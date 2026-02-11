@@ -1,66 +1,120 @@
-//
-//  ContentView.swift
-//  Spectrum
-//
-//  Created by Berkay on 25.01.2026.
-//
-
 import SwiftUI
-import SwiftData
+import UIKit
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @StateObject private var sessionStore = SessionStore.shared
+    @State private var selectedTab = 0
+    @State private var showAuthView = false
+    
+    init() {
+        // Customize Tab Bar Appearance for Glassmorphism
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        
+        // Glass Effect Background
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        appearance.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        
+        // Item Colors
+        let itemAppearance = UITabBarItemAppearance()
+        itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.5)
+        itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.5)]
+        
+        itemAppearance.selected.iconColor = UIColor(Color(hex: "#FF00FF"))
+        itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: "#FF00FF"))]
+        
+        appearance.stackedLayoutAppearance = itemAppearance
+        appearance.inlineLayoutAppearance = itemAppearance
+        appearance.compactInlineLayoutAppearance = itemAppearance
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+        Group {
+            if sessionStore.isLoading {
+                // Loading state with animated background
+                loadingView
+            } else if sessionStore.isAuthenticated {
+                // User is logged in - show main app
+                mainTabView
+            } else {
+                // User is not logged in - show welcome/auth flow
+                if showAuthView {
+                    AuthView(isAuthenticated: .constant(false), onSuccess: {
+                        // After successful auth, SessionStore is already updated
+                        showAuthView = false
+                    })
+                } else {
+                    LandingView(onGetStarted: {
+                        showAuthView = true
+                    })
                 }
             }
-        } detail: {
-            Text("Select an item")
+        }
+        .task {
+            await sessionStore.checkSession()
         }
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    
+    // MARK: - Loading View
+    private var loadingView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            Circle()
+                .fill(Color(hex: "#FF00FF").opacity(0.2))
+                .frame(width: 200, height: 200)
+                .blur(radius: 60)
+            
+            VStack(spacing: 16) {
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.2)
+                
+                Text("Loading...")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.5))
             }
         }
+    }
+    
+    // MARK: - Main Tab View
+    private var mainTabView: some View {
+        TabView(selection: $selectedTab) {
+            // 1. Home Feed
+            FeedView()
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
+                }
+                .tag(0)
+            
+            // 2. Search & Discovery
+            SearchDiscoveryView()
+                .tabItem {
+                    Label("Discover", systemImage: "magnifyingglass")
+                }
+                .tag(1)
+            
+            // 3. Activity / Notifications
+            ActivityView()
+                .tabItem {
+                    Label("Activity", systemImage: "bell.fill")
+                }
+                .tag(2)
+            
+            // 4. Profile
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.fill")
+                }
+                .tag(3)
+        }
+        .tint(Color(hex: "#FF00FF")) // Neon Purple Tint
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }

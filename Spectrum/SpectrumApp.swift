@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Supabase
 
 @main
 struct SpectrumApp: App {
@@ -26,6 +27,10 @@ struct SpectrumApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { url in
+                    // Handle Supabase Auth deep links (email confirmation, magic links, etc.)
+                    SupabaseManager.shared.client.handle(url)
+                }
         }
         .modelContainer(sharedModelContainer)
     }
