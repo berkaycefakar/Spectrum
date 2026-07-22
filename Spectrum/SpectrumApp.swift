@@ -6,24 +6,11 @@
 //
 
 import SwiftUI
-import SwiftData
 import Supabase
+import MusicKit
 
 @main
 struct SpectrumApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -31,7 +18,12 @@ struct SpectrumApp: App {
                     // Handle Supabase Auth deep links (email confirmation, magic links, etc.)
                     SupabaseManager.shared.client.handle(url)
                 }
+                .task {
+                    // Request MusicKit authorization on launch (best practice).
+                    // Catalog search works without authorization, but this ensures
+                    // full MusicKit features are available when needed.
+                    await MusicService.shared.requestMusicAuthorization()
+                }
         }
-        .modelContainer(sharedModelContainer)
     }
 }

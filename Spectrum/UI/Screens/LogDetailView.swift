@@ -55,13 +55,18 @@ struct LogDetailView: View {
                     
                     // The Glass Card (Review Details)
                     VStack(spacing: 24) {
-                        // Rating
+                        // Rating (stored as 0-10, display as 0-5)
                         HStack(spacing: 8) {
+                            let displayRating = Double(review.rating) / 2.0
                             ForEach(1...5, id: \.self) { index in
-                                Image(systemName: index <= review.rating ? "star.fill" : "star")
+                                Image(systemName: Double(index) <= displayRating ? "star.fill" : (Double(index) - 0.5 <= displayRating ? "star.leadinghalf.filled" : "star"))
                                     .font(.title2)
-                                    .foregroundStyle(index <= review.rating ? .yellow : .gray.opacity(0.5))
+                                    .foregroundStyle(Double(index) <= displayRating + 0.5 ? .yellow : .gray.opacity(0.5))
                             }
+                            Text(String(format: "%.1f", displayRating))
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white.opacity(0.7))
                         }
                         
                         Divider().background(.white.opacity(0.2))

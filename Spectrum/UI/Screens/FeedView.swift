@@ -90,12 +90,12 @@ struct FeedView: View {
                                                 track: track,
                                                 vibeLabel: profile.username ?? "User",
                                                 vibeColor: Color(hex: review.vibeColor),
-                                                rating: Double(review.rating) / 2.0
+                                                rating: Double(review.rating) / 2.0,
+                                                reviewText: review.reviewText
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                     } else {
-                                        // Loading placeholder
                                         RoundedRectangle(cornerRadius: 16)
                                             .fill(.white.opacity(0.05))
                                             .frame(height: 200)
@@ -112,6 +112,9 @@ struct FeedView: View {
             }
             .navigationBarHidden(true)
             .task {
+                await loadFeedData()
+            }
+            .refreshable {
                 await loadFeedData()
             }
         }
@@ -154,18 +157,19 @@ struct FeedView: View {
             
             // Fetch tracks
             for id in trackIds {
-                if let track = try? await iTunesService.shared.fetchTrack(id: id) {
+                if let track = try? await MusicService.shared.fetchTrack(id: id) {
                     await MainActor.run {
                         self.tracks[id] = track
                     }
                 }
             }
             
-            // Fetch user profiles
-            for id in userIds {
-                if let profile = try? await SupabaseManager.shared.getProfile(userId: id) {
-                    await MainActor.run {
-                        self.profiles[id] = profile
+            // Fetch user profiles (batch)
+            let userIdStrings = userIds.map { $0.uuidString }
+            if let fetchedProfiles = try? await SupabaseManager.shared.batchGetProfiles(ids: userIdStrings) {
+                await MainActor.run {
+                    for profile in fetchedProfiles {
+                        self.profiles[profile.id] = profile
                     }
                 }
             }

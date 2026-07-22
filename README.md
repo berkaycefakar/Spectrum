@@ -2,7 +2,7 @@
 
 A music logging and social discovery app — rate songs and albums, add reviews, and see logs from people you follow in your feed. *Letterboxd for music.*
 
-## Features
+## Features 
 
 - **Song logging** — Search via iTunes, rate (0–5), pick a vibe color, add a review
 - **Album rating** — Album page with community ratings and track list; rate and review in a separate sheet

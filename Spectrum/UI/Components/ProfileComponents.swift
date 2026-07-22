@@ -6,7 +6,11 @@ struct ProfileHeader: View {
     let profile: Profile
     let totalLogs: Int
     let averageRating: Double
+    let followersCount: Int
+    let followingCount: Int
     let onEditTapped: () -> Void
+    let onFollowersTapped: () -> Void
+    let onFollowingTapped: () -> Void
     
     var body: some View {
         VStack(spacing: 20) {
@@ -67,8 +71,16 @@ struct ProfileHeader: View {
             HStack(spacing: 40) {
                 ProfileStatItem(value: "\(totalLogs)", label: "Logs")
                 ProfileStatItem(value: String(format: "%.1f", averageRating), label: "Avg Rating")
-                // TODO: Wire real followers/following from backend
-                ProfileStatItem(value: "0", label: "Followers")
+                
+                Button(action: onFollowersTapped) {
+                    ProfileStatItem(value: "\(followersCount)", label: "Followers")
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: onFollowingTapped) {
+                    ProfileStatItem(value: "\(followingCount)", label: "Following")
+                }
+                .buttonStyle(.plain)
             }
             .padding(.top, 8)
             
@@ -115,100 +127,108 @@ struct ProfileStatItem: View {
     }
 }
 
-// MARK: - Profile Action Button
-/// Reusable button for profile actions (Edit, Logout, etc.)
-struct ProfileActionButton: View {
-    let title: String
-    let icon: String
-    let color: Color
-    let isDestructive: Bool
-    let action: () -> Void
-    
-    init(
-        title: String,
-        icon: String,
-        color: Color = .white,
-        isDestructive: Bool = false,
-        action: @escaping () -> Void
-    ) {
-        self.title = title
-        self.icon = icon
-        self.color = color
-        self.isDestructive = isDestructive
-        self.action = action
-    }
-    
+// MARK: - Account Actions Section
+
+struct AccountActionsSection: View {
+    let onEditProfile: () -> Void
+    let onLogout: () -> Void
+
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundStyle(isDestructive ? .red : color)
-                    .frame(width: 24)
-                
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(isDestructive ? .red : .white)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Account")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 4)
+
+            // Grouped glass card
+            VStack(spacing: 0) {
+                AccountRow(
+                    icon: "person.crop.circle",
+                    title: "Edit Profile",
+                    iconGradient: [Color(hex: "#00FFFF"), Color(hex: "#007AFF")],
+                    showDivider: true,
+                    action: onEditProfile
+                )
+
+                AccountRow(
+                    icon: "gearshape.fill",
+                    title: "Settings",
+                    iconGradient: [Color(hex: "#A0A0A0"), Color(hex: "#606060")],
+                    showDivider: true,
+                    action: { }
+                )
+
+                AccountRow(
+                    icon: "rectangle.portrait.and.arrow.right",
+                    title: "Log Out",
+                    iconGradient: [Color(hex: "#FF3B30"), Color(hex: "#FF6B6B")],
+                    isDestructive: true,
+                    showDivider: false,
+                    action: onLogout
+                )
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
             .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        isDestructive ? Color.red.opacity(0.3) : .white.opacity(0.1),
-                        lineWidth: 1
-                    )
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(.white.opacity(0.1), lineWidth: 1)
             )
         }
     }
 }
 
-// MARK: - Account Actions Section
-/// Section containing profile-related actions like Edit Profile, Settings, Logout
-struct AccountActionsSection: View {
-    let onEditProfile: () -> Void
-    let onLogout: () -> Void
-    
+// MARK: - Account Row
+
+private struct AccountRow: View {
+    let icon: String
+    let title: String
+    let iconGradient: [Color]
+    var isDestructive: Bool = false
+    var showDivider: Bool = true
+    let action: () -> Void
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Account")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 4)
-            
-            VStack(spacing: 8) {
-                ProfileActionButton(
-                    title: "Edit Profile",
-                    icon: "person.crop.circle",
-                    color: Color(hex: "#00FFFF"),
-                    action: onEditProfile
-                )
-                
-                ProfileActionButton(
-                    title: "Settings",
-                    icon: "gearshape.fill",
-                    color: .white,
-                    action: {
-                        // TODO: Navigate to settings
+        Button(action: action) {
+            VStack(spacing: 0) {
+                HStack(spacing: 14) {
+                    // Icon with gradient background
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(
+                                    colors: iconGradient,
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 34, height: 34)
+
+                        Image(systemName: icon)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
                     }
-                )
-                
-                ProfileActionButton(
-                    title: "Log Out",
-                    icon: "rectangle.portrait.and.arrow.right",
-                    isDestructive: true,
-                    action: onLogout
-                )
+
+                    Text(title)
+                        .font(.body)
+                        .foregroundStyle(isDestructive ? Color(hex: "#FF4D4D") : .white)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.25))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+
+                if showDivider {
+                    Divider()
+                        .background(.white.opacity(0.08))
+                        .padding(.leading, 64)
+                }
             }
         }
+        .buttonStyle(.plain)
     }
 }
 
@@ -339,7 +359,11 @@ struct AlbumGridItem: View {
                     profile: Profile(id: UUID(), username: "berkay", avatarUrl: nil, bio: "Music lover"),
                     totalLogs: 42,
                     averageRating: 4.2,
-                    onEditTapped: {}
+                    followersCount: 12,
+                    followingCount: 34,
+                    onEditTapped: {},
+                    onFollowersTapped: {},
+                    onFollowingTapped: {}
                 )
                 
                 SpectrumBarChart(stats: [

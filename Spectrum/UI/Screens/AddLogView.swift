@@ -44,11 +44,7 @@ struct AddLogView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // Drag Indicator
-                    Capsule()
-                        .fill(.white.opacity(0.2))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 10)
+                    Spacer().frame(height: 16)
                     
                     // Track Info & Artwork
                     VStack(spacing: 16) {
@@ -85,47 +81,15 @@ struct AddLogView: View {
                         }
                     }
                     
-                    Divider().background(.white.opacity(0.1))
-                    
-                    // Color Picker (The "Vibe")
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Choose your Vibe")
-                                .font(.caption)
-                                .textCase(.uppercase)
-                                .foregroundStyle(.white.opacity(0.5))
-                            
-                            Spacer()
-                            
-                            if hasExtractedColor {
-                                Text("Auto-picked from artwork")
-                                    .font(.caption2)
-                                    .foregroundStyle(selectedColor.opacity(0.8))
-                            }
+                    // Spectrum Prism Color Picker (full-width, beams go edge-to-edge)
+                    SpectrumPrismPicker(
+                        selectedHex: $selectedColorHex,
+                        vibeColors: vibeColors,
+                        onManualPick: {
+                            hasExtractedColor = false
                         }
-                        
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 15) {
-                            ForEach(vibeColors, id: \.self) { hex in
-                                Circle()
-                                    .fill(Color(hex: hex))
-                                    .frame(width: 44, height: 44)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(.white, lineWidth: selectedColorHex == hex ? 3 : 0)
-                                    )
-                                    .shadow(color: Color(hex: hex).opacity(selectedColorHex == hex ? 0.8 : 0.3), radius: selectedColorHex == hex ? 10 : 5)
-                                    .scaleEffect(selectedColorHex == hex ? 1.1 : 1.0)
-                                    .animation(.spring(response: 0.3), value: selectedColorHex)
-                                    .onTapGesture {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            selectedColorHex = hex
-                                            hasExtractedColor = false // User overrode auto-pick
-                                        }
-                                    }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
+                    )
+                    .padding(.vertical, 4)
                     
                     // Review Text
                     VStack(alignment: .leading, spacing: 8) {
@@ -175,8 +139,6 @@ struct AddLogView: View {
                             .padding(.horizontal)
                     }
                     
-                    Spacer(minLength: 20)
-                    
                     // Action Buttons
                     VStack(spacing: 12) {
                         // Save Button (color-synced)
@@ -218,7 +180,7 @@ struct AddLogView: View {
                     .padding(.bottom, 30)
                 }
             }
-            .scrollIndicators(.visible)
+            .scrollIndicators(.hidden)
         }
         .task {
             // Also try to extract color on appear if URL is available

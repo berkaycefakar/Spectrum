@@ -1,15 +1,18 @@
 import SwiftUI
-import AVFoundation
 
 struct FeedCardView: View {
     let track: Track
     let vibeLabel: String
     var vibeColor: Color? = nil
     var rating: Double? = nil
+    var reviewText: String? = nil
     
-    @State private var player: AVPlayer?
-    @State private var isPlaying: Bool = false
-    
+    @ObservedObject private var audioManager = AudioManager.shared
+
+    private var isPlaying: Bool {
+        audioManager.isTrackPlaying(track.id)
+    }
+
     // Dynamic Color State
     @State private var dynamicColor: Color = .gray.opacity(0.3) // Default neutral
     @State private var loadedImage: UIImage?
@@ -87,7 +90,16 @@ struct FeedCardView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 100)
+            .frame(minHeight: 100)
+            
+            // Review text
+            if let reviewText = reviewText, !reviewText.isEmpty {
+                Text("\"\(reviewText)\"")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             
             // Bottom Section: Play Button
             Button(action: toggleAudio) {
@@ -153,32 +165,7 @@ struct FeedCardView: View {
         // Stronger Outer Glow
         .shadow(color: dynamicColor.opacity(0.4), radius: 25, x: 0, y: 10)
         .task {
-            // Use provided vibeColor if available, otherwise extract from artwork
-            if let vibeColor = vibeColor {
-                dynamicColor = vibeColor
-            } else {
-                await loadImageAndColor()
-            }
-            await loadImage()
-        }
-        .onDisappear {
-            player?.pause()
-            isPlaying = false
-        }
-    }
-    
-    private func loadImage() async {
-        guard let url = track.artworkUrl600, loadedImage == nil else { return }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let uiImage = UIImage(data: data) {
-                await MainActor.run {
-                    self.loadedImage = uiImage
-                }
-            }
-        } catch {
-            print("Failed to load image: \(error)")
+            await loadImageAndColor()
         }
     }
     
@@ -208,29 +195,6 @@ struct FeedCardView: View {
     }
     
     private func toggleAudio() {
-        if isPlaying {
-            player?.pause()
-            isPlaying = false
-        } else {
-            if player == nil, let urlString = track.previewUrl, let url = URL(string: urlString) {
-                do {
-                    try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-                    try AVAudioSession.sharedInstance().setActive(true)
-                } catch {
-                    print("Audio session error: \(error)")
-                }
-                player = AVPlayer(url: url)
-            }
-            
-            if let player = player {
-                player.play()
-                isPlaying = true
-                
-                NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main) { _ in
-                    self.isPlaying = false
-                    self.player?.seek(to: .zero)
-                }
-            }
-        }
+        audioManager.toggle(trackId: track.id, previewUrl: track.previewUrl)
     }
 }

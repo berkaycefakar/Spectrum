@@ -86,31 +86,47 @@ struct AlbumDetailView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
                 .padding(.horizontal)
-            
-            HStack(spacing: 20) {
-                HStack(spacing: 8) {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(Color(hex: "#FFCC00"))
-                    Text(String(format: "%.1f", communityAverageRating))
-                        .font(.title3)
+
+            HStack(spacing: 0) {
+                // Rating
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color(hex: "#FFCC00"))
+                        Text(String(format: "%.1f", communityAverageRating))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                    }
+                    Text("avg rating")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .frame(maxWidth: .infinity)
+
+                // Divider
+                Rectangle()
+                    .fill(.white.opacity(0.1))
+                    .frame(width: 1, height: 36)
+
+                // Count
+                VStack(spacing: 6) {
+                    Text("\(communityReviews.count)")
+                        .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
-                    Text("/ 5")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.5))
+                    Text("ratings")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.4))
                 }
-                Text("\(communityReviews.count) ratings")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
+                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.white.opacity(0.06))
-            )
+            .padding(.vertical, 16)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(.white.opacity(0.1), lineWidth: 1)
             )
             .padding(.horizontal)
@@ -133,29 +149,66 @@ struct AlbumDetailView: View {
                 }
                 .padding(.vertical, 40)
             } else {
-                LazyVStack(spacing: 10) {
-                    ForEach(tracks) { track in
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
                         NavigationLink(destination: TrackDetailView(track: track)) {
-                            HStack(spacing: 12) {
-                                Text(track.title)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.4))
+                            VStack(spacing: 0) {
+                                HStack(spacing: 14) {
+                                    // Track number
+                                    Text("\(index + 1)")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.white.opacity(0.35))
+                                        .frame(width: 24)
+
+                                    // Artwork thumbnail
+                                    AsyncImage(url: track.artworkUrl600) { phase in
+                                        if let image = phase.image {
+                                            image.resizable().aspectRatio(contentMode: .fill)
+                                        } else {
+                                            Color.white.opacity(0.1)
+                                        }
+                                    }
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(track.title)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(.white)
+                                            .lineLimit(1)
+                                        Text(track.artist)
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                            .lineLimit(1)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(0.25))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+
+                                if index < tracks.count - 1 {
+                                    Divider()
+                                        .background(.white.opacity(0.06))
+                                        .padding(.leading, 54)
+                                }
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.white.opacity(0.05))
-                            )
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.plain)
                     }
                 }
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(.white.opacity(0.1), lineWidth: 1)
+                )
                 .padding(.horizontal)
             }
         }
@@ -168,14 +221,22 @@ struct AlbumDetailView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: userAlbumReview != nil ? "star.circle.fill" : "star.circle")
+                    .font(.system(size: 18, weight: .semibold))
                 Text(userAlbumReview != nil ? "Edit your rating" : "Rate this album")
                     .fontWeight(.semibold)
             }
             .foregroundStyle(.black)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color(hex: "#FFCC00"))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.vertical, 15)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "#FFCC00"), Color(hex: "#FFB800")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(Capsule())
+            .shadow(color: Color(hex: "#FFCC00").opacity(0.35), radius: 12, y: 4)
         }
         .padding(.horizontal)
     }
@@ -271,7 +332,7 @@ struct AlbumDetailView: View {
     
     private func loadTracks() async {
         do {
-            let fetched = try await iTunesService.shared.fetchTracksForAlbum(albumId: album.id)
+            let fetched = try await MusicService.shared.fetchTracksForAlbum(albumId: album.id)
             await MainActor.run {
                 self.tracks = fetched
                 self.tracksLoading = false

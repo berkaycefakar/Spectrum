@@ -1,12 +1,14 @@
 import SwiftUI
-import AVFoundation
 
 struct TrackCardView: View {
     let track: Track
     let vibeColor: Color
-    
-    @State private var player: AVPlayer?
-    @State private var isPlaying: Bool = false
+
+    @ObservedObject private var audioManager = AudioManager.shared
+
+    private var isPlaying: Bool {
+        audioManager.isTrackPlaying(track.id)
+    }
     
     var body: some View {
         ZStack {
@@ -74,22 +76,10 @@ struct TrackCardView: View {
             .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 10)
         }
         .frame(width: 320)
-        .onDisappear {
-            player?.pause()
-        }
     }
-    
+
     private func toggleAudio() {
-        if isPlaying {
-            player?.pause()
-            isPlaying = false
-        } else {
-            if player == nil, let urlString = track.previewUrl, let url = URL(string: urlString) {
-                player = AVPlayer(url: url)
-            }
-            player?.play()
-            isPlaying = true
-        }
+        audioManager.toggle(trackId: track.id, previewUrl: track.previewUrl)
     }
 }
 

@@ -126,3 +126,44 @@ struct Follow: Codable, Identifiable {
         case createdAt = "created_at"
     }
 }
+
+// MARK: - Activity
+
+enum ActivityType: String, Codable {
+    case trackReview = "track_review"
+    case albumReview = "album_review"
+    case newFollower = "new_follower"
+}
+
+struct ActivityItem: Codable, Identifiable {
+    let id: UUID
+    let type: ActivityType
+    
+    let actorId: UUID
+    let actorUsername: String?
+    let actorAvatarUrl: String?
+    
+    /// Target can be a track/album ID or a user ID, depending on type.
+    let targetId: String?
+    let targetName: String?
+    
+    let rating: Int?
+    let vibeColor: String?
+    let reviewText: String?
+    
+    let createdAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case actorId = "actor_id"
+        case actorUsername = "actor_username"
+        case actorAvatarUrl = "actor_avatar_url"
+        case targetId = "target_id"
+        case targetName = "target_name"
+        case rating
+        case vibeColor = "vibe_color"
+        case reviewText = "review_text"
+        case createdAt = "created_at"
+    }
+}

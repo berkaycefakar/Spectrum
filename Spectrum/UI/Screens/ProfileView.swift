@@ -12,6 +12,10 @@ struct ProfileView: View {
     @State private var artistReviews: [ArtistReview] = []
     @State private var tracks: [Int64: Track] = [:] // Cache for tracks
     @State private var albums: [Int64: Album] = [:] // Cache for albums
+    @State private var followers: [Profile] = []
+    @State private var following: [Profile] = []
+    @State private var showFollowersSheet = false
+    @State private var showFollowingSheet = false
     @State private var isLoading = true
     @State private var showEditProfile = false
     @State private var showLogoutAlert = false
@@ -82,8 +86,16 @@ struct ProfileView: View {
                                 profile: profile,
                                 totalLogs: reviews.count,
                                 averageRating: averageRating,
+                                followersCount: followers.count,
+                                followingCount: following.count,
                                 onEditTapped: {
                                     showEditProfile = true
+                                },
+                                onFollowersTapped: {
+                                    showFollowersSheet = true
+                                },
+                                onFollowingTapped: {
+                                    showFollowingSheet = true
                                 }
                             )
                         } else if isLoading {
@@ -181,6 +193,18 @@ struct ProfileView: View {
                     )
                     .presentationDetents([.medium, .large])
                 }
+            }
+            .sheet(isPresented: $showFollowersSheet) {
+                FollowersFollowingListView(
+                    title: "Followers",
+                    profiles: followers
+                )
+            }
+            .sheet(isPresented: $showFollowingSheet) {
+                FollowersFollowingListView(
+                    title: "Following",
+                    profiles: following
+                )
             }
             .alert("Log Out", isPresented: $showLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -288,27 +312,33 @@ struct ProfileView: View {
             let albumReviews: [AlbumReview] = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: currentUser.id)) ?? []
             let artistReviews: [ArtistReview] = [] // artist feature disabled
             
+            // 4. Followers / Following lists
+            let followers = (try? await SupabaseManager.shared.getFollowers(userId: currentUser.id)) ?? []
+            let following = (try? await SupabaseManager.shared.getFollowing(userId: currentUser.id)) ?? []
+            
             await MainActor.run {
                 self.profile = profileData
                 self.reviews = reviews
                 self.albumReviews = albumReviews
                 self.artistReviews = artistReviews
+                self.followers = followers
+                self.following = following
             }
             
-            // 4. Fetch Track Details for Reviews
+            // 5. Fetch Track Details for Reviews
             let trackIds = Set(reviews.map { $0.itunesTrackId })
             for id in trackIds {
-                if let track = try? await iTunesService.shared.fetchTrack(id: id) {
+                if let track = try? await MusicService.shared.fetchTrack(id: id) {
                     await MainActor.run {
                         self.tracks[id] = track
                     }
                 }
             }
             
-            // 5. Fetch Album Details for Album Reviews (görsel + puan profilde görünsün)
+            // 6. Fetch Album Details for Album Reviews (görsel + puan profilde görünsün)
             let albumIds = Set(albumReviews.map { $0.itunesCollectionId })
             for id in albumIds {
-                if let album = try? await iTunesService.shared.fetchAlbum(collectionId: id) {
+                if let album = try? await MusicService.shared.fetchAlbum(collectionId: id) {
                     await MainActor.run {
                         self.albums[id] = album
                     }
@@ -429,44 +459,51 @@ struct AlbumGridItemView: View {
 
 struct ArtistReviewRow: View {
     let review: ArtistReview
-    
+
     var body: some View {
-        HStack(spacing: 16) {
-            // Artist icon/avatar placeholder
-            ZStack {
-                Circle()
-                    .fill(Color(hex: review.vibeColor).opacity(0.3))
-                    .frame(width: 50, height: 50)
-                
-                Text(String(review.artistName.prefix(1)).uppercased())
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color(hex: review.vibeColor))
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(review.artistName)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                
-                HStack(spacing: 4) {
-                    ForEach(1...5, id: \.self) { index in
-                        Image(systemName: index <= (review.rating / 2) ? "star.fill" : "star")
-                            .font(.caption2)
-                            .foregroundStyle(Color(hex: review.vibeColor))
+        NavigationLink(destination: ArtistDetailView(artistName: review.artistName)) {
+            HStack(spacing: 16) {
+                // Artist icon/avatar placeholder
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: review.vibeColor).opacity(0.3))
+                        .frame(width: 50, height: 50)
+
+                    Text(String(review.artistName.prefix(1)).uppercased())
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color(hex: review.vibeColor))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(review.artistName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+
+                    HStack(spacing: 4) {
+                        ForEach(1...5, id: \.self) { index in
+                            Image(systemName: index <= (review.rating / 2) ? "star.fill" : "star")
+                                .font(.caption2)
+                                .foregroundStyle(Color(hex: review.vibeColor))
+                        }
                     }
                 }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.25))
             }
-            
-            Spacer()
+            .padding()
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(.white.opacity(0.1), lineWidth: 1)
+            )
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(.white.opacity(0.1), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
     }
 }

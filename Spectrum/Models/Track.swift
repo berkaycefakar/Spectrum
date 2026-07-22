@@ -8,6 +8,12 @@ struct Track: Identifiable, Decodable {
     let previewUrl: String?
     /// Optional album (collection) identifier – used for album detail flows.
     let collectionId: Int64?
+
+    // MusicKit-sourced fields
+    let genreNames: [String]?
+    let durationInMillis: Int?
+    let releaseDate: Date?
+    let artistId: String?
     
     // Computed property for the "Liquid Glass" high-res image
     var artworkUrl600: URL? {
@@ -29,7 +35,11 @@ struct Track: Identifiable, Decodable {
         artist: String,
         artworkUrl100: String,
         previewUrl: String?,
-        collectionId: Int64? = nil
+        collectionId: Int64? = nil,
+        genreNames: [String]? = nil,
+        durationInMillis: Int? = nil,
+        releaseDate: Date? = nil,
+        artistId: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -37,6 +47,10 @@ struct Track: Identifiable, Decodable {
         self.artworkUrl100 = artworkUrl100
         self.previewUrl = previewUrl
         self.collectionId = collectionId
+        self.genreNames = genreNames
+        self.durationInMillis = durationInMillis
+        self.releaseDate = releaseDate
+        self.artistId = artistId
     }
     
     /// Custom Decodable implementation to support the new `collectionId` field
@@ -49,6 +63,10 @@ struct Track: Identifiable, Decodable {
         self.artworkUrl100 = try container.decode(String.self, forKey: .artworkUrl100)
         self.previewUrl = try container.decodeIfPresent(String.self, forKey: .previewUrl)
         self.collectionId = try container.decodeIfPresent(Int64.self, forKey: .collectionId)
+        self.genreNames = try container.decodeIfPresent([String].self, forKey: .genreNames)
+        self.durationInMillis = try container.decodeIfPresent(Int.self, forKey: .durationInMillis)
+        self.releaseDate = try container.decodeIfPresent(Date.self, forKey: .releaseDate)
+        self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId)
     }
     
     enum CodingKeys: String, CodingKey {
@@ -58,6 +76,10 @@ struct Track: Identifiable, Decodable {
         case artworkUrl100 = "artworkUrl100"
         case previewUrl
         case collectionId
+        case genreNames
+        case durationInMillis
+        case releaseDate
+        case artistId
     }
 }
 

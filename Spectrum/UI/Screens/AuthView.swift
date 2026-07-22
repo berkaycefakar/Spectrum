@@ -23,17 +23,17 @@ struct AuthView: View {
             
             // Blob 1 (Purple)
             Circle()
-                .fill(Color(hex: "#FF00FF").opacity(0.4))
-                .frame(width: 300, height: 300)
-                .blur(radius: 60)
+                .fill(Color(hex: "#FF00FF").opacity(0.3))
+                .frame(width: 250, height: 250)
+                .blur(radius: 50)
                 .offset(x: animateBlobs ? -100 : -50, y: animateBlobs ? -200 : -150)
                 .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: animateBlobs)
             
             // Blob 2 (Blue)
             Circle()
-                .fill(Color(hex: "#00FFFF").opacity(0.4))
-                .frame(width: 300, height: 300)
-                .blur(radius: 60)
+                .fill(Color(hex: "#00FFFF").opacity(0.3))
+                .frame(width: 250, height: 250)
+                .blur(radius: 50)
                 .offset(x: animateBlobs ? 100 : 50, y: animateBlobs ? 200 : 150)
                 .animation(.easeInOut(duration: 5).repeatForever(autoreverses: true), value: animateBlobs)
             

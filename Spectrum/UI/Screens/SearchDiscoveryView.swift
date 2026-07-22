@@ -7,11 +7,14 @@ struct SearchDiscoveryView: View {
     @State private var searchText = ""
     @State private var trackResults: [Track] = []
     @State private var albumResults: [Album] = []
+    @State private var artistResults: [Artist] = []
     @State private var userResults: [Profile] = []
     @State private var selectedTrack: Track?
     @State private var isSearching = false
     @State private var showAllTrackResults = false
     @State private var showAllAlbumResults = false
+    @State private var showAllArtistResults = false
+    @State private var searchTask: Task<Void, Never>?
     
     // Trending Vibes - Mock data (TODO: Replace with backend data)
     let trendingVibes = [
@@ -38,14 +41,14 @@ struct SearchDiscoveryView: View {
                 // Ambient glow
                 Circle()
                     .fill(Color(hex: "#FF00FF").opacity(0.15))
-                    .frame(width: 400, height: 400)
-                    .blur(radius: 100)
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 80)
                     .offset(x: -150, y: -300)
                 
                 Circle()
                     .fill(Color(hex: "#00FFFF").opacity(0.15))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 80)
+                    .frame(width: 250, height: 250)
+                    .blur(radius: 60)
                     .offset(x: 150, y: 100)
                 
                 ScrollView {
@@ -63,7 +66,12 @@ struct SearchDiscoveryView: View {
                         
                         if searchText.isEmpty {
                             // Show discovery content when not searching
-                            discoveryContent
+                            DiscoveryContentView(
+                                trendingVibes: trendingVibes,
+                                discoverTracks: discoverTracks,
+                                searchText: $searchText,
+                                selectedTrack: $selectedTrack
+                            )
                         } else {
                             // Show search results
                             searchResultsView
@@ -99,8 +107,22 @@ struct SearchDiscoveryView: View {
                 .foregroundStyle(.white)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .onSubmit {
+                    Task { await performSearch(query: searchText) }
+                }
                 .onChange(of: searchText) { oldValue, newValue in
-                    Task {
+                    searchTask?.cancel()
+                    guard newValue.count >= 2 else {
+                        trackResults = []
+                        albumResults = []
+                        artistResults = []
+                        userResults = []
+                        isSearching = false
+                        return
+                    }
+                    searchTask = Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        guard !Task.isCancelled else { return }
                         await performSearch(query: newValue)
                     }
                 }
@@ -110,6 +132,7 @@ struct SearchDiscoveryView: View {
                     searchText = ""
                     trackResults = []
                     albumResults = []
+                    artistResults = []
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.white.opacity(0.5))
@@ -126,59 +149,6 @@ struct SearchDiscoveryView: View {
         )
     }
     
-    // MARK: - Discovery Content (shown before typing)
-    private var discoveryContent: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            // Trending Vibes Section
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Trending Vibes")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal)
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(trendingVibes) { vibe in
-                            TrendingVibeCard(vibe: vibe) {
-                                // TODO: Navigate to vibe-specific discovery
-                                searchText = vibe.name
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-            }
-            
-            // Quick Add Section
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("Quick Add")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    
-                    Spacer()
-                    
-                    Button("See All") {
-                        // TODO: Navigate to full list
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(Color(hex: "#FF00FF"))
-                }
-                .padding(.horizontal)
-                
-                // Track list
-                LazyVStack(spacing: 12) {
-                    ForEach(discoverTracks) { track in
-                        QuickAddTrackRow(track: track) {
-                            selectedTrack = track
-                        }
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
-    }
-    
     // MARK: - Search Results
     private var searchResultsView: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -190,7 +160,7 @@ struct SearchDiscoveryView: View {
                     Spacer()
                 }
                 .padding(.top, 40)
-            } else if trackResults.isEmpty && albumResults.isEmpty && userResults.isEmpty && !searchText.isEmpty {
+            } else if trackResults.isEmpty && albumResults.isEmpty && artistResults.isEmpty && userResults.isEmpty && !searchText.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 40))
@@ -201,7 +171,7 @@ struct SearchDiscoveryView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
             } else {
-                Text("\(trackResults.count) Songs • \(albumResults.count) Albums • \(userResults.count) Users")
+                Text("\(trackResults.count) Songs • \(albumResults.count) Albums • \(artistResults.count) Artists • \(userResults.count) Users")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .padding(.horizontal)
@@ -265,6 +235,35 @@ struct SearchDiscoveryView: View {
                     .padding(.horizontal)
                 }
                 
+                // Artists
+                if !artistResults.isEmpty {
+                    Text("Artists")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
+                    let artistsToShow = showAllArtistResults ? artistResults : Array(artistResults.prefix(5))
+
+                    LazyVStack(spacing: 12) {
+                        ForEach(artistsToShow) { artist in
+                            ArtistRow(artist: artist)
+                        }
+
+                        if artistResults.count > 5 {
+                            Button(showAllArtistResults ? "Show less" : "See more") {
+                                withAnimation(.spring()) {
+                                    showAllArtistResults.toggle()
+                                }
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(Color(hex: "#FF00FF"))
+                            .padding(.top, 4)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
                 // Users
                 if !userResults.isEmpty {
                     Text("Users")
@@ -272,7 +271,7 @@ struct SearchDiscoveryView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal)
                         .padding(.top, 8)
-                    
+
                     LazyVStack(spacing: 12) {
                         ForEach(userResults) { user in
                             UserRow(profile: user)
@@ -286,24 +285,24 @@ struct SearchDiscoveryView: View {
     
     // MARK: - Data Loading
     private func loadDiscoverTracks() async {
-        // Load sample tracks for discovery section
-        // TODO: Replace with actual recommendation API
-        do {
-            let artists = ["Daft Punk", "Tame Impala", "The Weeknd", "Arctic Monkeys", "Lorde"]
-            var tracks: [Track] = []
-            
+        let artists = ["Daft Punk", "Tame Impala", "The Weeknd", "Arctic Monkeys", "Lorde"]
+        
+        await withTaskGroup(of: Track?.self) { group in
             for artist in artists {
-                let results = try await iTunesService.shared.search(query: artist)
-                if let first = results.first {
-                    tracks.append(first)
+                group.addTask {
+                    let results = try? await MusicService.shared.search(query: artist)
+                    return results?.first
                 }
+            }
+            
+            var tracks: [Track] = []
+            for await track in group {
+                if let track { tracks.append(track) }
             }
             
             await MainActor.run {
                 discoverTracks = tracks
             }
-        } catch {
-            print("Failed to load discover tracks: \(error)")
         }
     }
     
@@ -312,29 +311,28 @@ struct SearchDiscoveryView: View {
             await MainActor.run {
                 trackResults = []
                 albumResults = []
+                artistResults = []
                 userResults = []
                 isSearching = false
                 showAllTrackResults = false
                 showAllAlbumResults = false
+                showAllArtistResults = false
             }
             return
         }
-        
+
         await MainActor.run {
             isSearching = true
         }
-        
-        // Debounce
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        
-        // Check if query is still the same
-        guard query == searchText else { return }
-        
+
+        guard !Task.isCancelled else { return }
+
         do {
-            async let tracks = try iTunesService.shared.search(query: query)
-            async let albums = try iTunesService.shared.searchAlbums(query: query)
+            async let tracks = try MusicService.shared.search(query: query)
+            async let albums = try MusicService.shared.searchAlbums(query: query)
+            async let artists = try MusicService.shared.searchArtists(query: query)
             async let users = try SupabaseManager.shared.searchUsers(query: query)
-            var (trackRes, albumRes, userRes) = try await (tracks, albums, users)
+            var (trackRes, albumRes, artistRes, userRes) = try await (tracks, albums, artists, users)
             
             // Arama sorgusunu normalize et (küçük harf, boşlukları temizle)
             let normalizedQuery = query.lowercased().trimmingCharacters(in: .whitespaces)
@@ -374,14 +372,16 @@ struct SearchDiscoveryView: View {
             }
             
             await MainActor.run {
-                // iTunes zaten popülerliğe göre sıralı dönüyor.
-                // Biz artist eşleşmesine göre önceliklendiriyoruz, sonra popülerlik sırası korunuyor.
+                // MusicKit results sorted by relevance.
+                // We further prioritize artist name matches.
                 self.trackResults = trackRes
                 self.albumResults = albumRes
+                self.artistResults = artistRes
                 self.userResults = userRes
                 self.isSearching = false
                 self.showAllTrackResults = false
                 self.showAllAlbumResults = false
+                self.showAllArtistResults = false
             }
         } catch {
             await MainActor.run {
@@ -399,6 +399,66 @@ struct TrendingVibe: Identifiable {
     let name: String
     let gradient: [Color]
     let icon: String
+}
+
+// MARK: - Discovery Content (extracted to prevent unnecessary recomputation)
+
+struct DiscoveryContentView: View {
+    let trendingVibes: [TrendingVibe]
+    let discoverTracks: [Track]
+    @Binding var searchText: String
+    @Binding var selectedTrack: Track?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            // Trending Vibes Section
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Trending Vibes")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(trendingVibes) { vibe in
+                            TrendingVibeCard(vibe: vibe) {
+                                searchText = vibe.name
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+
+            // Quick Add Section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Quick Add")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    Button("See All") {
+                        // TODO: Navigate to full list
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color(hex: "#FF00FF"))
+                }
+                .padding(.horizontal)
+
+                // Track list
+                LazyVStack(spacing: 12) {
+                    ForEach(discoverTracks) { track in
+                        QuickAddTrackRow(track: track) {
+                            selectedTrack = track
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
 }
 
 // MARK: - Trending Vibe Card
@@ -438,6 +498,7 @@ struct TrendingVibeCard: View {
                     .lineLimit(1)
             }
             .frame(width: 90)
+            .drawingGroup()
         }
     }
 }
@@ -565,11 +626,80 @@ struct AlbumRow: View {
 // MARK: - Artist Row
 
 struct ArtistRow: View {
-    let artistName: String
-    
+    let artist: Artist
+
     var body: some View {
-        // Artist ekranı şimdilik kapalı.
-        EmptyView()
+        NavigationLink(destination: ArtistDetailView(artistName: artist.name, artistId: artist.id)) {
+            HStack(spacing: 12) {
+                // Artist artwork or initial
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FF00FF").opacity(0.4), Color(hex: "#8B00FF").opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 56, height: 56)
+
+                    if let artworkUrl = artist.artworkUrl {
+                        AsyncImage(url: artworkUrl) { phase in
+                            if let image = phase.image {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else {
+                                Text(String(artist.name.prefix(1)).uppercased())
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .frame(width: 52, height: 52)
+                        .clipShape(Circle())
+                    } else {
+                        Text(String(artist.name.prefix(1)).uppercased())
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(artist.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    if !artist.genres.isEmpty {
+                        Text(artist.genres.prefix(2).joined(separator: ", "))
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                    } else {
+                        Text("Artist")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(.white.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -840,7 +970,7 @@ struct UserProfileView: View {
             
             var tracks: [Int64: Track] = [:]
             for id in Set(reviews.map { $0.itunesTrackId }) {
-                if let track = try? await iTunesService.shared.fetchTrack(id: id) {
+                if let track = try? await MusicService.shared.fetchTrack(id: id) {
                     tracks[id] = track
                 }
             }
@@ -848,7 +978,7 @@ struct UserProfileView: View {
             
             var albums: [Int64: Album] = [:]
             for id in Set(albumReviews.map { $0.itunesCollectionId }) {
-                if let album = try? await iTunesService.shared.fetchAlbum(collectionId: id) {
+                if let album = try? await MusicService.shared.fetchAlbum(collectionId: id) {
                     albums[id] = album
                 }
             }
@@ -861,7 +991,7 @@ struct UserProfileView: View {
     
     private func toggleFollow() async {
         guard !isCurrentUser, !isFollowLoading else { return }
-        isFollowLoading = true
+        await MainActor.run { isFollowLoading = true }
         
         do {
             if isFollowing {
@@ -880,7 +1010,13 @@ struct UserProfileView: View {
         } catch {
             print("Follow error: \(error)")
         }
-        await MainActor.run { isFollowLoading = false }
+        
+        // Re-verify from server to be sure
+        let serverFollowing = (try? await SupabaseManager.shared.isFollowing(userId: userId)) ?? isFollowing
+        await MainActor.run {
+            isFollowing = serverFollowing
+            isFollowLoading = false
+        }
     }
 }
 

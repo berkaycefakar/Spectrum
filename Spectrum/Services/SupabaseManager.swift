@@ -112,6 +112,17 @@ class SupabaseManager {
             .execute()
     }
     
+    func getTrackReviews(trackId: Int64) async throws -> [Review] {
+        let response: [Review] = try await client
+            .from("reviews")
+            .select()
+            .eq("itunes_track_id", value: Int(trackId))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        return response
+    }
+    
     // MARK: - Album Reviews
     
     func saveAlbumReview(collectionId: Int64, rating: Int, text: String, vibeColor: String) async throws {
@@ -219,7 +230,10 @@ class SupabaseManager {
             throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
         }
         
-        // Use proper Supabase insert format
+        // Check first to avoid duplicate insert
+        let already = try await isFollowing(userId: userId)
+        if already { return }
+        
         struct FollowInsert: Encodable {
             let follower_id: UUID
             let following_id: UUID
@@ -247,43 +261,49 @@ class SupabaseManager {
     }
     
     func getFollowing(userId: UUID) async throws -> [Profile] {
-        let response: [Follow] = try await client
+        struct FollowRow: Codable {
+            let following_id: UUID
+        }
+
+        let response: [FollowRow] = try await client
             .from("follows")
-            .select()
+            .select("following_id")
             .eq("follower_id", value: userId)
             .execute()
             .value
-        
-        let followingIds = response.map { $0.followingId }
-        var profiles: [Profile] = []
-        
-        for id in followingIds {
-            if let profile = try? await getProfile(userId: id) {
-                profiles.append(profile)
-            }
-        }
-        
-        return profiles
+
+        guard !response.isEmpty else { return [] }
+        let ids = response.map { $0.following_id.uuidString }
+        return try await batchGetProfiles(ids: ids)
     }
-    
+
     func getFollowers(userId: UUID) async throws -> [Profile] {
-        let response: [Follow] = try await client
+        struct FollowRow: Codable {
+            let follower_id: UUID
+        }
+
+        let response: [FollowRow] = try await client
             .from("follows")
-            .select()
+            .select("follower_id")
             .eq("following_id", value: userId)
             .execute()
             .value
-        
-        let followerIds = response.map { $0.followerId }
-        var profiles: [Profile] = []
-        
-        for id in followerIds {
-            if let profile = try? await getProfile(userId: id) {
-                profiles.append(profile)
-            }
-        }
-        
-        return profiles
+
+        guard !response.isEmpty else { return [] }
+        let ids = response.map { $0.follower_id.uuidString }
+        return try await batchGetProfiles(ids: ids)
+    }
+
+    /// Batch fetch profiles by IDs in a single query (avoids N+1)
+    func batchGetProfiles(ids: [String]) async throws -> [Profile] {
+        guard !ids.isEmpty else { return [] }
+        let response: [Profile] = try await client
+            .from("profiles")
+            .select()
+            .in("id", values: ids)
+            .execute()
+            .value
+        return response
     }
     
     func isFollowing(userId: UUID) async throws -> Bool {
@@ -291,9 +311,13 @@ class SupabaseManager {
             return false
         }
         
-        let response: [Follow] = try await client
+        struct FollowCheck: Codable {
+            let follower_id: UUID
+        }
+        
+        let response: [FollowCheck] = try await client
             .from("follows")
-            .select()
+            .select("follower_id")
             .eq("follower_id", value: currentUser.id)
             .eq("following_id", value: userId)
             .limit(1)
@@ -340,5 +364,170 @@ class SupabaseManager {
             .value
         
         return response
+    }
+
+    // MARK: - Activity Feed
+    
+    /// Fetches a mixed activity feed for the current user:
+    /// - track and album reviews from people they follow
+    /// - new followers (people who started following them)
+    func fetchActivityFeed(limitPerType: Int = 30) async throws -> [ActivityItem] {
+        guard let currentUser = try await getCurrentUser() else {
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+        }
+        
+        struct FollowRelation: Codable {
+            let follower_id: UUID
+            let following_id: UUID
+            let created_at: Date
+        }
+        
+        // 1. Load follow relationships
+        let followingRelations: [FollowRelation]
+        do {
+            followingRelations = try await client
+                .from("follows")
+                .select("follower_id,following_id,created_at")
+                .eq("follower_id", value: currentUser.id)
+                .execute()
+                .value
+        } catch {
+            print("Activity: failed to load following relations:", error)
+            followingRelations = []
+        }
+        
+        let followerRelations: [FollowRelation]
+        do {
+            followerRelations = try await client
+                .from("follows")
+                .select("follower_id,following_id,created_at")
+                .eq("following_id", value: currentUser.id)
+                .execute()
+                .value
+        } catch {
+            print("Activity: failed to load follower relations:", error)
+            followerRelations = []
+        }
+        
+        let followingIds = followingRelations.map { $0.following_id }
+        let followerIds = followerRelations.map { $0.follower_id }
+        
+        // 2. Load profiles for all related users in a single query
+        let allActorIds = Array(Set(followingIds + followerIds))
+        let actorIdStrings = allActorIds.map { $0.uuidString }
+        
+        var profilesById: [UUID: Profile] = [:]
+        if !actorIdStrings.isEmpty {
+            do {
+                let profileResponse: [Profile] = try await client
+                    .from("profiles")
+                    .select()
+                    .in("id", values: actorIdStrings)
+                    .execute()
+                    .value
+                for profile in profileResponse {
+                    profilesById[profile.id] = profile
+                }
+            } catch {
+                print("Activity: failed to load profiles:", error)
+            }
+        }
+        
+        // 3. Load reviews from people the user follows
+        var activityItems: [ActivityItem] = []
+        if !followingIds.isEmpty {
+            let followingIdStrings = followingIds.map { $0.uuidString }
+            
+            // Track reviews
+            let trackReviews: [Review]
+            do {
+                trackReviews = try await client
+                    .from("reviews")
+                    .select()
+                    .in("user_id", values: followingIdStrings)
+                    .order("created_at", ascending: false)
+                    .limit(limitPerType)
+                    .execute()
+                    .value
+            } catch {
+                print("Activity: failed to load track reviews:", error)
+                trackReviews = []
+            }
+            
+            for review in trackReviews {
+                let profile = profilesById[review.userId]
+                let item = ActivityItem(
+                    id: review.id,
+                    type: .trackReview,
+                    actorId: review.userId,
+                    actorUsername: profile?.username,
+                    actorAvatarUrl: profile?.avatarUrl,
+                    targetId: String(review.itunesTrackId),
+                    targetName: nil,
+                    rating: review.rating,
+                    vibeColor: review.vibeColor,
+                    reviewText: review.reviewText,
+                    createdAt: review.createdAt
+                )
+                activityItems.append(item)
+            }
+            
+            // Album reviews
+            let albumReviews: [AlbumReview]
+            do {
+                albumReviews = try await client
+                    .from("album_reviews")
+                    .select()
+                    .in("user_id", values: followingIdStrings)
+                    .order("created_at", ascending: false)
+                    .limit(limitPerType)
+                    .execute()
+                    .value
+            } catch {
+                print("Activity: failed to load album reviews:", error)
+                albumReviews = []
+            }
+            
+            for review in albumReviews {
+                let profile = profilesById[review.userId]
+                let item = ActivityItem(
+                    id: review.id,
+                    type: .albumReview,
+                    actorId: review.userId,
+                    actorUsername: profile?.username,
+                    actorAvatarUrl: profile?.avatarUrl,
+                    targetId: String(review.itunesCollectionId),
+                    targetName: nil,
+                    rating: review.rating,
+                    vibeColor: review.vibeColor,
+                    reviewText: review.reviewText,
+                    createdAt: review.createdAt
+                )
+                activityItems.append(item)
+            }
+        }
+        
+        // 4. New followers
+        for relation in followerRelations {
+            guard relation.follower_id != currentUser.id else { continue }
+            let profile = profilesById[relation.follower_id]
+            let item = ActivityItem(
+                id: UUID(),
+                type: .newFollower,
+                actorId: relation.follower_id,
+                actorUsername: profile?.username,
+                actorAvatarUrl: profile?.avatarUrl,
+                targetId: currentUser.id.uuidString,
+                targetName: nil,
+                rating: nil,
+                vibeColor: nil,
+                reviewText: nil,
+                createdAt: relation.created_at
+            )
+            activityItems.append(item)
+        }
+        
+        // 5. Sort by date, newest first
+        return activityItems.sorted { $0.createdAt > $1.createdAt }
     }
 }
