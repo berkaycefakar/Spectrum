@@ -1,6 +1,27 @@
 import SwiftUI
 import Supabase
 
+/// Static ambient glow behind the discovery screen. Kept separate from `SearchDiscoveryView`
+/// so typing in the search field doesn't force these blurs to redraw.
+private struct SearchAmbientBackground: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color(hex: "#FF00FF").opacity(0.15))
+                .frame(width: 300, height: 300)
+                .blur(radius: 80)
+                .offset(x: -150, y: -300)
+
+            Circle()
+                .fill(Color(hex: "#00FFFF").opacity(0.15))
+                .frame(width: 250, height: 250)
+                .blur(radius: 60)
+                .offset(x: 150, y: 100)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// Search & Discovery Screen
 /// Purpose: Find songs to log with visual recommendations before searching
 struct SearchDiscoveryView: View {
@@ -16,14 +37,23 @@ struct SearchDiscoveryView: View {
     @State private var showAllArtistResults = false
     @State private var searchTask: Task<Void, Never>?
     
-    // Trending Vibes - Mock data (TODO: Replace with backend data)
-    let trendingVibes = [
-        TrendingVibe(name: "Late Night Drive", gradient: [Color(hex: "#1a1a2e"), Color(hex: "#16213e")], icon: "car.fill"),
-        TrendingVibe(name: "Gym Hype", gradient: [Color(hex: "#ff416c"), Color(hex: "#ff4b2b")], icon: "bolt.fill"),
-        TrendingVibe(name: "Heartbreak", gradient: [Color(hex: "#667eea"), Color(hex: "#764ba2")], icon: "heart.slash.fill"),
-        TrendingVibe(name: "Chill Vibes", gradient: [Color(hex: "#11998e"), Color(hex: "#38ef7d")], icon: "leaf.fill"),
-        TrendingVibe(name: "Party Mode", gradient: [Color(hex: "#f12711"), Color(hex: "#f5af19")], icon: "sparkles"),
-        TrendingVibe(name: "Focus Flow", gradient: [Color(hex: "#4776E6"), Color(hex: "#8E54E9")], icon: "brain.head.profile")
+    // A rotating selection is shown each launch (see `.task`) so Discover doesn't feel static.
+    @State private var trendingVibes: [TrendingVibe] = []
+
+    /// Full pool of mood shortcuts to sample from.
+    private static let vibePool: [TrendingVibe] = [
+        TrendingVibe(name: "Late Night Drive", gradient: [Color(hex: "#1a1a2e"), Color(hex: "#16213e")], icon: "car.fill", query: "synthwave"),
+        TrendingVibe(name: "Gym Hype", gradient: [Color(hex: "#ff416c"), Color(hex: "#ff4b2b")], icon: "bolt.fill", query: "workout hype"),
+        TrendingVibe(name: "Heartbreak", gradient: [Color(hex: "#667eea"), Color(hex: "#764ba2")], icon: "heart.slash.fill", query: "sad breakup songs"),
+        TrendingVibe(name: "Chill Vibes", gradient: [Color(hex: "#11998e"), Color(hex: "#38ef7d")], icon: "leaf.fill", query: "lofi chill"),
+        TrendingVibe(name: "Party Mode", gradient: [Color(hex: "#f12711"), Color(hex: "#f5af19")], icon: "sparkles", query: "party hits"),
+        TrendingVibe(name: "Focus Flow", gradient: [Color(hex: "#4776E6"), Color(hex: "#8E54E9")], icon: "brain.head.profile", query: "lofi study"),
+        TrendingVibe(name: "Rainy Day", gradient: [Color(hex: "#3a6073"), Color(hex: "#16222a")], icon: "cloud.rain.fill", query: "acoustic mellow"),
+        TrendingVibe(name: "Summer Heat", gradient: [Color(hex: "#f7971e"), Color(hex: "#ffd200")], icon: "sun.max.fill", query: "summer hits"),
+        TrendingVibe(name: "Throwback", gradient: [Color(hex: "#8E2DE2"), Color(hex: "#4A00E0")], icon: "backward.fill", query: "2000s throwback"),
+        TrendingVibe(name: "Deep Focus", gradient: [Color(hex: "#000428"), Color(hex: "#004e92")], icon: "headphones", query: "ambient focus"),
+        TrendingVibe(name: "Feel Good", gradient: [Color(hex: "#f857a6"), Color(hex: "#ff5858")], icon: "face.smiling.fill", query: "feel good hits"),
+        TrendingVibe(name: "Midnight Mood", gradient: [Color(hex: "#232526"), Color(hex: "#414345")], icon: "moon.stars.fill", query: "midnight r&b")
     ]
     
     // Sample tracks for discovery - Mock data (TODO: Replace with backend recommendations)
@@ -38,19 +68,11 @@ struct SearchDiscoveryView: View {
                 // Background
                 Color.black.ignoresSafeArea()
                 
-                // Ambient glow
-                Circle()
-                    .fill(Color(hex: "#FF00FF").opacity(0.15))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 80)
-                    .offset(x: -150, y: -300)
-                
-                Circle()
-                    .fill(Color(hex: "#00FFFF").opacity(0.15))
-                    .frame(width: 250, height: 250)
-                    .blur(radius: 60)
-                    .offset(x: 150, y: 100)
-                
+                // Extracted into its own view: these large blurs are expensive, and inline
+                // they were re-rendered on every keystroke because `searchText` lives in
+                // this view's state. As a separate input-free view, SwiftUI skips them.
+                SearchAmbientBackground()
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         // Header
@@ -83,6 +105,9 @@ struct SearchDiscoveryView: View {
             }
             .navigationBarHidden(true)
             .task {
+                if trendingVibes.isEmpty {
+                    trendingVibes = Array(Self.vibePool.shuffled().prefix(6))
+                }
                 await loadDiscoverTracks()
             }
             .sheet(item: $selectedTrack) { track in
@@ -121,7 +146,9 @@ struct SearchDiscoveryView: View {
                         return
                     }
                     searchTask = Task {
-                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        // 350ms: long enough to coalesce a burst of typing, short enough
+                        // that results don't feel like they lag behind the keyboard.
+                        try? await Task.sleep(nanoseconds: 350_000_000)
                         guard !Task.isCancelled else { return }
                         await performSearch(query: newValue)
                     }
@@ -285,24 +312,38 @@ struct SearchDiscoveryView: View {
     
     // MARK: - Data Loading
     private func loadDiscoverTracks() async {
-        let artists = ["Daft Punk", "Tame Impala", "The Weeknd", "Arctic Monkeys", "Lorde"]
-        
+        // 1. Prefer what the community is actually logging — a real trending row.
+        if let trendingIds = try? await SupabaseManager.shared.fetchTrendingTrackIds(limit: 12),
+           !trendingIds.isEmpty {
+            let byId = await MusicService.shared.fetchTracks(ids: trendingIds)
+            // Keep the recency order from the query.
+            let ordered = trendingIds.compactMap { byId[$0] }
+            if !ordered.isEmpty {
+                await MainActor.run { discoverTracks = ordered }
+                return
+            }
+        }
+
+        // 2. Fallback for a fresh install with no logs yet: a rotating seed pool so Discover
+        //    isn't the same five tracks every launch.
+        let seedPool = [
+            "Kendrick Lamar", "Tame Impala", "The Weeknd", "Arctic Monkeys", "Lorde",
+            "Frank Ocean", "Radiohead", "Billie Eilish", "Tyler, The Creator", "SZA",
+            "Daft Punk", "Fleetwood Mac", "Travis Scott", "Beyoncé", "Mac Miller"
+        ]
+        let seeds = Array(seedPool.shuffled().prefix(6))
+
         await withTaskGroup(of: Track?.self) { group in
-            for artist in artists {
+            for artist in seeds {
                 group.addTask {
-                    let results = try? await MusicService.shared.search(query: artist)
-                    return results?.first
+                    (try? await MusicService.shared.search(query: artist))?.first
                 }
             }
-            
             var tracks: [Track] = []
             for await track in group {
                 if let track { tracks.append(track) }
             }
-            
-            await MainActor.run {
-                discoverTracks = tracks
-            }
+            await MainActor.run { discoverTracks = tracks }
         }
     }
     
@@ -384,6 +425,9 @@ struct SearchDiscoveryView: View {
                 self.showAllArtistResults = false
             }
         } catch {
+            // Previously swallowed, which is why a failing MusicKit request looked identical
+            // to "no results".
+            print("Search failed for '\(query)':", error)
             await MainActor.run {
                 self.isSearching = false
             }
@@ -399,6 +443,10 @@ struct TrendingVibe: Identifiable {
     let name: String
     let gradient: [Color]
     let icon: String
+    /// Musical search term this mood maps to. Tapping the vibe searches for real tracks
+    /// (e.g. "synthwave") instead of the literal label ("Late Night Drive"), which returned
+    /// nothing.
+    let query: String
 }
 
 // MARK: - Discovery Content (extracted to prevent unnecessary recomputation)
@@ -422,7 +470,8 @@ struct DiscoveryContentView: View {
                     HStack(spacing: 12) {
                         ForEach(trendingVibes) { vibe in
                             TrendingVibeCard(vibe: vibe) {
-                                searchText = vibe.name
+                                // Search the mood's musical query, not its display label.
+                                searchText = vibe.query
                             }
                         }
                     }
@@ -920,6 +969,7 @@ struct UserProfileView: View {
                             isPresented: $showEditProfile,
                             currentUsername: profileToEdit.username ?? "",
                             currentBio: profileToEdit.bio ?? "",
+                            currentAvatarUrl: profileToEdit.avatarUrl,
                             onSave: {
                                 Task { await loadUserProfile() }
                             }
@@ -968,20 +1018,11 @@ struct UserProfileView: View {
                 self.isLoading = false
             }
             
-            var tracks: [Int64: Track] = [:]
-            for id in Set(reviews.map { $0.itunesTrackId }) {
-                if let track = try? await MusicService.shared.fetchTrack(id: id) {
-                    tracks[id] = track
-                }
-            }
+            // Batched detail lookups instead of one request per row.
+            let tracks = await MusicService.shared.fetchTracks(ids: Array(Set(reviews.map { $0.itunesTrackId })))
             await MainActor.run { self.userTracks = tracks }
-            
-            var albums: [Int64: Album] = [:]
-            for id in Set(albumReviews.map { $0.itunesCollectionId }) {
-                if let album = try? await MusicService.shared.fetchAlbum(collectionId: id) {
-                    albums[id] = album
-                }
-            }
+
+            let albums = await MusicService.shared.fetchAlbums(ids: Array(Set(albumReviews.map { $0.itunesCollectionId })))
             await MainActor.run { self.userAlbums = albums }
         } catch {
             await MainActor.run { self.isLoading = false }
