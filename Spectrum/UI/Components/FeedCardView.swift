@@ -177,16 +177,17 @@ struct FeedCardView: View {
         
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            if let uiImage = UIImage(data: data) {
-                await MainActor.run {
-                    self.loadedImage = uiImage
-                    // Force extraction on main thread to ensure UI update
-                    if let avgColor = uiImage.averageColor {
-                        withAnimation(.easeIn(duration: 0.3)) {
-                            // Boost saturation slightly for neon effect
-                            self.dynamicColor = Color(uiColor: avgColor)
-                        }
-                    }
+            guard let uiImage = UIImage(data: data) else { return }
+
+            await MainActor.run { self.loadedImage = uiImage }
+
+            // Extract the dominant colour off the main thread — doing this inline on the main
+            // actor for every visible feed card was locking up the UI. The shared loader runs
+            // it on a background executor and caches the result.
+            let artworkColor = await ArtworkColorLoader.shared.color(for: url)
+            await MainActor.run {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    self.dynamicColor = artworkColor.accent
                 }
             }
         } catch {

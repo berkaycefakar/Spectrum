@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 extension Color {
     init(hex: String) {
@@ -29,5 +30,31 @@ extension Color {
     // Helper for the "Liquid Glass" glow
     var glow: Color {
         self.opacity(0.6)
+    }
+
+    /// Relative luminance (0 = black, 1 = white). Used to decide whether text sitting on
+    /// this colour should be black or white.
+    var luminance: Double {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return 0.299 * Double(red) + 0.587 * Double(green) + 0.114 * Double(blue)
+    }
+
+    /// Black or white, whichever stays readable on top of this colour. Artwork accents
+    /// range from near-black to near-white, so foregrounds can't be hardcoded.
+    var contrastingForeground: Color {
+        luminance > 0.6 ? .black : .white
+    }
+
+    /// "#RRGGBB" — the form the `vibe_color` column stores.
+    var hexString: String {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return String(
+            format: "#%02X%02X%02X",
+            Int((red * 255).rounded()),
+            Int((green * 255).rounded()),
+            Int((blue * 255).rounded())
+        )
     }
 }
