@@ -10,48 +10,156 @@ class MusicService {
 
     // MARK: - Authorization
 
-    /// Request MusicKit authorization. Catalog search works without authorization,
-    /// but requesting it is best practice for full MusicKit features.
+    /// Request MusicKit authorization.
+    ///
+    /// Catalog requests genuinely require `.authorized` on iOS — if the user declines, every
+    /// search and lookup below throws and the app silently shows empty screens. They also
+    /// always fail on the Simulator, which has no Media & Purchases account, so MusicKit
+    /// work has to be verified on a real device.
     @discardableResult
     func requestMusicAuthorization() async -> MusicAuthorization.Status {
-        await MusicAuthorization.request()
+        let status = await MusicAuthorization.request()
+        print("MusicKit: authorization status = \(status)")
+        if status != .authorized {
+            print("MusicKit: NOT authorized — catalog search and lookups will fail until the user grants access in Settings.")
+        }
+        return status
+    }
+
+    /// Current authorization status without prompting.
+    var authorizationStatus: MusicAuthorization.Status {
+        MusicAuthorization.currentStatus
     }
 
     // MARK: - Search: Tracks
 
     func search(query: String) async throws -> [Track] {
-        var request = MusicCatalogSearchRequest(term: query, types: [Song.self])
-        request.limit = 20
-        let response = try await request.response()
-        return response.songs.compactMap { mapSongToTrack($0) }
+        do {
+            var request = MusicCatalogSearchRequest(term: query, types: [Song.self])
+            request.limit = 20
+            let response = try await request.response()
+
+            // Search responses don't include relationships, so `song.albums` / `song.artists`
+            // are always nil here and every result would map with a nil collectionId —
+            // breaking navigation into the album. One batched resource request fills them in.
+            let songs = await withRelationships(Array(response.songs))
+            return songs.map { mapSongToTrack($0) }
+        } catch {
+            logFailure("search(query: \(query))", error)
+            throw error
+        }
+    }
+
+    /// Refetches songs with their album and artist relationships populated.
+    /// Falls back to the originals if the follow-up request fails — partial data beats none.
+    private func withRelationships(_ songs: [Song]) async -> [Song] {
+        guard !songs.isEmpty else { return [] }
+
+        do {
+            var request = MusicCatalogResourceRequest<Song>(matching: \.id, memberOf: songs.map(\.id))
+            request.properties = [.albums, .artists]
+            let response = try await request.response()
+
+            // Preserve the relevance order the search returned; the resource request doesn't
+            // guarantee it.
+            let byId = Dictionary(uniqueKeysWithValues: response.items.map { ($0.id, $0) })
+            return songs.map { byId[$0.id] ?? $0 }
+        } catch {
+            logFailure("withRelationships", error)
+            return songs
+        }
+    }
+
+    private func logFailure(_ context: String, _ error: Error) {
+        print("MusicKit failure in \(context): \(error)")
+        if MusicAuthorization.currentStatus != .authorized {
+            print("  → authorization is \(MusicAuthorization.currentStatus). This is the likely cause.")
+        }
     }
 
     // MARK: - Search: Albums
 
     func searchAlbums(query: String) async throws -> [Album] {
-        var request = MusicCatalogSearchRequest(term: query, types: [MusicKit.Album.self])
-        request.limit = 20
-        let response = try await request.response()
-        return response.albums.compactMap { mapMusicKitAlbumToAlbum($0) }
+        do {
+            var request = MusicCatalogSearchRequest(term: query, types: [MusicKit.Album.self])
+            request.limit = 20
+            let response = try await request.response()
+            return response.albums.compactMap { mapMusicKitAlbumToAlbum($0) }
+        } catch {
+            logFailure("searchAlbums(query: \(query))", error)
+            throw error
+        }
     }
 
     // MARK: - Search: Artists
 
     func searchArtists(query: String) async throws -> [Artist] {
-        var request = MusicCatalogSearchRequest(term: query, types: [MusicKit.Artist.self])
-        request.limit = 20
-        let response = try await request.response()
-        return response.artists.compactMap { mapMusicKitArtistToArtist($0) }
+        do {
+            var request = MusicCatalogSearchRequest(term: query, types: [MusicKit.Artist.self])
+            request.limit = 20
+            let response = try await request.response()
+            return response.artists.compactMap { mapMusicKitArtistToArtist($0) }
+        } catch {
+            logFailure("searchArtists(query: \(query))", error)
+            throw error
+        }
     }
 
     // MARK: - Fetch: Single Track by ID
 
     func fetchTrack(id: Int64) async throws -> Track? {
         let musicItemId = MusicItemID(String(id))
-        let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: musicItemId)
+        var request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: musicItemId)
+        request.properties = [.artists, .albums]
         let response = try await request.response()
         guard let song = response.items.first else { return nil }
         return mapSongToTrack(song)
+    }
+
+    // MARK: - Batch Fetch: Tracks by IDs
+
+    /// Fetches many tracks in a single request instead of one round-trip per id.
+    /// Feeds and profiles were fetching sequentially, which made them slow to populate.
+    func fetchTracks(ids: [Int64]) async -> [Int64: Track] {
+        guard !ids.isEmpty else { return [:] }
+        do {
+            let itemIds = ids.map { MusicItemID(String($0)) }
+            var request = MusicCatalogResourceRequest<Song>(matching: \.id, memberOf: itemIds)
+            request.properties = [.artists, .albums]
+            let response = try await request.response()
+
+            var result: [Int64: Track] = [:]
+            for song in response.items {
+                if let numericId = Int64(song.id.rawValue) {
+                    result[numericId] = mapSongToTrack(song)
+                }
+            }
+            return result
+        } catch {
+            logFailure("fetchTracks(ids:)", error)
+            return [:]
+        }
+    }
+
+    /// Batch album lookup, keyed by collection id.
+    func fetchAlbums(ids: [Int64]) async -> [Int64: Album] {
+        guard !ids.isEmpty else { return [:] }
+        do {
+            let itemIds = ids.map { MusicItemID(String($0)) }
+            let request = MusicCatalogResourceRequest<MusicKit.Album>(matching: \.id, memberOf: itemIds)
+            let response = try await request.response()
+
+            var result: [Int64: Album] = [:]
+            for album in response.items {
+                if let numericId = Int64(album.id.rawValue) {
+                    result[numericId] = mapMusicKitAlbumToAlbum(album)
+                }
+            }
+            return result
+        } catch {
+            logFailure("fetchAlbums(ids:)", error)
+            return [:]
+        }
     }
 
     // MARK: - Fetch: Single Album by ID
@@ -120,7 +228,11 @@ class MusicService {
             return nil
         }()
 
-        // Artist ID
+        // Individual credited artists (collaborations/features). Requires the `.artists`
+        // relationship to be loaded; empty otherwise and the UI falls back to artistName.
+        let artistRefs: [ArtistRef] = song.artists?.map {
+            ArtistRef(artistId: $0.id.rawValue, name: $0.name)
+        } ?? []
         let artistId: String? = song.artists?.first?.id.rawValue
 
         return Track(
@@ -133,7 +245,8 @@ class MusicService {
             genreNames: song.genreNames,
             durationInMillis: song.duration.map { Int($0 * 1000) },
             releaseDate: song.releaseDate,
-            artistId: artistId
+            artistId: artistId,
+            artists: artistRefs
         )
     }
 

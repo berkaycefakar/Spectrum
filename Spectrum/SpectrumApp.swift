@@ -11,6 +11,16 @@ import MusicKit
 
 @main
 struct SpectrumApp: App {
+    init() {
+        // AsyncImage goes through URLSession.shared, and the default cache is far too small
+        // for a grid of album art — artwork was being refetched on every re-render, which is
+        // what made search feel sluggish while typing.
+        URLCache.shared = URLCache(
+            memoryCapacity: 64 * 1024 * 1024,
+            diskCapacity: 256 * 1024 * 1024
+        )
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -19,9 +29,8 @@ struct SpectrumApp: App {
                     SupabaseManager.shared.client.handle(url)
                 }
                 .task {
-                    // Request MusicKit authorization on launch (best practice).
-                    // Catalog search works without authorization, but this ensures
-                    // full MusicKit features are available when needed.
+                    // Catalog search requires this — without `.authorized` every MusicKit
+                    // request throws and the app shows empty feeds and empty search results.
                     await MusicService.shared.requestMusicAuthorization()
                 }
         }
