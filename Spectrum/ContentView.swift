@@ -34,8 +34,8 @@ struct ContentView: View {
     var body: some View {
         Group {
             if sessionStore.isLoading {
-                // Loading state with animated background
-                loadingView
+                // Branded splash while the session is being restored.
+                SplashView()
             } else if sessionStore.isAuthenticated {
                 // User is logged in - show main app
                 mainTabView
@@ -55,28 +55,6 @@ struct ContentView: View {
         }
         .task {
             await sessionStore.checkSession()
-        }
-    }
-    
-    // MARK: - Loading View
-    private var loadingView: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            
-            Circle()
-                .fill(Color(hex: "#FF00FF").opacity(0.2))
-                .frame(width: 200, height: 200)
-                .blur(radius: 60)
-            
-            VStack(spacing: 16) {
-                ProgressView()
-                    .tint(.white)
-                    .scaleEffect(1.2)
-                
-                Text("Loading...")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
-            }
         }
     }
     

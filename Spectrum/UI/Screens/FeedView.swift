@@ -26,11 +26,13 @@ struct FeedView: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        Text("Spectrum Feed")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal)
+                        // Branded header: coloured prism mark + clean white wordmark.
+                        HStack(spacing: 11) {
+                            SpectrumMark(size: 32)
+                            SpectrumWordmark(size: 30)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
                         
                         if isLoading {
                             ProgressView()
@@ -155,13 +157,10 @@ struct FeedView: View {
             let trackIds = Set(feedReviews.map { $0.itunesTrackId })
             let userIds = Set(feedReviews.map { $0.userId })
             
-            // Fetch tracks
-            for id in trackIds {
-                if let track = try? await MusicService.shared.fetchTrack(id: id) {
-                    await MainActor.run {
-                        self.tracks[id] = track
-                    }
-                }
+            // Fetch all track details in one batched request instead of one-by-one.
+            let fetchedTracks = await MusicService.shared.fetchTracks(ids: Array(trackIds))
+            await MainActor.run {
+                for (id, track) in fetchedTracks { self.tracks[id] = track }
             }
             
             // Fetch user profiles (batch)
