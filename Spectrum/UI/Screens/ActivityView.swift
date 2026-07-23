@@ -12,14 +12,14 @@ struct ActivityView: View {
             ZStack {
                 // Background
                 Color.black.ignoresSafeArea()
-                
+
                 // Subtle ambient glow
                 Circle()
-                    .fill(Color(hex: "#FF00FF").opacity(0.1))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 100)
-                    .offset(x: 150, y: -200)
-                
+                    .fill(Color(hex: "#9652FF").opacity(0.12))
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 110)
+                    .offset(x: 150, y: -240)
+
                 if let errorMessage {
                     errorState(message: errorMessage)
                 } else if isLoading {
@@ -31,12 +31,56 @@ struct ActivityView: View {
                     activityList
                 }
             }
-            .navigationTitle("Activity")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
             .preferredColorScheme(.dark)
             .task {
                 await loadNotifications()
             }
+        }
+    }
+
+    // MARK: - Header
+    private var header: some View {
+        HStack(spacing: 11) {
+            Image(systemName: "bell.badge.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(
+                    LinearGradient(colors: [Color(hex: "#9652FF"), Color(hex: "#5AC8FA")],
+                                   startPoint: .top, endPoint: .bottom)
+                )
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Activity")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("Reactions and new followers")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    // MARK: - Time grouping
+    private enum TimeBucket: String, CaseIterable {
+        case today = "Today"
+        case week = "This Week"
+        case earlier = "Earlier"
+    }
+
+    private func bucket(for date: Date) -> TimeBucket {
+        let cal = Calendar.current
+        if cal.isDateInToday(date) { return .today }
+        if let days = cal.dateComponents([.day], from: date, to: Date()).day, days < 7 { return .week }
+        return .earlier
+    }
+
+    private var groupedActivities: [(bucket: TimeBucket, items: [ActivityItem])] {
+        let grouped = Dictionary(grouping: activities) { bucket(for: $0.createdAt) }
+        return TimeBucket.allCases.compactMap { b in
+            guard let items = grouped[b], !items.isEmpty else { return nil }
+            return (b, items)
         }
     }
     
@@ -63,12 +107,29 @@ struct ActivityView: View {
     // MARK: - Activity List
     private var activityList: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(activities) { item in
-                    ActivityItemCard(activity: item)
+            VStack(alignment: .leading, spacing: 22) {
+                header
+
+                ForEach(groupedActivities, id: \.bucket) { group in
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(group.bucket.rawValue)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+                            .foregroundStyle(.white.opacity(0.4))
+                            .padding(.horizontal, 4)
+
+                        LazyVStack(spacing: 12) {
+                            ForEach(group.items) { item in
+                                ActivityItemCard(activity: item)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
             }
-            .padding()
+            .padding(.top, 12)
             .padding(.bottom, 100)
         }
     }

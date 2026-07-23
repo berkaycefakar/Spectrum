@@ -54,32 +54,44 @@ struct ActivityItemCard: View {
     // MARK: - Card Content
     private var cardContent: some View {
         HStack(spacing: 14) {
-            // Artwork / Avatar thumbnail
+            // Artwork / avatar with a small action-type badge in the corner.
             artworkThumbnail
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: badgeIcon)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 20, height: 20)
+                        .background(accentColor)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(.black.opacity(0.85), lineWidth: 2))
+                        .offset(x: 5, y: 5)
+                }
 
             // Content
-            VStack(alignment: .leading, spacing: 5) {
-                // Username + action
-                Text(primaryText)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+            VStack(alignment: .leading, spacing: 4) {
+                // Username (bold) + action (muted), on one flowing line.
+                (
+                    Text(activity.actorUsername ?? "Someone").fontWeight(.semibold).foregroundColor(.white)
+                    + Text(" \(actionPhrase)").foregroundColor(.white.opacity(0.55))
+                )
+                .font(.subheadline)
+                .lineLimit(1)
 
                 // Target name (track/album title)
                 if let title = targetTitle ?? activity.targetName {
                     Text(title)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white.opacity(0.7))
                         .lineLimit(1)
                 }
 
                 // Review text snippet
                 if let text = activity.reviewText, !text.isEmpty {
-                    Text("\"\(text)\"")
+                    Text("\u{201C}\(text)\u{201D}")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.5))
-                        .lineLimit(1)
+                        .lineLimit(2)
                         .italic()
                 }
 
@@ -108,6 +120,7 @@ struct ActivityItemCard: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.35))
                 }
+                .padding(.top, 1)
             }
 
             Spacer()
@@ -123,13 +136,31 @@ struct ActivityItemCard: View {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(
                     LinearGradient(
-                        colors: [accentColor.opacity(0.3), .white.opacity(0.05)],
+                        colors: [accentColor.opacity(0.35), .white.opacity(0.05)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         )
+        .shadow(color: accentColor.opacity(0.12), radius: 10, y: 4)
+    }
+
+    private var badgeIcon: String {
+        switch activity.type {
+        case .trackReview: return "star.fill"
+        case .albumReview: return "opticaldisc.fill"
+        case .newFollower: return "person.fill.badge.plus"
+        }
+    }
+
+    /// Verb-only phrase; the username is rendered separately in bold.
+    private var actionPhrase: String {
+        switch activity.type {
+        case .trackReview: return "logged a track"
+        case .albumReview: return "reviewed an album"
+        case .newFollower: return "started following you"
+        }
     }
 
     // MARK: - Artwork Thumbnail
