@@ -51,6 +51,25 @@ struct ProfileUpdate: Encodable {
     let bio: String
 }
 
+// Update including avatar. `avatar_url` is omitted from the payload when nil so an update
+// without a new photo doesn't wipe the existing avatar.
+struct ProfileUpdateFull: Encodable {
+    let username: String
+    let bio: String
+    let avatar_url: String?
+
+    enum CodingKeys: String, CodingKey {
+        case username, bio, avatar_url
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(username, forKey: .username)
+        try container.encode(bio, forKey: .bio)
+        if let avatar_url { try container.encode(avatar_url, forKey: .avatar_url) }
+    }
+}
+
 // MARK: - Album Reviews
 
 struct AlbumReview: Codable, Identifiable {

@@ -79,6 +79,37 @@ class SupabaseManager {
             .eq("id", value: userId)
             .execute()
     }
+
+    /// Updates username, bio, and (optionally) the avatar URL in one call.
+    func updateProfile(userId: UUID, username: String, bio: String, avatarUrl: String?) async throws {
+        let updateData = ProfileUpdateFull(username: username, bio: bio, avatar_url: avatarUrl)
+        try await client
+            .from("profiles")
+            .update(updateData)
+            .eq("id", value: userId)
+            .execute()
+    }
+
+    /// Uploads avatar image data to the `avatars` storage bucket and returns its public URL.
+    /// Requires a public bucket named `avatars` to exist in Supabase Storage.
+    func uploadAvatar(userId: UUID, imageData: Data) async throws -> String {
+        // Per-user folder so a storage policy can restrict writes to a user's own folder.
+        // Stable filename so a new upload overwrites the old avatar instead of piling up.
+        let path = "\(userId.uuidString)/avatar.jpg"
+
+        try await client.storage
+            .from("avatars")
+            .upload(
+                path,
+                data: imageData,
+                options: FileOptions(cacheControl: "3600", contentType: "image/jpeg", upsert: true)
+            )
+
+        // Cache-buster: the public URL is stable across uploads, so without this the UI would
+        // keep showing the previous image from cache.
+        let publicURL = try client.storage.from("avatars").getPublicURL(path: path)
+        return publicURL.absoluteString + "?v=\(Int(Date().timeIntervalSince1970))"
+    }
     
     // MARK: - Reviews
     
@@ -105,13 +136,51 @@ class SupabaseManager {
             review_text: text,
             vibe_color: vibeColor
         )
-        
+
+        // Upsert so re-logging a song updates the existing entry instead of creating a
+        // duplicate. Requires a unique (user_id, itunes_track_id) constraint on `reviews`.
         try await client
             .from("reviews")
-            .insert(newReview)
+            .upsert(newReview, onConflict: "user_id,itunes_track_id")
+            .execute()
+    }
+
+    /// Deletes the current user's log for a track.
+    func deleteReview(trackId: Int64) async throws {
+        guard let user = try await getCurrentUser() else {
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+        }
+        try await client
+            .from("reviews")
+            .delete()
+            .eq("user_id", value: user.id)
+            .eq("itunes_track_id", value: Int(trackId))
             .execute()
     }
     
+    /// Track ids that the community has logged most recently, de-duplicated, newest first.
+    /// Used to drive a real "trending" row on Discover instead of a hardcoded artist list.
+    func fetchTrendingTrackIds(limit: Int = 20) async throws -> [Int64] {
+        struct Row: Decodable { let itunes_track_id: Int64 }
+        let rows: [Row] = try await client
+            .from("reviews")
+            .select("itunes_track_id")
+            .order("created_at", ascending: false)
+            .limit(200)
+            .execute()
+            .value
+
+        // Preserve recency order while removing repeats.
+        var seen = Set<Int64>()
+        var ordered: [Int64] = []
+        for row in rows where !seen.contains(row.itunes_track_id) {
+            seen.insert(row.itunes_track_id)
+            ordered.append(row.itunes_track_id)
+            if ordered.count >= limit { break }
+        }
+        return ordered
+    }
+
     func getTrackReviews(trackId: Int64) async throws -> [Review] {
         let response: [Review] = try await client
             .from("reviews")
@@ -182,9 +251,11 @@ class SupabaseManager {
             vibe_color: vibeColor
         )
         
+        // Upsert, not insert: (user_id, artist_name) is unique, so re-rating an artist you
+        // already logged would otherwise fail on the duplicate key.
         try await client
             .from("artist_reviews")
-            .insert(newReview)
+            .upsert(newReview, onConflict: "user_id,artist_name")
             .execute()
     }
     
