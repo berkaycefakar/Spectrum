@@ -18,6 +18,7 @@ struct ProfileView: View {
     @State private var showFollowingSheet = false
     @State private var isLoading = true
     @State private var showEditProfile = false
+    @State private var showSettings = false
     @State private var showLogoutAlert = false
     @State private var selectedCategory: ProfileCategory = .songs
     
@@ -166,6 +167,9 @@ struct ProfileView: View {
                             onEditProfile: {
                                 showEditProfile = true
                             },
+                            onSettings: {
+                                showSettings = true
+                            },
                             onLogout: {
                                 showLogoutAlert = true
                             }
@@ -187,12 +191,19 @@ struct ProfileView: View {
                         isPresented: $showEditProfile,
                         currentUsername: profile.username ?? "",
                         currentBio: profile.bio ?? "",
+                        currentAvatarUrl: profile.avatarUrl,
                         onSave: {
                             Task { await loadProfileData() } // Refresh after save
                         }
                     )
                     .presentationDetents([.medium, .large])
                 }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView(isPresented: $showSettings, onLogout: {
+                    Task { await sessionStore.signOut() }
+                })
+                .presentationDetents([.large])
             }
             .sheet(isPresented: $showFollowersSheet) {
                 FollowersFollowingListView(
@@ -231,7 +242,9 @@ struct ProfileView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(sortedReviews) { review in
                         if let track = tracks[review.itunesTrackId] {
-                            NavigationLink(destination: LogDetailView(track: track, review: review)) {
+                            NavigationLink(destination: LogDetailView(track: track, review: review, isOwner: true, onChanged: {
+                                Task { await loadProfileData() }
+                            })) {
                                 AlbumGridItem(track: track, vibeColor: Color(hex: review.vibeColor))
                             }
                         } else {
@@ -310,7 +323,15 @@ struct ProfileView: View {
             
             // 3. Fetch album reviews only if table exists (optional; use [] on error)
             let albumReviews: [AlbumReview] = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: currentUser.id)) ?? []
-            let artistReviews: [ArtistReview] = [] // artist feature disabled
+            // Optional like album reviews: if the artist_reviews table is missing we show
+            // an empty tab rather than failing the whole profile load.
+            let artistReviews: [ArtistReview]
+            do {
+                artistReviews = try await SupabaseManager.shared.getUserArtistReviews(userId: currentUser.id)
+            } catch {
+                print("Profile: failed to load artist reviews:", error)
+                artistReviews = []
+            }
             
             // 4. Followers / Following lists
             let followers = (try? await SupabaseManager.shared.getFollowers(userId: currentUser.id)) ?? []
@@ -325,24 +346,14 @@ struct ProfileView: View {
                 self.following = following
             }
             
-            // 5. Fetch Track Details for Reviews
-            let trackIds = Set(reviews.map { $0.itunesTrackId })
-            for id in trackIds {
-                if let track = try? await MusicService.shared.fetchTrack(id: id) {
-                    await MainActor.run {
-                        self.tracks[id] = track
-                    }
-                }
-            }
-            
-            // 6. Fetch Album Details for Album Reviews (görsel + puan profilde görünsün)
-            let albumIds = Set(albumReviews.map { $0.itunesCollectionId })
-            for id in albumIds {
-                if let album = try? await MusicService.shared.fetchAlbum(collectionId: id) {
-                    await MainActor.run {
-                        self.albums[id] = album
-                    }
-                }
+            // 5. Fetch track + album details in two batched requests (was one-by-one).
+            let trackIds = Array(Set(reviews.map { $0.itunesTrackId }))
+            let albumIds = Array(Set(albumReviews.map { $0.itunesCollectionId }))
+            let fetchedTracks = await MusicService.shared.fetchTracks(ids: trackIds)
+            let fetchedAlbums = await MusicService.shared.fetchAlbums(ids: albumIds)
+            await MainActor.run {
+                for (id, track) in fetchedTracks { self.tracks[id] = track }
+                for (id, album) in fetchedAlbums { self.albums[id] = album }
             }
             
         } catch {

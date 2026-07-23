@@ -131,6 +131,7 @@ struct ProfileStatItem: View {
 
 struct AccountActionsSection: View {
     let onEditProfile: () -> Void
+    let onSettings: () -> Void
     let onLogout: () -> Void
 
     var body: some View {
@@ -155,7 +156,7 @@ struct AccountActionsSection: View {
                     title: "Settings",
                     iconGradient: [Color(hex: "#A0A0A0"), Color(hex: "#606060")],
                     showDivider: true,
-                    action: { }
+                    action: onSettings
                 )
 
                 AccountRow(
@@ -381,6 +382,7 @@ struct AlbumGridItem: View {
                 
                 AccountActionsSection(
                     onEditProfile: {},
+                    onSettings: {},
                     onLogout: {}
                 )
                 .padding(.horizontal)
