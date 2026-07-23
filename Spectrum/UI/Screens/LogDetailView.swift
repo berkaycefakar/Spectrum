@@ -3,11 +3,21 @@ import SwiftUI
 struct LogDetailView: View {
     let track: Track
     let review: Review
-    
+    /// Only the log's owner sees edit/delete controls. Others viewing this log from a profile
+    /// see it read-only.
+    var isOwner: Bool = false
+    /// Called after the owner edits or deletes, so the presenting screen can refresh.
+    var onChanged: (() -> Void)? = nil
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var showEditSheet = false
+    @State private var showDeleteAlert = false
+    @State private var isDeleting = false
+
     var vibeColor: Color {
         Color(hex: review.vibeColor)
     }
-    
+
     var body: some View {
         ZStack {
             // 1. Dynamic Background
@@ -112,5 +122,59 @@ struct LogDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isOwner {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showEditSheet = true
+                        } label: {
+                            Label("Edit Log", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            showDeleteAlert = true
+                        } label: {
+                            Label("Delete Log", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            AddLogView(track: track, isPresented: $showEditSheet, editing: review, onSaved: {
+                // The edited values live in `review` (a let), so the simplest correct refresh
+                // is to pop back and let the profile reload.
+                onChanged?()
+                dismiss()
+            })
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert("Delete Log", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) { deleteLog() }
+        } message: {
+            Text("This will remove your log for \"\(track.title)\". This can't be undone.")
+        }
+    }
+
+    private func deleteLog() {
+        guard !isDeleting else { return }
+        isDeleting = true
+        Task {
+            do {
+                try await SupabaseManager.shared.deleteReview(trackId: Int64(track.id))
+                await MainActor.run {
+                    onChanged?()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run { isDeleting = false }
+                print("Failed to delete log: \(error)")
+            }
+        }
     }
 }

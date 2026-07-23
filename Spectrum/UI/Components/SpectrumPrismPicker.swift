@@ -4,6 +4,8 @@ struct SpectrumPrismPicker: View {
     @Binding var selectedHex: String
     let vibeColors: [String]
     var onManualPick: (() -> Void)?
+    /// Beam area height. Shrinks on compact screens so the log sheet fits without scrolling.
+    var beamHeight: CGFloat = 160
 
     private var selectedIndex: Int {
         vibeColors.firstIndex(of: selectedHex) ?? 0
@@ -155,7 +157,7 @@ struct SpectrumPrismPicker: View {
                         )
                 }
             }
-            .frame(height: 160)
+            .frame(height: beamHeight)
 
             // Mood label
             HStack(spacing: 6) {

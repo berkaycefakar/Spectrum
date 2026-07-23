@@ -4,15 +4,41 @@ import UIKit
 struct AddLogView: View {
     let track: Track
     @Binding var isPresented: Bool
-    
+    /// When true this is an existing log being edited; skips artwork colour auto-pick so the
+    /// user's saved vibe is preserved. Called after a successful save.
+    private let isEditing: Bool
+    private let onSaved: (() -> Void)?
+
+    init(
+        track: Track,
+        isPresented: Binding<Bool>,
+        editing review: Review? = nil,
+        onSaved: (() -> Void)? = nil
+    ) {
+        self.track = track
+        self._isPresented = isPresented
+        self.isEditing = review != nil
+        self.onSaved = onSaved
+        _rating = State(initialValue: review.map { Double($0.rating) / 2.0 } ?? 0)
+        _reviewText = State(initialValue: review?.reviewText ?? "")
+        _selectedColorHex = State(initialValue: review?.vibeColor ?? "#5AC8FA")
+        // Editing an existing log: don't let artwork colour override the saved vibe.
+        _hasExtractedColor = State(initialValue: review != nil)
+    }
+
     // Form State
     /// Rating 0...5 (0.5 adımlı). Veritabanına 0...10 tam sayı olarak gönderiyoruz.
     @State private var rating: Double = 0
     @State private var reviewText: String = ""
-    @State private var selectedColorHex: String = "#FF00FF" // Default Neon Purple
+    // Must be one of `vibeColors` — the prism highlights the selected beam by matching hex,
+    // and the old "#FF00FF" default wasn't in the palette so nothing was ever highlighted.
+    @State private var selectedColorHex: String = "#5AC8FA"
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var hasExtractedColor = false
+    /// The artwork's true colour — drives the ambient glow, independent of the vibe the
+    /// user picks from the prism.
+    @State private var artworkColor: ArtworkColor = .placeholder
     
     // The "Vibe" Palette
     let vibeColors = [
@@ -33,30 +59,32 @@ struct AddLogView: View {
     
     var body: some View {
         ZStack {
-            // Background: Blurred version of the selected vibe
+            // Background: the artwork's own colour, not the chosen vibe. A monochrome cover
+            // now glows neutral instead of being washed in an unrelated hue.
             Color.black.ignoresSafeArea()
-            
-            selectedColor
-                .opacity(0.3)
+
+            artworkColor.accent
+                .opacity(artworkColor.isNeutral ? 0.18 : 0.3)
                 .blur(radius: 100)
                 .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.5), value: selectedColorHex)
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    Spacer().frame(height: 16)
-                    
+                .animation(.easeInOut(duration: 0.5), value: artworkColor.accent)
+
+            // Everything is sized against the available height so the sheet fits on one
+            // screen — no scrolling to reach the rating or the save button.
+            GeometryReader { geo in
+                let height = geo.size.height
+                let isCompact = height < 700
+                let artworkSide = min(max(height * 0.26, 150), 220)
+                let beamHeight = min(max(height * 0.15, 88), 140)
+
+                VStack(spacing: isCompact ? 12 : 18) {
                     // Track Info & Artwork
-                    VStack(spacing: 16) {
+                    VStack(spacing: isCompact ? 8 : 12) {
                         AsyncImage(url: track.artworkUrl600) { phase in
                             if let image = phase.image {
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .onAppear {
-                                        // Extract color from artwork when image loads
-                                        extractColorFromImage(phase: phase)
-                                    }
                             } else if phase.error != nil {
                                 placeholderView
                             } else {
@@ -64,84 +92,92 @@ struct AddLogView: View {
                                     .overlay(ProgressView().tint(.white))
                             }
                         }
-                        .frame(width: 160, height: 160)
+                        .frame(width: artworkSide, height: artworkSide)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: selectedColor.opacity(0.6), radius: 20)
-                        .animation(.easeInOut(duration: 0.3), value: selectedColorHex)
-                        
-                        VStack(spacing: 4) {
+                        .shadow(color: artworkColor.accent.opacity(0.6), radius: 20)
+                        .animation(.easeInOut(duration: 0.3), value: artworkColor.accent)
+
+                        VStack(spacing: 2) {
                             Text(track.title)
-                                .font(.title3)
+                                .font(isCompact ? .headline : .title3)
                                 .fontWeight(.bold)
                                 .foregroundStyle(.white)
                                 .multilineTextAlignment(.center)
+                                .lineLimit(2)
                             Text(track.artist)
                                 .font(.subheadline)
                                 .foregroundStyle(.white.opacity(0.7))
+                                .lineLimit(1)
                         }
+                        .padding(.horizontal)
                     }
-                    
+
                     // Spectrum Prism Color Picker (full-width, beams go edge-to-edge)
                     SpectrumPrismPicker(
                         selectedHex: $selectedColorHex,
                         vibeColors: vibeColors,
                         onManualPick: {
                             hasExtractedColor = false
-                        }
+                        },
+                        beamHeight: beamHeight
                     )
-                    .padding(.vertical, 4)
-                    
+
                     // Review Text
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Thoughts")
-                            .font(.caption)
-                            .textCase(.uppercase)
-                            .foregroundStyle(.white.opacity(0.5))
-                        
-                        TextField("What's the vibe?", text: $reviewText, axis: .vertical)
-                            .lineLimit(3...6)
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .foregroundStyle(.white)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(selectedColor.opacity(0.3), lineWidth: 1)
-                            )
-                    }
-                    .padding(.horizontal)
-                    
+                    TextField("What's the vibe?", text: $reviewText, axis: .vertical)
+                        .lineLimit(isCompact ? 1...2 : 2...3)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .foregroundStyle(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(selectedColor.opacity(0.3), lineWidth: 1)
+                        )
+                        .padding(.horizontal)
+
                     // Rating Section with Spectrum Control
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         HStack {
                             Text("Rating")
                                 .font(.caption)
                                 .textCase(.uppercase)
                                 .foregroundStyle(.white.opacity(0.5))
-                            
+
                             Spacer()
-                            
+
                             RatingLabel(rating: rating, maxRating: 5, accentColor: selectedColor)
                         }
                         .padding(.horizontal)
-                        
+
                         // Custom Spectrum Rating Control (color-synced)
                         SpectrumRatingControl(
                             rating: $rating,
                             accentColor: selectedColor
                         )
                     }
-                    
+
                     if let error = errorMessage {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
                             .padding(.horizontal)
+                            .lineLimit(2)
                     }
-                    
+
+                    Spacer(minLength: 0)
+
                     // Action Buttons
-                    VStack(spacing: 12) {
-                        // Save Button (color-synced)
+                    HStack(spacing: 12) {
+                        Button("Cancel") {
+                            isPresented = false
+                        }
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(width: 96)
+                        .padding(.vertical, 15)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+
                         Button(action: saveLog) {
                             if isSaving {
                                 ProgressView()
@@ -149,14 +185,14 @@ struct AddLogView: View {
                             } else {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark.circle.fill")
-                                    Text("Save Log")
+                                    Text(isEditing ? "Update Log" : "Save Log")
                                         .fontWeight(.bold)
                                 }
                                 .foregroundStyle(contrastTextColor)
                             }
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 15)
                         .background(
                             LinearGradient(
                                 colors: [selectedColor, selectedColor.opacity(0.8)],
@@ -168,22 +204,15 @@ struct AddLogView: View {
                         .shadow(color: selectedColor.opacity(0.4), radius: 10)
                         .disabled(isSaving)
                         .animation(.easeInOut(duration: 0.3), value: selectedColorHex)
-                        
-                        // Cancel Button
-                        Button("Cancel") {
-                            isPresented = false
-                        }
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(.vertical, 8)
                     }
                     .padding(.horizontal)
-                    .padding(.bottom, 30)
                 }
+                .padding(.top, isCompact ? 8 : 16)
+                .padding(.bottom, 12)
+                .frame(width: geo.size.width, height: height)
             }
-            .scrollIndicators(.hidden)
         }
         .task {
-            // Also try to extract color on appear if URL is available
             await extractColorFromURL()
         }
     }
@@ -221,72 +250,54 @@ struct AddLogView: View {
     
     // MARK: - Color Extraction
     
-    /// Extract color from AsyncImage phase
-    private func extractColorFromImage(phase: AsyncImagePhase) {
-        guard !hasExtractedColor, case .success(let image) = phase else { return }
-        
-        // Convert SwiftUI Image to UIImage using snapshot
-        // This is a workaround since AsyncImage doesn't directly provide UIImage
-        // For better performance, we extract from URL instead
-    }
-    
-    /// Extract dominant color from artwork URL
+    /// Pull the artwork's dominant colour, use it for the ambient glow, and seed the vibe
+    /// picker from it.
     private func extractColorFromURL() async {
-        guard !hasExtractedColor, let url = track.artworkUrl600 else { return }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            guard let uiImage = UIImage(data: data) else { return }
-            
-            if let averageColor = uiImage.averageColor {
-                let matchedHex = findNearestVibeColor(from: averageColor)
-                await MainActor.run {
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        self.selectedColorHex = matchedHex
-                        self.hasExtractedColor = true
-                    }
-                }
-            }
-        } catch {
-            print("Failed to extract color: \(error)")
-            // Fallback: keep default color
+        let color = await ArtworkColorLoader.shared.color(for: track.artworkUrl600)
+
+        withAnimation(.easeInOut(duration: 0.5)) {
+            artworkColor = color
+        }
+
+        // Only pre-select a vibe when the artwork actually has one. For a monochrome cover
+        // any palette entry would be a guess, so we leave the user's default in place.
+        guard !hasExtractedColor, !color.isNeutral else { return }
+
+        let matchedHex = nearestVibeColor(to: color.accent)
+        withAnimation(.easeInOut(duration: 0.5)) {
+            selectedColorHex = matchedHex
+            hasExtractedColor = true
         }
     }
-    
-    /// Find the nearest vibe color from our palette
-    private func findNearestVibeColor(from color: UIColor) -> String {
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        
+
+    /// Nearest palette entry to `color`, matched primarily on hue. RGB distance used to
+    /// pick oddly — a pale colour is close to *everything* in RGB space, which is how white
+    /// artwork ended up on purple.
+    private func nearestVibeColor(to color: Color) -> String {
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(color).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+
         var nearestColor = vibeColors[0]
-        var minDistance: CGFloat = .greatestFiniteMagnitude
-        
+        var minDistance = CGFloat.greatestFiniteMagnitude
+
         for hex in vibeColors {
-            let paletteColor = UIColor(Color(hex: hex))
-            var pRed: CGFloat = 0
-            var pGreen: CGFloat = 0
-            var pBlue: CGFloat = 0
-            var pAlpha: CGFloat = 0
-            paletteColor.getRed(&pRed, green: &pGreen, blue: &pBlue, alpha: &pAlpha)
-            
-            // Calculate Euclidean distance in RGB space
-            let distance = sqrt(
-                pow(red - pRed, 2) +
-                pow(green - pGreen, 2) +
-                pow(blue - pBlue, 2)
-            )
-            
+            var pHue: CGFloat = 0, pSat: CGFloat = 0, pBright: CGFloat = 0, pAlpha: CGFloat = 0
+            UIColor(Color(hex: hex)).getHue(&pHue, saturation: &pSat, brightness: &pBright, alpha: &pAlpha)
+
+            // Hue is circular: red at 0.02 and red at 0.98 are neighbours, not opposites.
+            let rawDelta = abs(hue - pHue)
+            let hueDelta = min(rawDelta, 1 - rawDelta)
+
+            // Hue dominates; saturation breaks ties between similar hues.
+            let distance = hueDelta * 3 + abs(saturation - pSat) * 0.5
+
             if distance < minDistance {
                 minDistance = distance
                 nearestColor = hex
             }
         }
-        
+
         return nearestColor
-        // TODO: Better color clustering using LAB color space for perceptual accuracy
     }
     
     // MARK: - Save Action
@@ -313,6 +324,7 @@ struct AddLogView: View {
                 await MainActor.run {
                     isSaving = false
                     isPresented = false
+                    onSaved?()
                 }
             } catch {
                 await MainActor.run {
