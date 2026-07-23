@@ -12,19 +12,15 @@ struct ArtistDetailView: View {
     @State private var artistRating: Double = 0
     @State private var isSaving = false
     @State private var userArtistReview: ArtistReview?
+    @State private var artworkColor: ArtworkColor = .placeholder
 
-    private let accentColor = Color(hex: "#FF00FF")
+    /// Derived from the artist photo rather than fixed, so a black-and-white press shot no
+    /// longer gets a magenta wash.
+    private var accentColor: Color { artworkColor.accent }
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-
-            // Ambient glow
-            Circle()
-                .fill(accentColor.opacity(0.2))
-                .frame(width: 280, height: 280)
-                .blur(radius: 80)
-                .offset(x: 80, y: -120)
 
             ScrollView {
                 VStack(spacing: 28) {
@@ -56,28 +52,34 @@ struct ArtistDetailView: View {
 
                     ratingSection
                 }
-                .padding(.top, 24)
                 .padding(.bottom, 40)
             }
+            .ignoresSafeArea(edges: .top)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .task {
             await loadArtistData()
             await loadUserArtistReview()
+        }
+        .task(id: artist?.artworkUrl) {
+            await loadArtworkColor()
         }
     }
 
     // MARK: - Hero Section
 
+    /// Full-bleed square artist photo filling the top of the screen, with the name laid over
+    /// a scrim that fades into the page background.
     private var heroSection: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(accentColor.opacity(0.35))
-                    .frame(width: 140, height: 140)
-                    .blur(radius: 30)
+        GeometryReader { geo in
+            let width = geo.size.width
+            // Slightly taller than square so the name has room to sit inside the image
+            // rather than crowding it.
+            let height = width * 1.1
 
+            ZStack(alignment: .bottomLeading) {
                 if let artworkUrl = artist?.artworkUrl {
                     AsyncImage(url: artworkUrl) { phase in
                         if let image = phase.image {
@@ -88,49 +90,63 @@ struct ArtistDetailView: View {
                             artistInitialView
                         }
                     }
-                    .frame(width: 120, height: 120)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [accentColor.opacity(0.6), .white.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2
-                            )
-                    )
-                    .shadow(color: accentColor.opacity(0.5), radius: 20)
+                    .frame(width: width, height: height)
+                    .clipped()
                 } else {
                     artistInitialView
+                        .frame(width: width, height: height)
                 }
-            }
 
-            VStack(spacing: 6) {
-                Text(artistName)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
+                // Scrim: keeps the name legible over bright photos and blends the image
+                // into the black page below.
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black.opacity(0.15), location: 0.45),
+                        .init(color: .black.opacity(0.75), location: 0.78),
+                        .init(color: .black, location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: width, height: height)
 
-                Text("Artist")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ARTIST")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .tracking(1.5)
+                        .foregroundStyle(.white.opacity(0.65))
+
+                    Text(artistName)
+                        .font(.system(size: 40, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.6)
+                        .shadow(color: .black.opacity(0.5), radius: 12, y: 2)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 22)
+                .frame(width: width, alignment: .leading)
             }
+            .frame(width: width, height: height)
         }
-        .padding(.horizontal)
+        // GeometryReader has no intrinsic height, so the aspect ratio has to be restated
+        // here or the hero collapses inside the ScrollView.
+        .aspectRatio(1 / 1.1, contentMode: .fit)
     }
 
     private var artistInitialView: some View {
         ZStack {
-            Circle()
-                .fill(accentColor.opacity(0.2))
-                .frame(width: 120, height: 120)
+            LinearGradient(
+                colors: [accentColor.opacity(0.45), .black],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
             Text(String(artistName.prefix(1)).uppercased())
-                .font(.system(size: 48, weight: .bold))
-                .foregroundStyle(accentColor)
+                .font(.system(size: 96, weight: .bold))
+                .foregroundStyle(.white.opacity(0.9))
         }
     }
 
@@ -385,6 +401,14 @@ struct ArtistDetailView: View {
         await MainActor.run { self.isLoadingArtist = false }
     }
 
+    private func loadArtworkColor() async {
+        guard let url = artist?.artworkUrl else { return }
+        let color = await ArtworkColorLoader.shared.color(for: url)
+        withAnimation(.easeInOut(duration: 0.45)) {
+            artworkColor = color
+        }
+    }
+
     private func loadUserArtistReview() async {
         guard let user = try? await SupabaseManager.shared.getCurrentUser() else { return }
 
@@ -412,7 +436,7 @@ struct ArtistDetailView: View {
                     artistName: artistName,
                     rating: storedRating,
                     text: "",
-                    vibeColor: "#FF00FF"
+                    vibeColor: accentColor.hexString
                 )
                 await loadUserArtistReview()
                 await MainActor.run { isSaving = false }

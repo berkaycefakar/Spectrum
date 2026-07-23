@@ -13,7 +13,8 @@ struct AlbumDetailView: View {
     @State private var userAlbumReview: AlbumReview?
     @State private var communityReviews: [AlbumReview] = []
     @State private var showLogSheet = false
-    
+    @State private var artworkColor: ArtworkColor = .placeholder
+
     private var communityAverageRating: Double {
         guard !communityReviews.isEmpty else { return 0 }
         let sum = communityReviews.reduce(0) { $0 + $1.rating }
@@ -37,6 +38,7 @@ struct AlbumDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            artworkColor = await ArtworkColorLoader.shared.color(for: album.artworkUrl600)
             await loadTracks()
             await loadCommunityReviews()
             await loadUserAlbumReview()
@@ -62,18 +64,29 @@ struct AlbumDetailView: View {
                 }
                 .frame(width: 200, height: 200)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
-                .shadow(color: Color(hex: "#FF00FF").opacity(0.5), radius: 20)
+                .shadow(color: artworkColor.accent.opacity(0.5), radius: 20)
+                .animation(.easeInOut(duration: 0.45), value: artworkColor.accent)
             }
             
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Text(album.title)
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                Text(album.artist)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
+
+                // Tappable: album → artist page.
+                NavigationLink(destination: ArtistDetailView(artistName: album.artist, artistId: album.artistId)) {
+                    HStack(spacing: 5) {
+                        Text(album.artist)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.85))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.top, 24)

@@ -5,7 +5,13 @@ struct TrackDetailView: View {
 
     @ObservedObject private var audioManager = AudioManager.shared
     @State private var showAddLog = false
-    @State private var dominantColor: Color = Color(hex: "#FF00FF")
+    @State private var artworkColor: ArtworkColor = .placeholder
+
+    private var dominantColor: Color { artworkColor.accent }
+
+    /// The Log button is filled with the artwork accent, which can be anything from a dark
+    /// navy to a pale cream — so its label has to follow the fill, not a fixed white.
+    private var logTextColor: Color { dominantColor.contrastingForeground }
 
     private var isPlaying: Bool {
         audioManager.isTrackPlaying(track.id)
@@ -58,6 +64,7 @@ struct TrackDetailView: View {
                 .presentationDragIndicator(.visible)
         }
         .task {
+            await loadArtworkColor()
             await loadTrackReviews()
             await loadAlbum()
         }
@@ -127,9 +134,9 @@ struct TrackDetailView: View {
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
 
-                    Text(track.artist)
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.7))
+                    // Each credited artist is independently tappable — collaborations link to
+                    // every performer's page, not just the primary one.
+                    artistLinks
                 }
             }
             .padding(.bottom, 30)
@@ -137,6 +144,35 @@ struct TrackDetailView: View {
         }
     }
     
+    // MARK: - Artist links (supports collaborations)
+    private var artistLinks: some View {
+        let artists = track.displayArtists
+        return FlowLayout(spacing: 6, lineSpacing: 6) {
+            ForEach(Array(artists.enumerated()), id: \.element.id) { index, ref in
+                HStack(spacing: 4) {
+                    NavigationLink(destination: ArtistDetailView(artistName: ref.name, artistId: ref.artistId)) {
+                        Text(ref.name)
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Separator between multiple artists; chevron after the last one.
+                    if index < artists.count - 1 {
+                        Text("·")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.4))
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
     // MARK: - Action Bar
     private var actionBar: some View {
         HStack(spacing: 10) {
@@ -151,18 +187,19 @@ struct TrackDetailView: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(logTextColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
                     LinearGradient(
-                        colors: [Color(hex: "#FF00FF"), Color(hex: "#8B00FF")],
+                        colors: [dominantColor, dominantColor.opacity(0.75)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
                 .clipShape(Capsule())
-                .shadow(color: Color(hex: "#FF00FF").opacity(0.4), radius: 12, y: 4)
+                .shadow(color: dominantColor.opacity(0.4), radius: 12, y: 4)
+                .animation(.easeInOut(duration: 0.45), value: dominantColor)
             }
 
             // Preview — circle button
@@ -176,7 +213,7 @@ struct TrackDetailView: View {
                             Circle()
                                 .stroke(
                                     LinearGradient(
-                                        colors: [Color(hex: "#00FFFF").opacity(0.6), .white.opacity(0.1)],
+                                        colors: [dominantColor.opacity(0.7), .white.opacity(0.1)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
@@ -185,10 +222,11 @@ struct TrackDetailView: View {
                         )
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color(hex: "#00FFFF"))
+                        .foregroundStyle(dominantColor)
                 }
                 .frame(width: 48, height: 48)
-                .shadow(color: Color(hex: "#00FFFF").opacity(0.3), radius: 8)
+                .shadow(color: dominantColor.opacity(0.35), radius: 8)
+                .animation(.easeInOut(duration: 0.45), value: dominantColor)
             }
 
             // Share — circle button
@@ -261,7 +299,7 @@ struct TrackDetailView: View {
         HStack(spacing: 24) {
             HStack(spacing: 6) {
                 Image(systemName: "doc.text.fill")
-                    .foregroundStyle(Color(hex: "#FF00FF"))
+                    .foregroundStyle(dominantColor)
                 Text("\(trackReviews.count) logs")
             }
             
@@ -319,6 +357,13 @@ struct TrackDetailView: View {
     }
     
     // MARK: - Data
+    private func loadArtworkColor() async {
+        let color = await ArtworkColorLoader.shared.color(for: track.artworkUrl600)
+        withAnimation(.easeInOut(duration: 0.45)) {
+            artworkColor = color
+        }
+    }
+
     private func loadTrackReviews() async {
         do {
             let reviews = try await SupabaseManager.shared.getTrackReviews(trackId: Int64(track.id))

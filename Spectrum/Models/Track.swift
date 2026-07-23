@@ -1,5 +1,13 @@
 import Foundation
 
+/// A single credited artist on a track. Songs can have several (collaborations, features),
+/// and each should be independently tappable.
+struct ArtistRef: Identifiable, Hashable {
+    let artistId: String?   // MusicKit artist id; nil when only the name is known
+    let name: String
+    var id: String { artistId ?? name }
+}
+
 struct Track: Identifiable, Decodable {
     let id: Int
     let title: String
@@ -14,7 +22,15 @@ struct Track: Identifiable, Decodable {
     let durationInMillis: Int?
     let releaseDate: Date?
     let artistId: String?
-    
+    /// All credited artists (for collaborations). Empty when only the combined name is known.
+    let artists: [ArtistRef]
+
+    /// Artists to display/link. Falls back to the single primary artist when the per-artist
+    /// list isn't populated (e.g. album track lists or legacy data).
+    var displayArtists: [ArtistRef] {
+        artists.isEmpty ? [ArtistRef(artistId: artistId, name: artist)] : artists
+    }
+
     // Computed property for the "Liquid Glass" high-res image
     var artworkUrl600: URL? {
         let highResString = artworkUrl100.replacingOccurrences(of: "100x100", with: "600x600")
@@ -39,7 +55,8 @@ struct Track: Identifiable, Decodable {
         genreNames: [String]? = nil,
         durationInMillis: Int? = nil,
         releaseDate: Date? = nil,
-        artistId: String? = nil
+        artistId: String? = nil,
+        artists: [ArtistRef] = []
     ) {
         self.id = id
         self.title = title
@@ -51,6 +68,7 @@ struct Track: Identifiable, Decodable {
         self.durationInMillis = durationInMillis
         self.releaseDate = releaseDate
         self.artistId = artistId
+        self.artists = artists
     }
     
     /// Custom Decodable implementation to support the new `collectionId` field
@@ -67,6 +85,7 @@ struct Track: Identifiable, Decodable {
         self.durationInMillis = try container.decodeIfPresent(Int.self, forKey: .durationInMillis)
         self.releaseDate = try container.decodeIfPresent(Date.self, forKey: .releaseDate)
         self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId)
+        self.artists = []  // populated from MusicKit relationships, not JSON
     }
     
     enum CodingKeys: String, CodingKey {
