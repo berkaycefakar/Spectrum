@@ -50,12 +50,18 @@ struct FeedView: View {
                                     .font(.caption)
                                     .foregroundStyle(.gray)
                                     .multilineTextAlignment(.center)
-                                Button("Try Again") {
+                                Button {
                                     Task { await loadFeedData() }
+                                } label: {
+                                    // Inside the label so the whole pill is tappable, not
+                                    // just the two words.
+                                    Text("Try Again")
+                                        .padding(.horizontal, 24)
+                                        .padding(.vertical, 12)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .contentShape(RoundedRectangle(cornerRadius: 12))
                                 }
-                                .padding()
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                             .padding()
                             .frame(maxWidth: .infinity)

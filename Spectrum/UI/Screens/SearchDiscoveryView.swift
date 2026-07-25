@@ -368,70 +368,56 @@ struct SearchDiscoveryView: View {
 
         guard !Task.isCancelled else { return }
 
+        // Each source fails on its own. They used to be awaited as one tuple, so a single
+        // throw — a MusicKit request while catalog access is denied, say — discarded the
+        // three results that *had* come back. Searching for a friend's username returned
+        // nothing simply because Apple Music was unavailable.
+        // (`MusicService` already logs its own failures; `searchUsers` is logged here.)
+        async let tracks = (try? await MusicService.shared.search(query: query)) ?? []
+        async let albums = (try? await MusicService.shared.searchAlbums(query: query)) ?? []
+        async let artists = (try? await MusicService.shared.searchArtists(query: query)) ?? []
+        async let users = Self.searchUsersOrEmpty(query)
+
+        var (trackRes, albumRes, artistRes, userRes) = await (tracks, albums, artists, users)
+
+        // A slower request from an earlier keystroke must not overwrite newer results.
+        guard !Task.isCancelled else { return }
+
+        let normalizedQuery = query.lowercased().trimmingCharacters(in: .whitespaces)
+
+        // Prefer rows whose *artist* matches what was typed: searching "radiohead" should
+        // lead with Radiohead's own records, not a compilation that happens to rank higher.
+        albumRes.sort { Self.artistMatchRank($0.artist, normalizedQuery) > Self.artistMatchRank($1.artist, normalizedQuery) }
+        trackRes.sort { Self.artistMatchRank($0.artist, normalizedQuery) > Self.artistMatchRank($1.artist, normalizedQuery) }
+
+        await MainActor.run {
+            self.trackResults = trackRes
+            self.albumResults = albumRes
+            self.artistResults = artistRes
+            self.userResults = userRes
+            self.isSearching = false
+            self.showAllTrackResults = false
+            self.showAllAlbumResults = false
+            self.showAllArtistResults = false
+        }
+    }
+
+    /// 1 when the credited artist relates to the query, 0 otherwise. Deliberately a rank
+    /// rather than a comparison: the previous predicate returned `false` for equal elements
+    /// *and* for "b before a", which isn't a strict weak ordering — `sort` is free to produce
+    /// any arrangement from that, so the same search could come back in a different order.
+    private static func artistMatchRank(_ artist: String, _ normalizedQuery: String) -> Int {
+        guard !normalizedQuery.isEmpty else { return 0 }
+        let lowered = artist.lowercased()
+        return (lowered.contains(normalizedQuery) || normalizedQuery.contains(lowered)) ? 1 : 0
+    }
+
+    private static func searchUsersOrEmpty(_ query: String) async -> [Profile] {
         do {
-            async let tracks = try MusicService.shared.search(query: query)
-            async let albums = try MusicService.shared.searchAlbums(query: query)
-            async let artists = try MusicService.shared.searchArtists(query: query)
-            async let users = try SupabaseManager.shared.searchUsers(query: query)
-            var (trackRes, albumRes, artistRes, userRes) = try await (tracks, albums, artists, users)
-            
-            // Arama sorgusunu normalize et (küçük harf, boşlukları temizle)
-            let normalizedQuery = query.lowercased().trimmingCharacters(in: .whitespaces)
-            
-            // Albümleri sırala: Artist adı sorguyla eşleşenler önce
-            albumRes.sort { album1, album2 in
-                let artist1 = album1.artist.lowercased()
-                let artist2 = album2.artist.lowercased()
-                
-                // Eğer birinin artist'i sorguyla eşleşiyorsa, o önce gelsin
-                let match1 = artist1.contains(normalizedQuery) || normalizedQuery.contains(artist1)
-                let match2 = artist2.contains(normalizedQuery) || normalizedQuery.contains(artist2)
-                
-                if match1 && !match2 {
-                    return true // album1 önce
-                } else if !match1 && match2 {
-                    return false // album2 önce
-                }
-                // İkisi de eşleşiyorsa veya hiçbiri eşleşmiyorsa, iTunes'ın sıralamasını koru (zaten popülerliğe göre)
-                return false
-            }
-            
-            // Şarkıları da benzer şekilde sırala
-            trackRes.sort { track1, track2 in
-                let artist1 = track1.artist.lowercased()
-                let artist2 = track2.artist.lowercased()
-                
-                let match1 = artist1.contains(normalizedQuery) || normalizedQuery.contains(artist1)
-                let match2 = artist2.contains(normalizedQuery) || normalizedQuery.contains(artist2)
-                
-                if match1 && !match2 {
-                    return true
-                } else if !match1 && match2 {
-                    return false
-                }
-                return false
-            }
-            
-            await MainActor.run {
-                // MusicKit results sorted by relevance.
-                // We further prioritize artist name matches.
-                self.trackResults = trackRes
-                self.albumResults = albumRes
-                self.artistResults = artistRes
-                self.userResults = userRes
-                self.isSearching = false
-                self.showAllTrackResults = false
-                self.showAllAlbumResults = false
-                self.showAllArtistResults = false
-            }
+            return try await SupabaseManager.shared.searchUsers(query: query)
         } catch {
-            // Previously swallowed, which is why a failing MusicKit request looked identical
-            // to "no results".
-            print("Search failed for '\(query)':", error)
-            await MainActor.run {
-                self.isSearching = false
-            }
-            print("Search error: \(error)")
+            print("User search failed for '\(query)':", error)
+            return []
         }
     }
 }
@@ -843,12 +829,24 @@ struct UserProfileView: View {
     
     @State private var userReviews: [Review] = []
     @State private var userAlbumReviews: [AlbumReview] = []
+    @State private var userArtistReviews: [ArtistReview] = []
     @State private var userTracks: [Int64: Track] = [:]
     @State private var userAlbums: [Int64: Album] = [:]
+    @State private var userArtistBriefs: [String: ArtistBrief] = [:]
     @State private var selectedUserCategory: ProfileCategory = .songs
-    
-    private var sortedUserReviews: [Review] { userReviews.sorted { $0.rating > $1.rating } }
-    private var sortedUserAlbumReviews: [AlbumReview] { userAlbumReviews.sorted { $0.rating > $1.rating } }
+
+    // Best-rated first, most recent breaking ties. `sorted(by:)` isn't a stable sort, so
+    // comparing on rating alone let equally-rated logs swap places between two loads of the
+    // same profile.
+    private var sortedUserReviews: [Review] {
+        userReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
+    }
+    private var sortedUserAlbumReviews: [AlbumReview] {
+        userAlbumReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
+    }
+    private var sortedUserArtistReviews: [ArtistReview] {
+        userArtistReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
+    }
     
     var body: some View {
         ZStack {
@@ -890,7 +888,7 @@ struct UserProfileView: View {
                                 }
                                 ProfileCategoryButton(
                                     title: "Artists",
-                                    count: 0,
+                                    count: userArtistReviews.count,
                                     isSelected: selectedUserCategory == .artists
                                 ) {
                                     withAnimation(.spring()) { selectedUserCategory = .artists }
@@ -951,11 +949,25 @@ struct UserProfileView: View {
                                     }
                                 }
                             } else {
-                                Text("No artists rated yet")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.5))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 32)
+                                // This tab used to be hardcoded empty: another user's artist
+                                // ratings existed in the database and on their own profile,
+                                // but were invisible to everyone else.
+                                if sortedUserArtistReviews.isEmpty {
+                                    Text("No artists rated yet")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 32)
+                                } else {
+                                    LazyVStack(spacing: 12) {
+                                        ForEach(sortedUserArtistReviews) { review in
+                                            ArtistReviewRow(
+                                                review: review,
+                                                brief: userArtistBriefs[review.artistName]
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal)
@@ -997,14 +1009,23 @@ struct UserProfileView: View {
                 following = (try? await SupabaseManager.shared.isFollowing(userId: userId)) ?? false
             }
             
-            let reviews = (try? await SupabaseManager.shared.getUserReviews(userId: userId)) ?? []
-            let albumReviews = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: userId)) ?? []
+            // Five independent reads. Chained, opening a profile cost five round-trips
+            // back to back before anything rendered.
+            async let reviewsLoad = (try? await SupabaseManager.shared.getUserReviews(userId: userId)) ?? []
+            async let albumReviewsLoad = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: userId)) ?? []
+            async let artistReviewsLoad = (try? await SupabaseManager.shared.getUserArtistReviews(userId: userId)) ?? []
+            async let followersLoad = (try? await SupabaseManager.shared.getFollowers(userId: userId)) ?? []
+            async let followingLoad = (try? await SupabaseManager.shared.getFollowing(userId: userId)) ?? []
+
+            let reviews = await reviewsLoad
+            let albumReviews = await albumReviewsLoad
+            let artistReviews = await artistReviewsLoad
+            let followers = await followersLoad
+            let followingList = await followingLoad
+
             let logsCount = reviews.count
             let avg: Double = reviews.isEmpty ? 0 : Double(reviews.reduce(0) { $0 + $1.rating }) / Double(reviews.count) / 2.0
-            
-            let followers = (try? await SupabaseManager.shared.getFollowers(userId: userId)) ?? []
-            let followingList = (try? await SupabaseManager.shared.getFollowing(userId: userId)) ?? []
-            
+
             await MainActor.run {
                 self.profile = profileData
                 self.isCurrentUser = isSelf
@@ -1015,15 +1036,24 @@ struct UserProfileView: View {
                 self.followingCount = followingList.count
                 self.userReviews = reviews
                 self.userAlbumReviews = albumReviews
+                self.userArtistReviews = artistReviews
                 self.isLoading = false
             }
-            
-            // Batched detail lookups instead of one request per row.
-            let tracks = await MusicService.shared.fetchTracks(ids: Array(Set(reviews.map { $0.itunesTrackId })))
-            await MainActor.run { self.userTracks = tracks }
 
-            let albums = await MusicService.shared.fetchAlbums(ids: Array(Set(albumReviews.map { $0.itunesCollectionId })))
-            await MainActor.run { self.userAlbums = albums }
+            // Batched detail lookups instead of one request per row, all three at once.
+            async let tracksLoad = MusicService.shared.fetchTracks(ids: Array(Set(reviews.map { $0.itunesTrackId })))
+            async let albumsLoad = MusicService.shared.fetchAlbums(ids: Array(Set(albumReviews.map { $0.itunesCollectionId })))
+            async let briefsLoad = MusicService.shared.fetchArtistBriefs(names: artistReviews.map { $0.artistName })
+
+            let tracks = await tracksLoad
+            let albums = await albumsLoad
+            let briefs = await briefsLoad
+
+            await MainActor.run {
+                self.userTracks = tracks
+                self.userAlbums = albums
+                self.userArtistBriefs = briefs
+            }
         } catch {
             await MainActor.run { self.isLoading = false }
             print("Failed to load user profile: \(error)")

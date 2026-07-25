@@ -12,7 +12,23 @@ struct ArtistDetailView: View {
     @State private var artistRating: Double = 0
     @State private var isSaving = false
     @State private var userArtistReview: ArtistReview?
+    @State private var communityReviews: [ArtistReview] = []
     @State private var artworkColor: ArtworkColor = .placeholder
+    /// The value currently stored on the server. Loading an existing rating pushes it into
+    /// `artistRating`, which fires `onChange` — without this we'd immediately write back the
+    /// exact value we just read, on every visit to the page.
+    @State private var persistedRating: Double?
+    /// In-flight debounce. Dragging the control emits a change per step; each one used to
+    /// start its own save, and the `isSaving` guard silently dropped the later ones — so the
+    /// rating that landed in the database was the first step of the drag, not the last.
+    @State private var ratingSaveTask: Task<Void, Never>?
+
+    private var communityStats: CommunityStats {
+        CommunityStats(
+            ratings: communityReviews.map(\.rating),
+            vibeHexes: communityReviews.map(\.vibeColor)
+        )
+    }
 
     /// Derived from the artist photo rather than fixed, so a black-and-white press shot no
     /// longer gets a magenta wash.
@@ -22,16 +38,21 @@ struct ArtistDetailView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 28) {
-                    heroSection
+            // The hero is sized from the container width rather than from whatever height the
+            // ScrollView has spare — otherwise every section that loads in below it (top songs,
+            // albums, community) steals height and drags the photo upward.
+            GeometryReader { container in
+                ScrollView {
+                    VStack(spacing: 28) {
+                        heroSection(width: container.size.width)
 
-                    if isLoadingArtist {
-                        ProgressView()
-                            .tint(.white)
-                            .padding(.top, 20)
-                    } else {
-                        if let artist = artist {
+                        communitySection
+
+                        if isLoadingArtist {
+                            ProgressView()
+                                .tint(.white)
+                                .padding(.top, 20)
+                        } else if let artist = artist {
                             if !artist.genres.isEmpty {
                                 genresSection(genres: artist.genres)
                             }
@@ -47,12 +68,16 @@ struct ArtistDetailView: View {
                             if !artist.albums.isEmpty {
                                 albumsSection(albums: artist.albums)
                             }
-                        }
-                    }
 
-                    ratingSection
+                            if !artist.similarArtists.isEmpty {
+                                similarArtistsSection(artists: artist.similarArtists)
+                            }
+                        }
+
+                        ratingSection
+                    }
+                    .padding(.bottom, 40)
                 }
-                .padding(.bottom, 40)
             }
             .ignoresSafeArea(edges: .top)
         }
@@ -60,8 +85,13 @@ struct ArtistDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .task {
-            await loadArtistData()
-            await loadUserArtistReview()
+            // The three loads are independent — the artist's catalogue comes from MusicKit,
+            // the ratings from Supabase. Running them sequentially made the page's slowest
+            // request the sum of all three.
+            async let details: Void = loadArtistData()
+            async let ownRating: Void = loadUserArtistReview()
+            async let community: Void = loadCommunityReviews()
+            _ = await (details, ownRating, community)
         }
         .task(id: artist?.artworkUrl) {
             await loadArtworkColor()
@@ -72,68 +102,73 @@ struct ArtistDetailView: View {
 
     /// Full-bleed square artist photo filling the top of the screen, with the name laid over
     /// a scrim that fades into the page background.
-    private var heroSection: some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            // Slightly taller than square so the name has room to sit inside the image
-            // rather than crowding it.
-            let height = width * 1.1
+    private func heroSection(width: CGFloat) -> some View {
+        // Slightly taller than square so the name has room to sit inside the image
+        // rather than crowding it.
+        let height = width * 1.1
 
-            ZStack(alignment: .bottomLeading) {
-                if let artworkUrl = artist?.artworkUrl {
-                    AsyncImage(url: artworkUrl) { phase in
-                        if let image = phase.image {
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } else {
-                            artistInitialView
-                        }
+        return ZStack(alignment: .bottomLeading) {
+            if let artworkUrl = artist?.artworkUrl {
+                AsyncImage(url: artworkUrl) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        artistInitialView
                     }
-                    .frame(width: width, height: height)
-                    .clipped()
-                } else {
-                    artistInitialView
-                        .frame(width: width, height: height)
                 }
-
-                // Scrim: keeps the name legible over bright photos and blends the image
-                // into the black page below.
-                LinearGradient(
-                    stops: [
-                        .init(color: .clear, location: 0),
-                        .init(color: .black.opacity(0.15), location: 0.45),
-                        .init(color: .black.opacity(0.75), location: 0.78),
-                        .init(color: .black, location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
                 .frame(width: width, height: height)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ARTIST")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .tracking(1.5)
-                        .foregroundStyle(.white.opacity(0.65))
-
-                    Text(artistName)
-                        .font(.system(size: 40, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.6)
-                        .shadow(color: .black.opacity(0.5), radius: 12, y: 2)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 22)
-                .frame(width: width, alignment: .leading)
+                .clipped()
+            } else {
+                artistInitialView
+                    .frame(width: width, height: height)
             }
+
+            // Scrim: keeps the name legible over bright photos and blends the image
+            // into the black page below.
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black.opacity(0.15), location: 0.45),
+                    .init(color: .black.opacity(0.75), location: 0.78),
+                    .init(color: .black, location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
             .frame(width: width, height: height)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("ARTIST")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .tracking(1.5)
+                    .foregroundStyle(.white.opacity(0.65))
+
+                Text(artistName)
+                    .font(.system(size: 40, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
+                    .shadow(color: .black.opacity(0.5), radius: 12, y: 2)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 22)
+            .frame(width: width, alignment: .leading)
         }
-        // GeometryReader has no intrinsic height, so the aspect ratio has to be restated
-        // here or the hero collapses inside the ScrollView.
-        .aspectRatio(1 / 1.1, contentMode: .fit)
+        .frame(width: width, height: height)
+        .clipped()
+    }
+
+    // MARK: - Community
+
+    private var communitySection: some View {
+        CommunityStatsCard(
+            stats: communityStats,
+            emptyMessage: "No one has rated \(artistName) yet"
+        )
+        .padding(.horizontal, 24)
     }
 
     private var artistInitialView: some View {
@@ -327,6 +362,77 @@ struct ArtistDetailView: View {
         }
     }
 
+    // MARK: - Similar Artists
+
+    /// "Fans also like". Mirrors the albums row's rhythm and spacing, but circular — a square
+    /// tile reads as a record sleeve, and these are people.
+    private func similarArtistsSection(artists: [ArtistBrief]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Similar Artists")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(artists) { similar in
+                        NavigationLink(
+                            destination: ArtistDetailView(artistName: similar.name, artistId: similar.id)
+                        ) {
+                            VStack(spacing: 8) {
+                                similarArtistPhoto(for: similar)
+
+                                Text(similar.name)
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.center)
+                                    .frame(height: 32, alignment: .top)
+                            }
+                            .frame(width: 110)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+        }
+    }
+
+    private func similarArtistPhoto(for similar: ArtistBrief) -> some View {
+        ZStack {
+            if let url = similar.artworkUrl {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        similarArtistInitial(for: similar.name)
+                    }
+                }
+            } else {
+                similarArtistInitial(for: similar.name)
+            }
+        }
+        .frame(width: 110, height: 110)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(.white.opacity(0.12), lineWidth: 1))
+        .shadow(color: accentColor.opacity(0.2), radius: 8)
+    }
+
+    private func similarArtistInitial(for name: String) -> some View {
+        ZStack {
+            LinearGradient(
+                colors: [accentColor.opacity(0.35), .black],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Text(String(name.prefix(1)).uppercased())
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(.white.opacity(0.85))
+        }
+    }
+
     // MARK: - Rating Section
 
     private var ratingSection: some View {
@@ -345,9 +451,7 @@ struct ArtistDetailView: View {
                 accentColor: accentColor
             )
             .onChange(of: artistRating) { _, newValue in
-                if newValue > 0 {
-                    saveArtistRating()
-                }
+                scheduleRatingSave(newValue)
             }
 
             if isSaving {
@@ -409,42 +513,57 @@ struct ArtistDetailView: View {
         }
     }
 
-    private func loadUserArtistReview() async {
-        guard let user = try? await SupabaseManager.shared.getCurrentUser() else { return }
+    private func loadCommunityReviews() async {
+        guard let list = try? await SupabaseManager.shared.getArtistReviews(artistName: artistName) else { return }
+        await MainActor.run { self.communityReviews = list }
+    }
 
+    private func loadUserArtistReview() async {
         do {
-            let reviews = try await SupabaseManager.shared.getUserArtistReviews(userId: user.id)
-            if let review = reviews.first(where: { $0.artistName == artistName }) {
-                await MainActor.run {
-                    userArtistReview = review
-                    artistRating = Double(review.rating) / 2.0
-                }
+            guard let review = try await SupabaseManager.shared.getUserArtistReview(artistName: artistName) else { return }
+            await MainActor.run {
+                userArtistReview = review
+                artistRating = Double(review.rating) / 2.0
+                persistedRating = artistRating
             }
         } catch {
             print("Failed to load artist review: \(error)")
         }
     }
 
-    private func saveArtistRating() {
-        guard !isSaving, artistRating > 0 else { return }
-        isSaving = true
+    /// Coalesces a drag into a single write, ~half a second after the user settles.
+    private func scheduleRatingSave(_ rating: Double) {
+        ratingSaveTask?.cancel()
 
-        Task {
-            do {
-                let storedRating = Int((artistRating * 2).rounded())
-                try await SupabaseManager.shared.saveArtistReview(
-                    artistName: artistName,
-                    rating: storedRating,
-                    text: "",
-                    vibeColor: accentColor.hexString
-                )
-                await loadUserArtistReview()
-                await MainActor.run { isSaving = false }
-            } catch {
-                await MainActor.run { isSaving = false }
-                print("Failed to save artist rating: \(error)")
-            }
+        // Nothing to store yet, or this is the value we just read back from the server.
+        guard rating > 0, rating != persistedRating else { return }
+
+        ratingSaveTask = Task {
+            try? await Task.sleep(nanoseconds: 550_000_000)
+            guard !Task.isCancelled else { return }
+            await saveArtistRating(rating)
         }
+    }
+
+    private func saveArtistRating(_ rating: Double) async {
+        await MainActor.run { isSaving = true }
+
+        do {
+            let storedRating = Int((rating * 2).rounded())
+            try await SupabaseManager.shared.saveArtistReview(
+                artistName: artistName,
+                rating: storedRating,
+                text: "",
+                vibeColor: accentColor.hexString
+            )
+            await MainActor.run { persistedRating = rating }
+            await loadUserArtistReview()
+            await loadCommunityReviews()
+        } catch {
+            print("Failed to save artist rating: \(error)")
+        }
+
+        await MainActor.run { isSaving = false }
     }
 }
 

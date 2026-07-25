@@ -104,8 +104,14 @@ struct FeedCardView: View {
             // Bottom Section: Play Button
             Button(action: toggleAudio) {
                 HStack {
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    Text(isPlaying ? "Playing Preview" : "Play Preview")
+                    if audioManager.isTrackBuffering(track.id) {
+                        ProgressView()
+                            .tint(.white)
+                        Text("Loading...")
+                    } else {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        Text(isPlaying ? "Playing Preview" : "Play Preview")
+                    }
                 }
                 .font(.subheadline)
                 .fontWeight(.bold)

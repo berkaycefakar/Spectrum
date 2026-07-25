@@ -8,28 +8,7 @@ class MusicService {
 
     private init() {}
 
-    // MARK: - Authorization
-
-    /// Request MusicKit authorization.
-    ///
-    /// Catalog requests genuinely require `.authorized` on iOS — if the user declines, every
-    /// search and lookup below throws and the app silently shows empty screens. They also
-    /// always fail on the Simulator, which has no Media & Purchases account, so MusicKit
-    /// work has to be verified on a real device.
-    @discardableResult
-    func requestMusicAuthorization() async -> MusicAuthorization.Status {
-        let status = await MusicAuthorization.request()
-        print("MusicKit: authorization status = \(status)")
-        if status != .authorized {
-            print("MusicKit: NOT authorized — catalog search and lookups will fail until the user grants access in Settings.")
-        }
-        return status
-    }
-
-    /// Current authorization status without prompting.
-    var authorizationStatus: MusicAuthorization.Status {
-        MusicAuthorization.currentStatus
-    }
+    private let artistBriefCache = ArtistBriefCache()
 
     // MARK: - Search: Tracks
 
@@ -105,6 +84,71 @@ class MusicService {
         }
     }
 
+    // MARK: - Lookup: Artists by name
+
+    /// Resolves artist names to their photo + catalog id.
+    ///
+    /// `artist_reviews` rows only carry a name, so anything listing them (the profile's
+    /// Artists tab) has no artwork to show. MusicKit has no batch "match by name" request, so
+    /// this fans out one search per name concurrently and caches the results — the profile
+    /// reloads on every save and would otherwise re-search the same handful of names forever.
+    func fetchArtistBriefs(names: [String]) async -> [String: ArtistBrief] {
+        let unique = Array(Set(names.filter { !$0.isEmpty }))
+        guard !unique.isEmpty else { return [:] }
+
+        var result: [String: ArtistBrief] = [:]
+        var missing: [String] = []
+        for name in unique {
+            if let cached = await artistBriefCache.value(for: name) {
+                result[name] = cached
+            } else {
+                missing.append(name)
+            }
+        }
+        guard !missing.isEmpty else { return result }
+
+        let fetched = await withTaskGroup(of: (String, ArtistBrief?).self) { group in
+            for name in missing {
+                group.addTask { (name, await self.searchArtistBrief(name: name)) }
+            }
+            var found: [String: ArtistBrief] = [:]
+            for await (name, brief) in group {
+                if let brief { found[name] = brief }
+            }
+            return found
+        }
+
+        for (name, brief) in fetched {
+            await artistBriefCache.store(brief, for: name)
+            result[name] = brief
+        }
+        return result
+    }
+
+    private func searchArtistBrief(name: String) async -> ArtistBrief? {
+        do {
+            var request = MusicCatalogSearchRequest(term: name, types: [MusicKit.Artist.self])
+            request.limit = 5
+            let response = try await request.response()
+
+            // Prefer an exact name match: searching "Muse" also returns "Museum of Love", and
+            // the top hit isn't always the artist the user actually logged.
+            let artists = Array(response.artists)
+            let match = artists.first { $0.name.compare(name, options: .caseInsensitive) == .orderedSame }
+                ?? artists.first
+            guard let match else { return nil }
+
+            return ArtistBrief(
+                id: match.id.rawValue,
+                name: match.name,
+                artworkUrl: match.artwork?.url(width: 300, height: 300)
+            )
+        } catch {
+            logFailure("searchArtistBrief(name: \(name))", error)
+            return nil
+        }
+    }
+
     // MARK: - Fetch: Single Track by ID
 
     func fetchTrack(id: Int64) async throws -> Track? {
@@ -177,7 +221,7 @@ class MusicService {
     func fetchArtist(id: String) async throws -> Artist? {
         let musicItemId = MusicItemID(id)
         var request = MusicCatalogResourceRequest<MusicKit.Artist>(matching: \.id, equalTo: musicItemId)
-        request.properties = [.topSongs, .albums, .genres]
+        request.properties = [.topSongs, .albums, .genres, .similarArtists]
         let response = try await request.response()
         guard let artist = response.items.first else { return nil }
         return mapMusicKitArtistToArtistDetailed(artist)
@@ -283,22 +327,95 @@ class MusicService {
         )
     }
 
+    /// A richer genre list than MusicKit's artist relationship gives on its own.
+    ///
+    /// `artist.genres` is usually a single broad bucket ("Pop"), because that's how Apple
+    /// files the *artist*. The detail lives on their catalogue: the top songs and albums each
+    /// carry their own genre names. Those get folded in, ranked by how often they appear, so
+    /// an artist's page shows what they actually make rather than one generic label.
+    private func combinedGenres(artistGenres: [String], songs: [Track], albums: [Album]) -> [String] {
+        var ordered: [String] = []
+        var seen = Set<String>()
+
+        func add(_ name: String) {
+            // "Music" is Apple's catch-all parent genre — true of every record ever released.
+            guard name.caseInsensitiveCompare("Music") != .orderedSame else { return }
+            if seen.insert(name.lowercased()).inserted { ordered.append(name) }
+        }
+
+        // The artist's own genres stay pinned to the front — they're the most authoritative.
+        artistGenres.forEach(add)
+
+        // Everything else is ranked by frequency: a genre on 8 of 10 top songs describes the
+        // artist far better than one that shows up on a single b-side.
+        let catalogGenres = songs.flatMap { $0.genreNames ?? [] } + albums.flatMap { $0.genreNames ?? [] }
+        var counts: [String: Int] = [:]
+        var firstSpelling: [String: String] = [:]
+        for name in catalogGenres {
+            let key = name.lowercased()
+            counts[key, default: 0] += 1
+            if firstSpelling[key] == nil { firstSpelling[key] = name }
+        }
+
+        counts
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .compactMap { firstSpelling[$0.key] }
+            .forEach(add)
+
+        return Array(ordered.prefix(8))
+    }
+
     // MARK: - Mapping: MusicKit Artist -> Artist (detailed, with songs and albums)
 
     private func mapMusicKitArtistToArtistDetailed(_ mkArtist: MusicKit.Artist) -> Artist {
         let artworkUrl = mkArtist.artwork?.url(width: 600, height: 600)
 
         let topSongs: [Track] = mkArtist.topSongs?.prefix(10).compactMap { mapSongToTrack($0) } ?? []
-        let albums: [Album] = mkArtist.albums?.prefix(20).compactMap { mapMusicKitAlbumToAlbum($0) } ?? []
+
+        // Newest first. MusicKit returns the albums relationship in its own editorial order,
+        // which put decade-old records ahead of a release from last month — the opposite of
+        // what someone opening an artist page is looking for. Sorted *before* the cap so the
+        // twenty we keep are genuinely the twenty most recent.
+        let albums: [Album] = Array(
+            (mkArtist.albums?.compactMap { mapMusicKitAlbumToAlbum($0) } ?? [])
+                .sorted(by: Album.newestFirst)
+                .prefix(20)
+        )
+
+        // "Fans also like". Requires the `.similarArtists` property on the request; empty
+        // otherwise, and the artist page simply hides the section.
+        let similar: [ArtistBrief] = mkArtist.similarArtists?.prefix(20).map {
+            ArtistBrief(
+                id: $0.id.rawValue,
+                name: $0.name,
+                artworkUrl: $0.artwork?.url(width: 300, height: 300)
+            )
+        } ?? []
 
         return Artist(
             id: mkArtist.id.rawValue,
             name: mkArtist.name,
             artworkUrl: artworkUrl,
-            genres: mkArtist.genres?.map(\.name) ?? [],
+            genres: combinedGenres(
+                artistGenres: mkArtist.genres?.map(\.name) ?? [],
+                songs: topSongs,
+                albums: albums
+            ),
             topSongs: topSongs,
             albums: albums,
-            editorialNotes: mkArtist.editorialNotes?.standard ?? mkArtist.editorialNotes?.short
+            editorialNotes: mkArtist.editorialNotes?.standard ?? mkArtist.editorialNotes?.short,
+            similarArtists: similar
         )
     }
+}
+
+// MARK: - Artist Brief Cache
+
+/// Name → artist lookups, kept for the process lifetime. An actor because `MusicService` is a
+/// plain shared class that gets hit from several concurrent screen loads.
+private actor ArtistBriefCache {
+    private var storage: [String: ArtistBrief] = [:]
+
+    func value(for name: String) -> ArtistBrief? { storage[name] }
+    func store(_ brief: ArtistBrief, for name: String) { storage[name] = brief }
 }

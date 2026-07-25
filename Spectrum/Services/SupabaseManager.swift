@@ -38,7 +38,17 @@ class SupabaseManager {
         try await client.auth.signIn(email: email, password: password)
     }
     
-    func signUp(email: String, password: String, username: String) async throws {
+    /// What happened after a sign-up attempt — the caller needs to know whether it can send
+    /// the user straight into the app or has to ask them to check their inbox.
+    enum SignUpOutcome {
+        /// A session exists: the user is already logged in, no second trip through the form.
+        case signedIn
+        /// The Supabase project has "Confirm email" switched on, so there is no session yet.
+        case needsEmailConfirmation
+    }
+
+    @discardableResult
+    func signUp(email: String, password: String, username: String) async throws -> SignUpOutcome {
         // 1. Create Auth User
         let response = try await client.auth.signUp(
             email: email,
@@ -46,15 +56,161 @@ class SupabaseManager {
             data: ["username": .string(username)],
             redirectTo: authRedirectURL
         )
-        
-        // 2. Manually create Profile row to avoid Trigger issues
-        // In current Supabase Swift, `response.user` is non-optional, so we access `id` directly.
-        let userId = response.user.id
-        let profile = Profile(id: userId, username: username, avatarUrl: nil, bio: nil)
-        try await client.from("profiles").insert(profile).execute()
+
+        // 2. With email confirmation enabled there is no session yet, so we are still an
+        //    anonymous caller — writing the profile row here would be refused by RLS and the
+        //    user would see a scary error for an account that was actually created fine.
+        //    `ensureProfile` runs on their first real sign-in instead.
+        guard response.session != nil else {
+            return .needsEmailConfirmation
+        }
+
+        try await ensureProfile(userId: response.user.id, preferredUsername: username)
+        return .signedIn
+    }
+
+    /// Creates the `profiles` row if this account doesn't have one yet.
+    ///
+    /// Needed on every entry path, not just sign-up: Apple and Google hand us an account with
+    /// no username at all, and email sign-ups whose profile insert was deferred (see above)
+    /// arrive here on their first sign-in. Safe to call repeatedly.
+    @discardableResult
+    func ensureProfile(userId: UUID, preferredUsername: String?) async throws -> Profile {
+        if let existing = try? await getProfile(userId: userId) {
+            return existing
+        }
+
+        let base = Self.sanitizedUsername(preferredUsername) ?? "listener"
+
+        // `profiles.username` is unique, so a taken name has to be nudged rather than retried
+        // forever — three attempts is plenty and keeps sign-in from hanging on a bad day.
+        for attempt in 0..<3 {
+            let candidate = attempt == 0 ? base : "\(base)\(Int.random(in: 1000...9999))"
+            let profile = Profile(id: userId, username: candidate, avatarUrl: nil, bio: nil)
+            do {
+                try await client.from("profiles").insert(profile).execute()
+                return profile
+            } catch {
+                let message = error.localizedDescription
+                let isDuplicate = message.contains("duplicate key") || message.contains("profiles_username_key")
+                guard isDuplicate, attempt < 2 else { throw error }
+            }
+        }
+
+        return try await getProfile(userId: userId)
+    }
+
+    /// Turns an email address or a person's name into something usable as a username.
+    private static func sanitizedUsername(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let localPart = raw.split(separator: "@").first.map(String.init) ?? raw
+        let allowed = localPart.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "_" }
+        let trimmed = String(allowed.prefix(20))
+        return trimmed.count >= 3 ? trimmed : nil
+    }
+
+    // MARK: - Social sign-in
+
+    /// Exchanges an Apple identity token for a Supabase session.
+    ///
+    /// Apple only discloses the user's name on the *very first* authorization, so the caller
+    /// passes it through here — after that it is gone for good and we fall back to the email.
+    func signInWithApple(idToken: String, nonce: String, fullName: String?) async throws {
+        let session = try await client.auth.signInWithIdToken(
+            credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
+        )
+        try await ensureProfile(
+            userId: session.user.id,
+            preferredUsername: fullName ?? session.user.email
+        )
+    }
+
+    /// Google sign-in through the system browser sheet.
+    ///
+    /// Deliberately the OAuth web flow rather than the GoogleSignIn SDK: it needs no extra
+    /// dependency, no client-id in the bundle, and Supabase already owns the redirect.
+    /// Requires Google to be enabled in Supabase → Auth → Providers, and
+    /// `spectrum://auth-callback` listed under Redirect URLs.
+    func signInWithGoogle() async throws {
+        let session = try await client.auth.signInWithOAuth(
+            provider: .google,
+            redirectTo: authRedirectURL
+        )
+        try await ensureProfile(
+            userId: session.user.id,
+            preferredUsername: session.user.email
+        )
+    }
+
+    // MARK: - Password reset
+
+    /// Sends the "reset your password" email. Always report success to the caller even for an
+    /// address with no account — telling a stranger which emails are registered is a
+    /// disclosure we don't need to make.
+    func sendPasswordReset(email: String) async throws {
+        try await client.auth.resetPasswordForEmail(email, redirectTo: authRedirectURL)
+    }
+
+    /// Replaces the password on the currently signed-in account.
+    func updatePassword(_ newPassword: String) async throws {
+        try await client.auth.update(user: UserAttributes(password: newPassword))
     }
     
     func signOut() async throws {
+        try await client.auth.signOut()
+    }
+
+    // MARK: - Account Deletion
+
+    /// Erases everything this account owns, then signs out.
+    ///
+    /// App Store Review Guideline 5.1.1(v) requires any app that lets a user *create* an
+    /// account to let them delete it from inside the app. Spectrum had sign-up but no way
+    /// out, which is a straightforward rejection.
+    ///
+    /// Order matters. Owned content goes first, then the follow graph, then the avatar, then
+    /// the profile row — so that if the run is interrupted we never leave a profile pointing
+    /// at content that no longer exists (a half-deleted profile still reads as a live user).
+    ///
+    /// **The `auth.users` row is deliberately not touched here.** Deleting it requires the
+    /// service-role key, and shipping that key inside the app would hand every user full
+    /// admin access to the database. The row is orphaned by design: it retains only the email
+    /// address, and everything the user created is gone. See `APP_STORE_READINESS.md` for the
+    /// Edge Function that finishes the job server-side, which is what Apple expects.
+    func deleteAccount() async throws {
+        guard let user = try await getCurrentUser() else {
+            throw NSError(
+                domain: "Spectrum",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "User not logged in"]
+            )
+        }
+        let userId = user.id
+
+        // 1. Everything the user wrote.
+        for table in ["reviews", "album_reviews", "artist_reviews"] {
+            try await client.from(table).delete().eq("user_id", value: userId).execute()
+        }
+
+        // 2. The follow graph, in both directions — otherwise other people keep a follower
+        //    that no longer exists and their counts stay wrong forever.
+        try await client.from("follows").delete().eq("follower_id", value: userId).execute()
+        try await client.from("follows").delete().eq("following_id", value: userId).execute()
+
+        // 3. The avatar. Best-effort: a storage failure must not block the deletion, and a
+        //    user who never uploaded one has nothing at this path.
+        do {
+            _ = try await client.storage
+                .from("avatars")
+                .remove(paths: ["\(userId.uuidString)/avatar.jpg"])
+        } catch {
+            print("Account deletion: couldn't remove avatar object:", error)
+        }
+
+        // 4. The profile row — the last thing that makes the account visible to anyone else.
+        try await client.from("profiles").delete().eq("id", value: userId).execute()
+
+        // 5. Drop the local session.
         try await client.auth.signOut()
     }
     
@@ -128,7 +284,7 @@ class SupabaseManager {
         guard let user = try await getCurrentUser() else {
             throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
         }
-        
+
         let newReview = NewReview(
             user_id: user.id,
             itunes_track_id: Int64(trackId),
@@ -137,12 +293,113 @@ class SupabaseManager {
             vibe_color: vibeColor
         )
 
-        // Upsert so re-logging a song updates the existing entry instead of creating a
-        // duplicate. Requires a unique (user_id, itunes_track_id) constraint on `reviews`.
-        try await client
-            .from("reviews")
-            .upsert(newReview, onConflict: "user_id,itunes_track_id")
+        // Look the row up and edit it in place rather than `upsert(onConflict:)`. Postgres
+        // rejects ON CONFLICT outright ("no unique or exclusion constraint matching the ON
+        // CONFLICT specification") unless a matching unique index exists, so re-logging a
+        // song failed on any database where that migration hadn't been run.
+        try await writeReview(
+            table: "reviews",
+            existingIds: try await existingReviewIds(
+                table: "reviews",
+                userId: user.id,
+                targetColumn: "itunes_track_id",
+                targetValue: Int(trackId)
+            ),
+            insert: newReview,
+            rating: rating,
+            text: text,
+            vibeColor: vibeColor
+        )
+    }
+
+    // MARK: - Review write helpers
+
+    /// Ids of the current user's existing rows for one target, newest first.
+    private func existingReviewIds(
+        table: String,
+        userId: UUID,
+        targetColumn: String,
+        targetValue: any URLQueryRepresentable
+    ) async throws -> [UUID] {
+        struct Row: Decodable { let id: UUID }
+        let rows: [Row] = try await client
+            .from(table)
+            .select("id")
+            .eq("user_id", value: userId)
+            .eq(targetColumn, value: targetValue)
+            .order("created_at", ascending: false)
             .execute()
+            .value
+        return rows.map(\.id)
+    }
+
+    /// Same as above but matching the target case-insensitively. Only used for artists, which
+    /// are keyed by name: MusicKit isn't perfectly consistent about capitalisation between
+    /// endpoints, so an exact match would let one artist become two rows.
+    private func existingReviewIdsIgnoringCase(
+        table: String,
+        userId: UUID,
+        targetColumn: String,
+        targetValue: String
+    ) async throws -> [UUID] {
+        struct Row: Decodable { let id: UUID }
+        let rows: [Row] = try await client
+            .from(table)
+            .select("id")
+            .eq("user_id", value: userId)
+            .ilike(targetColumn, pattern: Self.literalPattern(targetValue))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        return rows.map(\.id)
+    }
+
+    /// Escapes a value so it can be used as an `ilike` pattern that matches it literally.
+    /// Without this, an artist called "_" or one with a "%" in their name would match rows
+    /// belonging to somebody else entirely.
+    static func literalPattern(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
+    }
+
+    /// Updates the newest existing row, or inserts when there is none.
+    ///
+    /// Also deletes any older rows for the same target: the album path used to `upsert`
+    /// without a conflict target, which Postgres resolves against the primary key — and since
+    /// the payload carries no `id`, every save inserted a *fresh* row. Users ended up with a
+    /// pile of duplicate ratings for one album and edits appeared to do nothing. Cleaning the
+    /// extras up here heals the rows that bug already created.
+    private func writeReview(
+        table: String,
+        existingIds: [UUID],
+        insert: some Encodable,
+        rating: Int,
+        text: String,
+        vibeColor: String
+    ) async throws {
+        guard let keeper = existingIds.first else {
+            try await client.from(table).insert(insert).execute()
+            return
+        }
+
+        try await client
+            .from(table)
+            .update(ReviewUpdate(rating: rating, review_text: text, vibe_color: vibeColor))
+            .eq("id", value: keeper)
+            .execute()
+
+        // Best-effort: the edit itself has already landed, so a missing RLS delete policy
+        // shouldn't surface to the user as "couldn't save".
+        let stale = existingIds.dropFirst().map(\.uuidString)
+        if !stale.isEmpty {
+            do {
+                try await client.from(table).delete().in("id", values: stale).execute()
+            } catch {
+                print("Couldn't clean up \(stale.count) duplicate \(table) row(s):", error)
+            }
+        }
     }
 
     /// Deletes the current user's log for a track.
@@ -160,13 +417,21 @@ class SupabaseManager {
     
     /// Track ids that the community has logged most recently, de-duplicated, newest first.
     /// Used to drive a real "trending" row on Discover instead of a hardcoded artist list.
+    ///
+    /// De-duplication happens client-side because PostgREST has no `DISTINCT ON`, so we
+    /// over-fetch and collapse. The window scales with what the caller actually wants rather
+    /// than always pulling a flat 200 rows: Discover asks for 12, which now costs 120 rows
+    /// instead of 200. If Discover ever needs to be cheaper than this, the right fix is a
+    /// Postgres view (`create view trending_tracks as select distinct on (itunes_track_id)
+    /// ...`) — noted in APP_STORE_READINESS.md.
     func fetchTrendingTrackIds(limit: Int = 20) async throws -> [Int64] {
         struct Row: Decodable { let itunes_track_id: Int64 }
+        let window = min(max(limit * 10, 50), 200)
         let rows: [Row] = try await client
             .from("reviews")
             .select("itunes_track_id")
             .order("created_at", ascending: false)
-            .limit(200)
+            .limit(window)
             .execute()
             .value
 
@@ -206,14 +471,38 @@ class SupabaseManager {
             review_text: text,
             vibe_color: vibeColor
         )
-        
-        // Upsert so the user can update rating/review for same album
-        try await client
-            .from("album_reviews")
-            .upsert(newReview)
-            .execute()
+
+        try await writeReview(
+            table: "album_reviews",
+            existingIds: try await existingReviewIds(
+                table: "album_reviews",
+                userId: user.id,
+                targetColumn: "itunes_collection_id",
+                targetValue: Int(collectionId)
+            ),
+            insert: newReview,
+            rating: rating,
+            text: text,
+            vibeColor: vibeColor
+        )
     }
-    
+
+    /// The current user's rating for one album, newest first — cheaper and more correct than
+    /// pulling their whole album history and filtering it client-side.
+    func getUserAlbumReview(collectionId: Int64) async throws -> AlbumReview? {
+        guard let user = try await getCurrentUser() else { return nil }
+        let rows: [AlbumReview] = try await client
+            .from("album_reviews")
+            .select()
+            .eq("user_id", value: user.id)
+            .eq("itunes_collection_id", value: Int(collectionId))
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
     func getUserAlbumReviews(userId: UUID) async throws -> [AlbumReview] {
         let response: [AlbumReview] = try await client
             .from("album_reviews")
@@ -250,15 +539,37 @@ class SupabaseManager {
             review_text: text,
             vibe_color: vibeColor
         )
-        
-        // Upsert, not insert: (user_id, artist_name) is unique, so re-rating an artist you
-        // already logged would otherwise fail on the duplicate key.
-        try await client
-            .from("artist_reviews")
-            .upsert(newReview, onConflict: "user_id,artist_name")
-            .execute()
+
+        try await writeReview(
+            table: "artist_reviews",
+            existingIds: try await existingReviewIdsIgnoringCase(
+                table: "artist_reviews",
+                userId: user.id,
+                targetColumn: "artist_name",
+                targetValue: artistName
+            ),
+            insert: newReview,
+            rating: rating,
+            text: text,
+            vibeColor: vibeColor
+        )
     }
-    
+
+    /// The current user's rating for one artist.
+    func getUserArtistReview(artistName: String) async throws -> ArtistReview? {
+        guard let user = try await getCurrentUser() else { return nil }
+        let rows: [ArtistReview] = try await client
+            .from("artist_reviews")
+            .select()
+            .eq("user_id", value: user.id)
+            .ilike("artist_name", pattern: Self.literalPattern(artistName))
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
     func getUserArtistReviews(userId: UUID) async throws -> [ArtistReview] {
         let response: [ArtistReview] = try await client
             .from("artist_reviews")
@@ -270,11 +581,18 @@ class SupabaseManager {
         return response
     }
     
+    /// Everyone's ratings for one artist.
+    ///
+    /// Matched case-insensitively on purpose. Artists are keyed by *name* here (there is no
+    /// artist id column), so an exact match split "Tyler, The Creator" from "TYLER, THE
+    /// CREATOR" into two separate artists with two separate community averages. Casing is the
+    /// variation this can fix; differing punctuation still can't be reconciled without
+    /// storing the MusicKit artist id — see the note in HANDOFF.md.
     func getArtistReviews(artistName: String) async throws -> [ArtistReview] {
         let response: [ArtistReview] = try await client
             .from("artist_reviews")
             .select()
-            .eq("artist_name", value: artistName)
+            .ilike("artist_name", pattern: Self.literalPattern(artistName))
             .order("created_at", ascending: false)
             .execute()
             .value

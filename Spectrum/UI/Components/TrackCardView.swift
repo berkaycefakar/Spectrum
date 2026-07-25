@@ -62,10 +62,22 @@ struct TrackCardView: View {
                     
                     // Play Button
                     Button(action: toggleAudio) {
-                        Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(vibeColor.gradient)
-                            .shadow(color: vibeColor.opacity(0.5), radius: 10)
+                        Group {
+                            // Spinner while the preview loads — the icon used to jump to
+                            // "pause" and then stay silent, which looks like a broken button.
+                            if audioManager.isTrackBuffering(track.id) {
+                                ProgressView()
+                                    .tint(vibeColor)
+                                    .scaleEffect(1.3)
+                            } else {
+                                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(vibeColor.gradient)
+                                    .shadow(color: vibeColor.opacity(0.5), radius: 10)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                     }
                 }
                 .padding(.horizontal)

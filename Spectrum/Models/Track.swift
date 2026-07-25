@@ -101,7 +101,3 @@ struct Track: Identifiable, Decodable {
         case artistId
     }
 }
-
-struct iTunesResponse: Decodable {
-    let results: [Track]
-}

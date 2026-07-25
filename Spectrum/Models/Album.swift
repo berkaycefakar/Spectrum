@@ -54,6 +54,24 @@ struct Album: Identifiable, Decodable {
         self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId)
     }
 
+    /// The one ordering rule for "a list of albums": newest release first, undated releases
+    /// last, ties broken by title so the order can't shuffle between two loads of the same
+    /// data. Shared so the artist page, search and profile can't drift apart.
+    static func newestFirst(_ lhs: Album, _ rhs: Album) -> Bool {
+        switch (lhs.releaseDate, rhs.releaseDate) {
+        case let (l?, r?):
+            // Same-day releases (very common for a deluxe edition shipped alongside the
+            // standard one) fall back to the title rather than an arbitrary order.
+            return l == r ? lhs.title < rhs.title : l > r
+        case (_?, nil):
+            return true
+        case (nil, _?):
+            return false
+        case (nil, nil):
+            return lhs.title < rhs.title
+        }
+    }
+
     enum CodingKeys: String, CodingKey {
         case id = "collectionId"
         case title = "collectionName"

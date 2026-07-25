@@ -21,17 +21,32 @@ struct SpectrumApp: App {
         )
     }
 
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var musicAuth = MusicAuthorizationStore.shared
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .onOpenURL { url in
+                    // Check what the link is for *before* handing it over: the PKCE flow
+                    // exchanges the callback and reports a plain `.signedIn`, so a recovery
+                    // link would otherwise just log the user in and leave the password they
+                    // forgot in place.
+                    if AuthDeepLink.isPasswordRecovery(url) {
+                        SessionStore.shared.beginPasswordRecovery()
+                    }
                     // Handle Supabase Auth deep links (email confirmation, magic links, etc.)
                     SupabaseManager.shared.client.handle(url)
                 }
                 .task {
                     // Catalog search requires this — without `.authorized` every MusicKit
                     // request throws and the app shows empty feeds and empty search results.
-                    await MusicService.shared.requestMusicAuthorization()
+                    await musicAuth.requestIfNeeded()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    // iOS doesn't notify us when the user flips the Media & Apple Music switch
+                    // in Settings, so re-read it whenever we come back to the foreground.
+                    if newPhase == .active { musicAuth.refresh() }
                 }
         }
     }

@@ -45,6 +45,14 @@ struct NewReview: Encodable {
     let vibe_color: String
 }
 
+/// The mutable part of any review row (track, album or artist). Editing a log rewrites
+/// exactly these three columns and leaves user/target/created_at alone.
+struct ReviewUpdate: Encodable {
+    let rating: Int
+    let review_text: String
+    let vibe_color: String
+}
+
 // Encodable struct for updating a profile
 struct ProfileUpdate: Encodable {
     let username: String

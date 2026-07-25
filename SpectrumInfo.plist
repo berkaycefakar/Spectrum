@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Only the keys Xcode's GENERATE_INFOPLIST_FILE cannot express live here; everything else
+	  (usage descriptions, encryption flag, versions) is still generated from build settings
+	  and merged on top of this file at build time.
+
+	  CFBundleURLTypes registers the `spectrum://` scheme. Without it the OS has nothing to
+	  hand `spectrum://auth-callback` to, so Supabase's email-confirmation and password-reset
+	  links open a browser error instead of the app — the redirect was configured in code and
+	  in the Supabase dashboard, but never claimed by the bundle.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>berkay.Spectrum.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>spectrum</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

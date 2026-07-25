@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Sign in with Apple.
+
+	  Required by App Store Review Guideline 4.8 the moment the app offers any third-party
+	  sign-in (Google, here): an equivalent privacy-preserving option has to be available.
+
+	  This entitlement only works once "Sign In with Apple" is also enabled for the
+	  berkay.Spectrum App ID in the Apple Developer portal — see APP_STORE_READINESS.md.
+	-->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

@@ -8,6 +8,10 @@ struct SettingsView: View {
 
     @State private var email: String?
     @State private var showLogoutAlert = false
+    @State private var showChangePassword = false
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+    @State private var deleteError: String?
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -48,6 +52,25 @@ struct SettingsView: View {
                     infoRow(label: "Music data", value: "Apple Music (MusicKit)")
                 }
 
+                // Change password. Also the dependable way in if a future Supabase flow
+                // change stops the recovery link from being recognised.
+                Button {
+                    showChangePassword = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "key.fill")
+                        Text("Change Password").fontWeight(.semibold)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .contentShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .padding(.horizontal)
+                .disabled(isDeleting)
+
                 // Log out
                 Button {
                     showLogoutAlert = true
@@ -63,6 +86,9 @@ struct SettingsView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal)
+                .disabled(isDeleting)
+
+                deleteAccountSection
 
                 Spacer()
             }
@@ -78,6 +104,91 @@ struct SettingsView: View {
             }
         } message: {
             Text("Are you sure you want to log out?")
+        }
+        .sheet(isPresented: $showChangePassword) {
+            NewPasswordView(mode: .change) {
+                showChangePassword = false
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Account", role: .destructive) { deleteAccount() }
+        } message: {
+            Text("This permanently deletes your profile, every song, album and artist you've logged, and everyone you follow. This can't be undone.")
+        }
+    }
+
+    // MARK: - Delete account
+
+    /// Required by App Store Review Guideline 5.1.1(v): an app that lets people create an
+    /// account has to let them delete it from inside the app. Kept visually quiet and placed
+    /// last so it can't be mistaken for "Log Out", but not hidden behind anything either —
+    /// Apple expects it to be easy to find.
+    private var deleteAccountSection: some View {
+        VStack(spacing: 10) {
+            Button {
+                deleteError = nil
+                showDeleteConfirmation = true
+            } label: {
+                HStack(spacing: 8) {
+                    if isDeleting {
+                        ProgressView().tint(Color(hex: "#FF3B30"))
+                        Text("Deleting...")
+                    } else {
+                        Image(systemName: "trash")
+                        Text("Delete Account")
+                    }
+                }
+                .font(.subheadline)
+                .foregroundStyle(Color(hex: "#FF3B30").opacity(isDeleting ? 0.6 : 1))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color(hex: "#FF3B30").opacity(0.35), lineWidth: 1)
+                )
+            }
+            .disabled(isDeleting)
+
+            if let deleteError {
+                Text(deleteError)
+                    .font(.caption)
+                    .foregroundStyle(Color(hex: "#FF3B30"))
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Permanently removes your account and all your logs.")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.4))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 4)
+    }
+
+    private func deleteAccount() {
+        guard !isDeleting else { return }
+        isDeleting = true
+        deleteError = nil
+
+        Task {
+            do {
+                try await SupabaseManager.shared.deleteAccount()
+                await MainActor.run {
+                    isDeleting = false
+                    isPresented = false
+                    // `deleteAccount` already ended the Supabase session; this drives the UI
+                    // back to the landing screen.
+                    onLogout()
+                }
+            } catch {
+                await MainActor.run {
+                    isDeleting = false
+                    deleteError = "Couldn't delete your account: \(error.localizedDescription)"
+                }
+            }
         }
     }
 

@@ -166,7 +166,7 @@ struct SpectrumPrismPicker: View {
                     .frame(width: 10, height: 10)
                     .shadow(color: Color(hex: selectedHex).opacity(0.8), radius: 4)
 
-                Text(moodLabel(for: selectedHex))
+                Text(VibePalette.label(for: selectedHex))
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.white.opacity(0.7))
@@ -223,21 +223,6 @@ struct SpectrumPrismPicker: View {
         }
     }
 
-    // MARK: - Mood Labels
-
-    private func moodLabel(for hex: String) -> String {
-        switch hex {
-        case "#FF3B30": return "Energetic"
-        case "#FF9500": return "Warm"
-        case "#FFCC00": return "Sunny"
-        case "#4CD964": return "Fresh"
-        case "#5AC8FA": return "Chill"
-        case "#007AFF": return "Deep"
-        case "#5856D6": return "Dreamy"
-        case "#FF2D55": return "Passionate"
-        default: return "Vibe"
-        }
-    }
 }
 
 // MARK: - Prism Shape
@@ -258,10 +243,7 @@ struct PrismTriangle: Shape {
         Color.black.ignoresSafeArea()
         SpectrumPrismPicker(
             selectedHex: .constant("#5AC8FA"),
-            vibeColors: [
-                "#FF3B30", "#FF9500", "#FFCC00", "#4CD964",
-                "#5AC8FA", "#007AFF", "#5856D6", "#FF2D55"
-            ]
+            vibeColors: VibePalette.colors
         )
         .padding(.vertical, 24)
     }

@@ -12,15 +12,27 @@ struct LandingView: View {
     @State private var animateBlob3 = false
     @State private var showContent = false
     
-    // Demo track for preview card
-    let demoTrack = Track(
-        id: 1488408568,
-        title: "Blinding Lights",
-        artist: "The Weeknd",
-        artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a0/4d/a4/a04da453-3a4b-851b-5813-2b20aa8024e0/source/100x100bb.jpg",
-        previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/7b/2f/1e/7b2f1e62-62d2-1a64-5666-326e63785547/mzaf_2864609346649723364.plus.aac.p.m4a"
-    )
-    
+    // Demo track for preview card.
+    //
+    // Both URLs used to be hardcoded from 2020 and both now return 404 — Apple re-issues these
+    // paths when a record is re-released or re-mastered. The visible result was a grey box
+    // where the album art should be, and a play button that did nothing, as the first thing a
+    // new user ever saw. These are current, and `refreshDemoTrack()` re-resolves them at
+    // runtime so the screen heals itself the next time Apple moves the files.
+    private static let demoTrackId = 1488408568
+    @State private var demoArtworkUrl = "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a6/6e/bf/a66ebf79-5008-8948-b352-a790fc87446b/19UM1IM04638.rgb.jpg/100x100bb.jpg"
+    @State private var demoPreviewUrl: String? = "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/17/b4/8f/17b48f9a-0b93-6bb8-fe1d-3a16623c2cfb/mzaf_9560252727299052414.plus.aac.p.m4a"
+
+    private var demoTrack: Track {
+        Track(
+            id: Self.demoTrackId,
+            title: "Blinding Lights",
+            artist: "The Weeknd",
+            artworkUrl100: demoArtworkUrl,
+            previewUrl: demoPreviewUrl
+        )
+    }
+
     var body: some View {
         ZStack {
             // Deep swirling liquid gradient background
@@ -69,6 +81,44 @@ struct LandingView: View {
             withAnimation(.easeOut(duration: 0.8).delay(0.3)) {
                 showContent = true
             }
+        }
+        .task {
+            await refreshDemoTrack()
+        }
+    }
+
+    /// Re-resolves the demo card's artwork and preview from Apple.
+    ///
+    /// Deliberately the public iTunes lookup endpoint rather than MusicKit: this screen is
+    /// shown *before* login and before the Apple Music permission prompt, so a MusicKit
+    /// request here would simply fail. Nothing breaks if this call doesn't come back — the
+    /// bundled URLs above are valid, so the card already looks right.
+    private func refreshDemoTrack() async {
+        struct LookupResponse: Decodable {
+            struct Item: Decodable {
+                let artworkUrl100: String?
+                let previewUrl: String?
+            }
+            let results: [Item]
+        }
+
+        guard let url = URL(string: "https://itunes.apple.com/lookup?id=\(Self.demoTrackId)") else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let decoded = try JSONDecoder().decode(LookupResponse.self, from: data)
+            guard let item = decoded.results.first else { return }
+
+            await MainActor.run {
+                if let artwork = item.artworkUrl100, artwork != demoArtworkUrl {
+                    demoArtworkUrl = artwork
+                }
+                if let preview = item.previewUrl, preview != demoPreviewUrl {
+                    demoPreviewUrl = preview
+                }
+            }
+        } catch {
+            print("Landing: couldn't refresh the demo track artwork:", error)
         }
     }
     

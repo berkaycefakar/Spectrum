@@ -10,15 +10,21 @@ struct AlbumDetailView: View {
     @State private var albumRating: Double = 0
     @State private var reviewText: String = ""
     @State private var isSaving = false
+    @State private var errorMessage: String?
     @State private var userAlbumReview: AlbumReview?
     @State private var communityReviews: [AlbumReview] = []
     @State private var showLogSheet = false
     @State private var artworkColor: ArtworkColor = .placeholder
+    /// Album logs used to hard-code gold, which made "what vibe did people give this?"
+    /// unanswerable. Users pick it from the prism now, same as songs.
+    @State private var selectedVibeHex: String = "#FFCC00"
+    @State private var hasPickedVibe = false
 
-    private var communityAverageRating: Double {
-        guard !communityReviews.isEmpty else { return 0 }
-        let sum = communityReviews.reduce(0) { $0 + $1.rating }
-        return Double(sum) / Double(communityReviews.count) / 2.0 // 0-10 -> 0-5
+    private var communityStats: CommunityStats {
+        CommunityStats(
+            ratings: communityReviews.map(\.rating),
+            vibeHexes: communityReviews.map(\.vibeColor)
+        )
     }
     
     var body: some View {
@@ -38,10 +44,24 @@ struct AlbumDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            artworkColor = await ArtworkColorLoader.shared.color(for: album.artworkUrl600)
-            await loadTracks()
-            await loadCommunityReviews()
-            await loadUserAlbumReview()
+            // Four independent loads (artwork colour, track list, community ratings, the
+            // user's own rating). Run in parallel — sequentially the page took as long as
+            // all four combined before anything below the hero appeared.
+            async let colorLoad: ArtworkColor = ArtworkColorLoader.shared.color(for: album.artworkUrl600)
+            async let trackLoad: Void = loadTracks()
+            async let communityLoad: Void = loadCommunityReviews()
+            async let ownReviewLoad: Void = loadUserAlbumReview()
+
+            let color = await colorLoad
+            _ = await (trackLoad, communityLoad, ownReviewLoad)
+
+            artworkColor = color
+            // Pre-select the palette entry closest to the cover, but only when the cover
+            // actually has a colour — a monochrome sleeve would just be a guess — and never
+            // over the top of the vibe the user already saved.
+            if !hasPickedVibe, !color.isNeutral {
+                selectedVibeHex = VibePalette.nearest(to: color.accent)
+            }
         }
         .sheet(isPresented: $showLogSheet) {
             albumLogSheet
@@ -94,56 +114,8 @@ struct AlbumDetailView: View {
     
     // MARK: - Topluluk puanları (community)
     private var communitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Community")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal)
-
-            HStack(spacing: 0) {
-                // Rating
-                VStack(spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color(hex: "#FFCC00"))
-                        Text(String(format: "%.1f", communityAverageRating))
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                    }
-                    Text("avg rating")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                .frame(maxWidth: .infinity)
-
-                // Divider
-                Rectangle()
-                    .fill(.white.opacity(0.1))
-                    .frame(width: 1, height: 36)
-
-                // Count
-                VStack(spacing: 6) {
-                    Text("\(communityReviews.count)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                    Text("ratings")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.vertical, 16)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.1), lineWidth: 1)
-            )
+        CommunityStatsCard(stats: communityStats)
             .padding(.horizontal)
-        }
     }
     
     // MARK: - Parça listesi
@@ -277,6 +249,20 @@ struct AlbumDetailView: View {
                         )
                         
                         VStack(alignment: .leading, spacing: 8) {
+                            Text("Your vibe")
+                                .font(.caption)
+                                .textCase(.uppercase)
+                                .foregroundStyle(.white.opacity(0.5))
+
+                            SpectrumPrismPicker(
+                                selectedHex: $selectedVibeHex,
+                                vibeColors: VibePalette.colors,
+                                onManualPick: { hasPickedVibe = true },
+                                beamHeight: 130
+                            )
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Your thoughts")
                                 .font(.caption)
                                 .textCase(.uppercase)
@@ -300,12 +286,19 @@ struct AlbumDetailView: View {
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.6))
                             }
+                        } else if let errorMessage {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                Text(errorMessage)
+                            }
+                            .font(.footnote)
+                            .foregroundStyle(Color(hex: "#FF3B30"))
                         } else if userAlbumReview != nil {
                             Text("Saved")
                                 .font(.footnote)
                                 .foregroundStyle(Color(hex: "#FFCC00"))
                         }
-                        
+
                         Button {
                             saveAlbumRating()
                         } label: {
@@ -320,7 +313,9 @@ struct AlbumDetailView: View {
                             .background(Color(hex: "#FFCC00"))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .disabled(isSaving || albumRating <= 0)
+                        // Deliberately NOT disabled when the rating is empty: a dead button
+                        // told the user nothing. Tapping it now explains what's missing.
+                        .disabled(isSaving)
                     }
                     .padding(24)
                 }
@@ -362,15 +357,15 @@ struct AlbumDetailView: View {
     }
     
     private func loadUserAlbumReview() async {
-        guard let user = try? await SupabaseManager.shared.getCurrentUser() else { return }
         do {
-            let reviews = try await SupabaseManager.shared.getUserAlbumReviews(userId: user.id)
-            if let review = reviews.first(where: { $0.itunesCollectionId == album.id }) {
-                await MainActor.run {
-                    self.userAlbumReview = review
-                    self.albumRating = Double(review.rating) / 2.0
-                    self.reviewText = review.reviewText ?? ""
-                }
+            guard let review = try await SupabaseManager.shared.getUserAlbumReview(collectionId: album.id) else { return }
+            await MainActor.run {
+                self.userAlbumReview = review
+                self.albumRating = Double(review.rating) / 2.0
+                self.reviewText = review.reviewText ?? ""
+                // Their own saved vibe wins over the artwork guess.
+                self.selectedVibeHex = VibePalette.snap(review.vibeColor)
+                self.hasPickedVibe = true
             }
         } catch {
             print("Failed to load user album review: \(error)")
@@ -378,8 +373,17 @@ struct AlbumDetailView: View {
     }
     
     private func saveAlbumRating() {
-        guard !isSaving, albumRating > 0 else { return }
+        guard !isSaving else { return }
+
+        // Picking only a vibe used to hit the `albumRating > 0` guard and return silently.
+        guard albumRating > 0 else {
+            errorMessage = "Add a rating before saving."
+            return
+        }
+
         isSaving = true
+        errorMessage = nil
+
         Task {
             do {
                 let storedRating = Int((albumRating * 2).rounded())
@@ -387,7 +391,7 @@ struct AlbumDetailView: View {
                     collectionId: album.id,
                     rating: storedRating,
                     text: reviewText,
-                    vibeColor: "#FFCC00"
+                    vibeColor: selectedVibeHex
                 )
                 await loadUserAlbumReview()
                 await loadCommunityReviews()
@@ -396,7 +400,10 @@ struct AlbumDetailView: View {
                     self.showLogSheet = false
                 }
             } catch {
-                await MainActor.run { self.isSaving = false }
+                await MainActor.run {
+                    self.isSaving = false
+                    self.errorMessage = "Couldn't save: \(error.localizedDescription)"
+                }
                 print("Failed to save album rating: \(error)")
             }
         }

@@ -36,6 +36,11 @@ struct ActivityView: View {
             .task {
                 await loadNotifications()
             }
+            // `.task` only runs once per view identity, so the tab showed whatever was true
+            // when the app launched — new followers never appeared until a relaunch.
+            .refreshable {
+                await loadNotifications()
+            }
         }
     }
 

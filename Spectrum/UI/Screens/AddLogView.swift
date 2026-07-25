@@ -40,17 +40,8 @@ struct AddLogView: View {
     /// user picks from the prism.
     @State private var artworkColor: ArtworkColor = .placeholder
     
-    // The "Vibe" Palette
-    let vibeColors = [
-        "#FF3B30", // Red
-        "#FF9500", // Orange
-        "#FFCC00", // Yellow
-        "#4CD964", // Green
-        "#5AC8FA", // Light Blue
-        "#007AFF", // Blue
-        "#5856D6", // Purple
-        "#FF2D55"  // Pink
-    ]
+    // The "Vibe" Palette — shared so community summaries can name the same colours.
+    let vibeColors = VibePalette.colors
     
     // Computed color from hex
     var selectedColor: Color {
@@ -158,50 +149,63 @@ struct AddLogView: View {
                     }
 
                     if let error = errorMessage {
+                        // Database errors are long and the message is the only clue to what
+                        // went wrong — two lines cut it off mid-sentence.
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
                             .padding(.horizontal)
-                            .lineLimit(2)
+                            .lineLimit(5)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     Spacer(minLength: 0)
 
                     // Action Buttons
                     HStack(spacing: 12) {
-                        Button("Cancel") {
+                        // Frame/padding/background belong INSIDE the label. Applied to the
+                        // Button they only enlarge the drawing — the tap region stays the
+                        // size of the text, so these only responded to a hit on the words.
+                        Button {
                             isPresented = false
+                        } label: {
+                            Text("Cancel")
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(width: 96)
+                                .padding(.vertical, 15)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .contentShape(RoundedRectangle(cornerRadius: 14))
                         }
-                        .foregroundStyle(.white.opacity(0.7))
-                        .frame(width: 96)
-                        .padding(.vertical, 15)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
 
                         Button(action: saveLog) {
-                            if isSaving {
-                                ProgressView()
-                                    .tint(contrastTextColor)
-                            } else {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                    Text(isEditing ? "Update Log" : "Save Log")
-                                        .fontWeight(.bold)
+                            Group {
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(contrastTextColor)
+                                } else {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                        Text(isEditing ? "Update Log" : "Save Log")
+                                            .fontWeight(.bold)
+                                    }
+                                    .foregroundStyle(contrastTextColor)
                                 }
-                                .foregroundStyle(contrastTextColor)
                             }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(
-                            LinearGradient(
-                                colors: [selectedColor, selectedColor.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 15)
+                            .background(
+                                LinearGradient(
+                                    colors: [selectedColor, selectedColor.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: selectedColor.opacity(0.4), radius: 10)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .contentShape(RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: selectedColor.opacity(0.4), radius: 10)
+                        }
                         .disabled(isSaving)
                         .animation(.easeInOut(duration: 0.3), value: selectedColorHex)
                     }
@@ -263,43 +267,14 @@ struct AddLogView: View {
         // any palette entry would be a guess, so we leave the user's default in place.
         guard !hasExtractedColor, !color.isNeutral else { return }
 
-        let matchedHex = nearestVibeColor(to: color.accent)
+        let matchedHex = VibePalette.nearest(to: color.accent)
         withAnimation(.easeInOut(duration: 0.5)) {
             selectedColorHex = matchedHex
             hasExtractedColor = true
         }
     }
 
-    /// Nearest palette entry to `color`, matched primarily on hue. RGB distance used to
-    /// pick oddly — a pale colour is close to *everything* in RGB space, which is how white
-    /// artwork ended up on purple.
-    private func nearestVibeColor(to color: Color) -> String {
-        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
-        UIColor(color).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
 
-        var nearestColor = vibeColors[0]
-        var minDistance = CGFloat.greatestFiniteMagnitude
-
-        for hex in vibeColors {
-            var pHue: CGFloat = 0, pSat: CGFloat = 0, pBright: CGFloat = 0, pAlpha: CGFloat = 0
-            UIColor(Color(hex: hex)).getHue(&pHue, saturation: &pSat, brightness: &pBright, alpha: &pAlpha)
-
-            // Hue is circular: red at 0.02 and red at 0.98 are neighbours, not opposites.
-            let rawDelta = abs(hue - pHue)
-            let hueDelta = min(rawDelta, 1 - rawDelta)
-
-            // Hue dominates; saturation breaks ties between similar hues.
-            let distance = hueDelta * 3 + abs(saturation - pSat) * 0.5
-
-            if distance < minDistance {
-                minDistance = distance
-                nearestColor = hex
-            }
-        }
-
-        return nearestColor
-    }
-    
     // MARK: - Save Action
     
     func saveLog() {

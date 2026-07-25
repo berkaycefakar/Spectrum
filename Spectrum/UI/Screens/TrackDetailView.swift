@@ -22,10 +22,12 @@ struct TrackDetailView: View {
     @State private var isLoadingReviews = true
     @State private var album: Album?
     
-    private var averageRating: Double {
-        guard !trackReviews.isEmpty else { return 0 }
-        let total = trackReviews.reduce(0) { $0 + $1.rating }
-        return Double(total) / Double(trackReviews.count) / 2.0
+    /// Average score, how many people logged it, and which vibe they picked most.
+    private var communityStats: CommunityStats {
+        CommunityStats(
+            ratings: trackReviews.map(\.rating),
+            vibeHexes: trackReviews.map(\.vibeColor)
+        )
     }
     
     var body: some View {
@@ -43,16 +45,19 @@ struct TrackDetailView: View {
                             albumLink(album: album)
                         }
 
-                        if !trackReviews.isEmpty {
-                            statsBar
-                        }
+                        CommunityStatsCard(
+                            stats: communityStats,
+                            countLabel: "logs",
+                            emptyMessage: "No logs yet — be the first!"
+                        )
 
                         reviewsSection
-
-                        Spacer(minLength: 100)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 24)
+                    // A `Spacer(minLength:)` here made this whole column flexible, which is
+                    // what let it squeeze the hero. Padding takes the space without stretching.
+                    .padding(.bottom, 100)
                 }
             }
             .ignoresSafeArea(edges: .top)
@@ -64,9 +69,13 @@ struct TrackDetailView: View {
                 .presentationDragIndicator(.visible)
         }
         .task {
-            await loadArtworkColor()
-            await loadTrackReviews()
-            await loadAlbum()
+            // Independent: the artwork colour is computed locally, the reviews come from
+            // Supabase and the album from MusicKit. Chaining them made the page's perceived
+            // load time the sum of all three.
+            async let colorLoad: Void = loadArtworkColor()
+            async let reviewsLoad: Void = loadTrackReviews()
+            async let albumLoad: Void = loadAlbum()
+            _ = await (colorLoad, reviewsLoad, albumLoad)
         }
         .onDisappear {
             if audioManager.isTrackPlaying(track.id) {
@@ -76,27 +85,32 @@ struct TrackDetailView: View {
     }
     
     // MARK: - Hero Section
+
+    /// The hero is pinned to this height on purpose. It used to size itself from whatever the
+    /// ScrollView had left over, and because the reviews list below it is also flexible, every
+    /// extra log stole height from the hero — which, being bottom-aligned, slid the artwork
+    /// upward as a song gained logs.
+    private let heroHeight: CGFloat = 420
+
     private var heroSection: some View {
         ZStack(alignment: .bottom) {
-            // Blurred background — must be clipped to frame
-            GeometryReader { geo in
-                AsyncImage(url: track.artworkUrl600) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geo.size.width, height: 420)
-                    } else {
-                        Color.gray.opacity(0.3)
-                            .frame(width: geo.size.width, height: 420)
+            // Blurred background — Color.clear takes the hero's box, the image overflows it
+            // and gets clipped.
+            Color.clear
+                .overlay {
+                    AsyncImage(url: track.artworkUrl600) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Color.gray.opacity(0.3)
+                        }
                     }
                 }
                 .clipped()
                 .blur(radius: 50)
                 .overlay(Color.black.opacity(0.4))
-            }
-            .frame(height: 420)
-            .clipped()
 
             LinearGradient(
                 colors: [.clear, .black.opacity(0.8), .black],
@@ -133,6 +147,9 @@ struct TrackDetailView: View {
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                        .padding(.horizontal, 20)
 
                     // Each credited artist is independently tappable — collaborations link to
                     // every performer's page, not just the primary one.
@@ -142,6 +159,8 @@ struct TrackDetailView: View {
             .padding(.bottom, 30)
             .padding(.top, 50)
         }
+        .frame(height: heroHeight)
+        .clipped()
     }
     
     // MARK: - Artist links (supports collaborations)
@@ -220,9 +239,16 @@ struct TrackDetailView: View {
                                     lineWidth: 1
                                 )
                         )
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(dominantColor)
+                    // A spinner while the preview downloads. The icon used to flip to "pause"
+                    // instantly and then play nothing for seconds, which read as a dead button.
+                    if audioManager.isTrackBuffering(track.id) {
+                        ProgressView()
+                            .tint(dominantColor)
+                    } else {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(dominantColor)
+                    }
                 }
                 .frame(width: 48, height: 48)
                 .shadow(color: dominantColor.opacity(0.35), radius: 8)
@@ -294,55 +320,22 @@ struct TrackDetailView: View {
         .buttonStyle(.plain)
     }
     
-    // MARK: - Stats Bar
-    private var statsBar: some View {
-        HStack(spacing: 24) {
-            HStack(spacing: 6) {
-                Image(systemName: "doc.text.fill")
-                    .foregroundStyle(dominantColor)
-                Text("\(trackReviews.count) logs")
-            }
-            
-            HStack(spacing: 6) {
-                Image(systemName: "star.fill")
-                    .foregroundStyle(Color(hex: "#FFCC00"))
-                Text(String(format: "%.1f", averageRating) + " avg")
-            }
-        }
-        .font(.subheadline)
-        .foregroundStyle(.white.opacity(0.7))
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(.white.opacity(0.1), lineWidth: 1)
-        )
-    }
-    
     // MARK: - Reviews Section
     private var reviewsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Community Reviews")
-                .font(.headline)
-                .foregroundStyle(.white)
-            
+            // Only carries the written reviews now — the numbers moved into CommunityStatsCard.
+            if !trackReviews.isEmpty || isLoadingReviews {
+                Text("Reviews")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+
             if isLoadingReviews {
                 ProgressView().tint(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
             } else if trackReviews.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "text.bubble")
-                        .font(.system(size: 30))
-                        .foregroundStyle(.white.opacity(0.3))
-                    Text("No reviews yet — be the first!")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                EmptyView()
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(trackReviews) { review in
@@ -368,13 +361,12 @@ struct TrackDetailView: View {
         do {
             let reviews = try await SupabaseManager.shared.getTrackReviews(trackId: Int64(track.id))
             
-            var profiles: [UUID: Profile] = [:]
-            for uid in Set(reviews.map { $0.userId }) {
-                if let p = try? await SupabaseManager.shared.getProfile(userId: uid) {
-                    profiles[uid] = p
-                }
-            }
-            
+            // One query for every reviewer rather than one per reviewer — a popular song was
+            // firing a request per log.
+            let userIds = Set(reviews.map { $0.userId }).map(\.uuidString)
+            let fetchedProfiles = (try? await SupabaseManager.shared.batchGetProfiles(ids: userIds)) ?? []
+            let profiles = Dictionary(uniqueKeysWithValues: fetchedProfiles.map { ($0.id, $0) })
+
             await MainActor.run {
                 self.trackReviews = reviews
                 self.reviewProfiles = profiles

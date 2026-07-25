@@ -3,6 +3,7 @@ import UIKit
 
 struct ContentView: View {
     @StateObject private var sessionStore = SessionStore.shared
+    @StateObject private var musicAuth = MusicAuthorizationStore.shared
     @State private var selectedTab = 0
     @State private var showAuthView = false
     
@@ -56,6 +57,29 @@ struct ContentView: View {
         .task {
             await sessionStore.checkSession()
         }
+        .fullScreenCover(isPresented: musicAccessBinding) {
+            MusicAccessView {
+                musicAuth.hasDismissedExplainer = true
+            }
+        }
+        // Sits above everything, signed in or not: the reset link has already established a
+        // session, so this has to be the thing the user lands on.
+        .fullScreenCover(isPresented: $sessionStore.isPasswordRecovery) {
+            NewPasswordView(mode: .recovery) {
+                sessionStore.endPasswordRecovery()
+            }
+        }
+    }
+
+    /// Only worth interrupting a signed-in user — the landing and auth screens work fine
+    /// without catalog access.
+    private var musicAccessBinding: Binding<Bool> {
+        Binding(
+            get: { sessionStore.isAuthenticated && musicAuth.shouldShowExplainer },
+            set: { isPresented in
+                if !isPresented { musicAuth.hasDismissedExplainer = true }
+            }
+        )
     }
     
     // MARK: - Main Tab View

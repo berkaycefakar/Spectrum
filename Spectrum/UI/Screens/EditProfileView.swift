@@ -120,19 +120,24 @@ struct EditProfileView: View {
                             .multilineTextAlignment(.center)
                     }
 
+                    // Layout inside the label — outside the Button it enlarges only the
+                    // drawing, leaving the tap region the size of the text.
                     Button(action: saveProfile) {
-                        if isLoading {
-                            ProgressView().tint(.black)
-                        } else {
-                            Text("Save Changes")
-                                .fontWeight(.bold)
-                                .foregroundStyle(.black)
+                        Group {
+                            if isLoading {
+                                ProgressView().tint(.black)
+                            } else {
+                                Text("Save Changes")
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.black)
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(trimmedUsername.isEmpty ? Color.white.opacity(0.4) : Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .contentShape(RoundedRectangle(cornerRadius: 14))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(trimmedUsername.isEmpty ? Color.white.opacity(0.4) : Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
                     .disabled(isLoading || trimmedUsername.isEmpty)
                 }
                 .padding()
@@ -214,7 +219,16 @@ struct EditProfileView: View {
 
         Task {
             do {
-                guard let user = try await SupabaseManager.shared.getCurrentUser() else { return }
+                // Bailing out silently here left the button spinning forever with no
+                // explanation — the one state the user can't recover from without force
+                // quitting.
+                guard let user = try await SupabaseManager.shared.getCurrentUser() else {
+                    await MainActor.run {
+                        isLoading = false
+                        errorMessage = "Oturumun sona ermiş görünüyor. Lütfen tekrar giriş yap."
+                    }
+                    return
+                }
 
                 // Upload the new photo first (if one was picked), then persist the profile.
                 var avatarUrl = existingAvatarUrl

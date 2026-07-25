@@ -12,6 +12,8 @@ struct ProfileView: View {
     @State private var artistReviews: [ArtistReview] = []
     @State private var tracks: [Int64: Track] = [:] // Cache for tracks
     @State private var albums: [Int64: Album] = [:] // Cache for albums
+    // Artist reviews only store a name, so photos have to be resolved from MusicKit.
+    @State private var artistBriefs: [String: ArtistBrief] = [:]
     @State private var followers: [Profile] = []
     @State private var following: [Profile] = []
     @State private var showFollowersSheet = false
@@ -48,19 +50,19 @@ struct ProfileView: View {
         return Double(total) / Double(reviews.count) / 2.0 // Convert 0-10 to 0-5
     }
     
-    // Sorted reviews by rating (highest first)
+    // Best-rated first — the profile grid is a "favourites" wall, not a diary — with the most
+    // recent log breaking ties. The tie-break matters: `sorted(by:)` is not a stable sort, so
+    // ranking on rating alone let equally-rated logs swap positions on every reload.
     var sortedReviews: [Review] {
-        reviews.sorted { $0.rating > $1.rating }
+        reviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
     }
-    
-    // Sorted album reviews by rating (highest first)
+
     var sortedAlbumReviews: [AlbumReview] {
-        albumReviews.sorted { $0.rating > $1.rating }
+        albumReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
     }
-    
-    // Sorted artist reviews by rating (highest first)
+
     var sortedArtistReviews: [ArtistReview] {
-        artistReviews.sorted { $0.rating > $1.rating }
+        artistReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
     }
 
     var body: some View {
@@ -289,7 +291,7 @@ struct ProfileView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(sortedArtistReviews) { review in
-                        ArtistReviewRow(review: review)
+                        ArtistReviewRow(review: review, brief: artistBriefs[review.artistName])
                     }
                 }
             }
@@ -321,22 +323,19 @@ struct ProfileView: View {
             // 2. Fetch song reviews (required table: reviews)
             let reviews = try await SupabaseManager.shared.getUserReviews(userId: currentUser.id)
             
-            // 3. Fetch album reviews only if table exists (optional; use [] on error)
-            let albumReviews: [AlbumReview] = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: currentUser.id)) ?? []
-            // Optional like album reviews: if the artist_reviews table is missing we show
-            // an empty tab rather than failing the whole profile load.
-            let artistReviews: [ArtistReview]
-            do {
-                artistReviews = try await SupabaseManager.shared.getUserArtistReviews(userId: currentUser.id)
-            } catch {
-                print("Profile: failed to load artist reviews:", error)
-                artistReviews = []
-            }
-            
-            // 4. Followers / Following lists
-            let followers = (try? await SupabaseManager.shared.getFollowers(userId: currentUser.id)) ?? []
-            let following = (try? await SupabaseManager.shared.getFollowing(userId: currentUser.id)) ?? []
-            
+            // 3. Album, artist, follower and following lists are independent of each other —
+            //    fetch them concurrently rather than as four chained round-trips. Each is
+            //    optional: a missing table shows an empty tab instead of failing the load.
+            async let albumReviewsLoad = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: currentUser.id)) ?? []
+            async let artistReviewsLoad = (try? await SupabaseManager.shared.getUserArtistReviews(userId: currentUser.id)) ?? []
+            async let followersLoad = (try? await SupabaseManager.shared.getFollowers(userId: currentUser.id)) ?? []
+            async let followingLoad = (try? await SupabaseManager.shared.getFollowing(userId: currentUser.id)) ?? []
+
+            let albumReviews = await albumReviewsLoad
+            let artistReviews = await artistReviewsLoad
+            let followers = await followersLoad
+            let following = await followingLoad
+
             await MainActor.run {
                 self.profile = profileData
                 self.reviews = reviews
@@ -346,14 +345,22 @@ struct ProfileView: View {
                 self.following = following
             }
             
-            // 5. Fetch track + album details in two batched requests (was one-by-one).
+            // 5. Fetch track + album details in two batched requests (was one-by-one),
+            // plus artist photos, which only exist in MusicKit (artist_reviews stores a name).
             let trackIds = Array(Set(reviews.map { $0.itunesTrackId }))
             let albumIds = Array(Set(albumReviews.map { $0.itunesCollectionId }))
-            let fetchedTracks = await MusicService.shared.fetchTracks(ids: trackIds)
-            let fetchedAlbums = await MusicService.shared.fetchAlbums(ids: albumIds)
+            let artistNames = artistReviews.map { $0.artistName }
+            async let tracksLoad = MusicService.shared.fetchTracks(ids: trackIds)
+            async let albumsLoad = MusicService.shared.fetchAlbums(ids: albumIds)
+            async let briefsLoad = MusicService.shared.fetchArtistBriefs(names: artistNames)
+
+            let fetchedTracks = await tracksLoad
+            let fetchedAlbums = await albumsLoad
+            let fetchedArtists = await briefsLoad
             await MainActor.run {
                 for (id, track) in fetchedTracks { self.tracks[id] = track }
                 for (id, album) in fetchedAlbums { self.albums[id] = album }
+                for (name, brief) in fetchedArtists { self.artistBriefs[name] = brief }
             }
             
         } catch {
@@ -470,21 +477,13 @@ struct AlbumGridItemView: View {
 
 struct ArtistReviewRow: View {
     let review: ArtistReview
+    /// Photo + catalog id resolved from MusicKit; nil until the lookup lands (or if it fails).
+    var brief: ArtistBrief? = nil
 
     var body: some View {
-        NavigationLink(destination: ArtistDetailView(artistName: review.artistName)) {
+        NavigationLink(destination: ArtistDetailView(artistName: review.artistName, artistId: brief?.id)) {
             HStack(spacing: 16) {
-                // Artist icon/avatar placeholder
-                ZStack {
-                    Circle()
-                        .fill(Color(hex: review.vibeColor).opacity(0.3))
-                        .frame(width: 50, height: 50)
-
-                    Text(String(review.artistName.prefix(1)).uppercased())
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color(hex: review.vibeColor))
-                }
+                artistAvatar
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(review.artistName)
@@ -516,5 +515,38 @@ struct ArtistReviewRow: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    /// The artist's photo, falling back to the initial-on-vibe-colour badge while the MusicKit
+    /// lookup is in flight or when the artist has no press shot.
+    private var artistAvatar: some View {
+        ZStack {
+            Circle()
+                .fill(Color(hex: review.vibeColor).opacity(0.3))
+
+            if let url = brief?.artworkUrl {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        initialBadge
+                    }
+                }
+                .clipShape(Circle())
+            } else {
+                initialBadge
+            }
+        }
+        .frame(width: 50, height: 50)
+        .overlay(
+            Circle().stroke(Color(hex: review.vibeColor).opacity(0.45), lineWidth: 1.5)
+        )
+    }
+
+    private var initialBadge: some View {
+        Text(String(review.artistName.prefix(1)).uppercased())
+            .font(.title3)
+            .fontWeight(.bold)
+            .foregroundStyle(Color(hex: review.vibeColor))
     }
 }
