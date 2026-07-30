@@ -124,18 +124,26 @@ struct LogDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        // Opened from someone else's profile this screen shows their review text full-width,
-        // so it needs Report / Block like every other content surface. The modifier hides
-        // itself for your own logs, which is why it can sit outside the `isOwner` branch.
-        .moderationActions(
-            contentType: .songReview,
-            contentRef: review.id.uuidString,
-            authorId: review.userId,
-            authorUsername: authorUsername,
-            reportedText: review.reviewText,
-            onBlocked: { dismiss() }
-        )
         .toolbar {
+            // Someone else's log: this screen shows their review full-width, so it carries the
+            // app's visible Report / Block control. The feed and activity cards keep the
+            // long-press shortcut only — a permanent badge on every card in a scrolling list
+            // is noise, and this is where a reviewer looking for the mechanism ends up.
+            if !isOwner {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ModerationMenu(
+                        target: ModerationTarget(
+                            contentType: .songReview,
+                            contentRef: review.id.uuidString,
+                            authorId: review.userId,
+                            authorUsername: authorUsername,
+                            reportedText: review.reviewText
+                        ),
+                        onBlocked: { dismiss() }
+                    )
+                }
+            }
+
             if isOwner {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {

@@ -145,7 +145,6 @@ struct ActivityView: View {
                                         authorId: item.actorId,
                                         authorUsername: item.actorUsername,
                                         reportedText: item.reviewText,
-                                        showsAffordance: true,
                                         onBlocked: { Task { await loadNotifications() } }
                                     )
                             }
