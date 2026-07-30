@@ -8,12 +8,33 @@ struct ActivityItemCard: View {
     @State private var targetTitle: String?
 
     var body: some View {
-        NavigationLink(destination: activityDestination) {
-            cardContent
+        Group {
+            // Value-based so the Activity tab can pop back to its root when re-tapped. Rows
+            // with an unusable target id stay unpushable rather than opening a dead end.
+            if let route = activityRoute {
+                NavigationLink(value: route) {
+                    cardContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                cardContent
+            }
         }
-        .buttonStyle(PlainButtonStyle())
         .task {
             await loadTargetInfo()
+        }
+    }
+
+    private var activityRoute: AppRoute? {
+        switch activity.type {
+        case .trackReview:
+            guard let targetId = activity.targetId, let trackId = Int64(targetId) else { return nil }
+            return .activityTrack(trackId)
+        case .albumReview:
+            guard let targetId = activity.targetId, let collectionId = Int64(targetId) else { return nil }
+            return .activityAlbum(collectionId)
+        case .newFollower:
+            return .user(activity.actorId)
         }
     }
 
@@ -88,7 +109,7 @@ struct ActivityItemCard: View {
 
                 // Review text snippet
                 if let text = activity.reviewText, !text.isEmpty {
-                    Text("\u{201C}\(text)\u{201D}")
+                    Text("\u{201C}\(ProfanityFilter.masked(text))\u{201D}")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(2)

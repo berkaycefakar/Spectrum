@@ -30,6 +30,10 @@ struct AddLogView: View {
     /// Rating 0...5 (0.5 adımlı). Veritabanına 0...10 tam sayı olarak gönderiyoruz.
     @State private var rating: Double = 0
     @State private var reviewText: String = ""
+    /// A vertical TextField turns Return into a newline, so without an explicit Done button
+    /// there was no way to put the keyboard away — it covered the rating control and the
+    /// save button underneath it.
+    @FocusState private var reviewFieldFocused: Bool
     // Must be one of `vibeColors` — the prism highlights the selected beam by matching hex,
     // and the old "#FF00FF" default wasn't in the palette so nothing was ever highlighted.
     @State private var selectedColorHex: String = "#5AC8FA"
@@ -115,6 +119,7 @@ struct AddLogView: View {
 
                     // Review Text
                     TextField("What's the vibe?", text: $reviewText, axis: .vertical)
+                        .focused($reviewFieldFocused)
                         .lineLimit(isCompact ? 1...2 : 2...3)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -219,8 +224,22 @@ struct AddLogView: View {
         .task {
             await extractColorFromURL()
         }
+        // Tap anywhere off the field to dismiss. `simultaneousGesture` so it doesn't eat taps
+        // meant for the prism picker or the rating control underneath.
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                if reviewFieldFocused { reviewFieldFocused = false }
+            }
+        )
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { reviewFieldFocused = false }
+                    .fontWeight(.semibold)
+            }
+        }
     }
-    
+
     // MARK: - Placeholder View
     private var placeholderView: some View {
         RoundedRectangle(cornerRadius: 16)

@@ -83,7 +83,7 @@ struct LogDetailView: View {
                         
                         // Review Text
                         if let text = review.reviewText, !text.isEmpty {
-                            Text(text)
+                            Text(ProfanityFilter.masked(text))
                                 .font(.body)
                                 .foregroundStyle(.white)
                                 .multilineTextAlignment(.center)

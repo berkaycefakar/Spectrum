@@ -147,7 +147,21 @@ git push origin main
 ## KALAN İŞLER (öncelik sırasıyla)
 
 ### 🔴 Yayın öncesi ZORUNLU (Supabase panelinde / senin yapman gereken)
-1. **Commit + push** (yukarıda) — her şeyden önce.
+> **30 Temmuz 2026 güncellemesi (2).** UGC migration'ı (`content_reports` + `user_blocks` +
+> trigger) Supabase'de **çalıştırıldı** — rapor ve engelleme artık canlı. Kalanlar:
+> `Supabase_migration_artist_reviews.sql`, RLS denetimi, `avatars` bucket + storage policy'leri,
+> `supabase functions deploy delete-user`, e-posta doğrulaması kontrolü.
+>
+> **30 Temmuz 2026 güncellemesi (1).** Aşağıdaki 1. madde (commit/push) tamamlandı — `32594f5`
+> commit'i atıldı ve push edildi. 4. ve 5. maddelerin **kod tarafı da yazıldı**; artık senden
+> sadece panel işleri kaldı:
+> - `Supabase_migration_ugc_reports_blocks.sql` çalıştırılacak (rapor + engelleme tabloları)
+> - `supabase functions deploy delete-user` (hesap silmenin sunucu adımı)
+>
+> Ayrıca tab bar'a scroll'da küçülüp yazılarını gizleyen efekt eklendi
+> (`UI/Components/SpectrumTabBar.swift`), iOS 26'da gerçek Liquid Glass kullanıyor.
+
+1. ~~**Commit + push**~~ — yapıldı (`32594f5`).
 2. **RLS denetimi** — tüm tablolarda RLS açık mı, policy'ler doğru mu? Uygulamanın TÜM güvenliği
    buna bağlı. Audit script'i + gereken policy seti `APP_STORE_READINESS.md` §7'de.
 3. **Apple/Google giriş panel ayarları** — kod hazır ama panel ayarları yapılmadan ÇALIŞMAZ.
@@ -175,6 +189,73 @@ git push origin main
 2. Albüm rozetleri (Explicit, Dolby Atmos/Lossless).
 3. "Latest release" bloğu, besteci alanı, mini-player, paylaşım kartı.
 4. Yarım yıldız gösterimi (`ArtistReviewRow` `rating/2` tam sayı bölmesi yapıyor).
+
+---
+
+## 30 Temmuz 2026 — bu oturumda yapılanlar
+
+Hepsi `xcodebuild` ile temiz derleniyor. **Hiçbiri gerçek cihazda test edilmedi** — simülatörde
+UI test ile swipe/tap attırıp ekran görüntüsüyle doğrulandı.
+
+### 1. Tab bar: scroll'da küçülen kapsül (`UI/Components/SpectrumTabBar.swift`)
+- Sistem tab bar'ı gizli (`.toolbar(.hidden, for: .tabBar)`), yerine custom kapsül.
+- Aşağı kaydırınca yazılar gizlenip kapsül küçülüyor; durunca 250 ms sonra geri geliyor.
+- iOS 26'da **gerçek Liquid Glass**: `glassEffect(.regular.interactive(), in: .capsule)`.
+  `interactive()` parmakla etkileşen efekti veriyor. iOS 17–25 için material yedeği var.
+- Ölçüler native kapsülden alındı: 22pt kenar boşluğu, 52pt öğe yüksekliği.
+- **Öğrenilenler (tekrar aynı hataya düşmemek için):**
+  - Scroll state'i `ContentView` dinlerse her açılıp kapanmada 4 ekran birden yeniden kurulur
+    ve bar "yavaş" hissettirir. State sadece bar view'ının içinde dinlenmeli.
+  - Her dokunuşta yeni `UIImpactFeedbackGenerator` yaratmak ilk tıkta belirgin gecikme yapıyor;
+    tek örnek tutulup `prepare()` edilmeli.
+  - Seçili pill doğrudan `selection`'a bağlanırsa hedef ekran kurulana kadar kıpırdamaz; ayrı
+    bir state ile dokunulan karede hareket ettiriliyor, sekme geçişi bir runloop sonra.
+  - iOS 26'nın kendi `.tabBarMinimizeBehavior(.onScrollDown)` davranışı bizim istediğimiz şey
+    DEĞİL: barı tek yuvarlağa indirip diğer ikonları tamamen gizliyor (simülatörde doğrulandı).
+
+### 2. UGC — App Store Guideline 1.2 (2. en olası ret sebebi kapandı)
+- `Core/Utils/ProfanityFilter.swift` — TR+EN, leet-speak ("s1kt1r") ve tekrar harf ("fuuuck")
+  çözümlü. `SupabaseManager.writeReview`'a konuldu: şarkı/albüm/sanatçı yazma yollarının üçü de
+  oradan geçtiği için sonradan eklenecek bir ekran atlayamaz. Okurken de maskeleniyor
+  (`ProfanityFilter.masked`) — filtre öncesi yazılmış satırlar DB'de duruyor.
+- `UI/Screens/ReportContentView.swift` — sebep seçimi + detay + 24 saat yanıt taahhüdü.
+- `UI/Components/ModerationActions.swift` — feed kartına / topluluk incelemesine uzun basınca
+  Report + Block. Profilde ⋯ menüsünden de var.
+- `UI/Screens/BlockedUsersView.swift` — Settings → Blocked Users, engel kaldırma.
+- Engellenen kullanıcı feed, arama, aktivite ve tüm inceleme listelerinden süzülüyor
+  (`SupabaseManager.blockedUserIds()`, 60 sn cache).
+- **Moderasyon manuel:** `select * from content_reports where status = 'pending' order by created_at;`
+
+### 3. Hesap silme sunucu adımı
+- `supabase/functions/delete-user/index.ts` yazıldı (çağıranı kendi token'ından doğrulayıp
+  sonra service-role'e yükseliyor). `deleteAccount()` önce bunu deniyor, yoksa eski istemci
+  yoluna düşüyor. **Deploy edilmedi.**
+
+### 4. Navigasyon: sekmeye tekrar basınca köke dönme
+- `Core/Navigation/AppRoute.swift` — dört sekmenin ilk seviye linkleri değer tabanlı
+  navigasyona çevrildi (`NavigationLink(value:)` + `navigationDestination(for: AppRoute.self)`).
+- **Neden:** `NavigationPath` sıfırlamak `NavigationLink(destination:)` ile açılmış sayfayı
+  KAPATMIYOR (simülatörde doğrulandı). Değer tabanlı olunca kapatıyor.
+- `TabReselectionState` ayrı bir observable — `TabBarScrollState`'e eklenseydi her scroll
+  collapse'ında 4 ekran birden yeniden kurulurdu.
+- Detay ekranlarının kendi içindeki linkler destination tabanlı kalabilir; alttaki view
+  pop'lanınca üstündekiler de gidiyor.
+
+### 5. Düzeltilen bug'lar
+- **Kullanıcı aramasında wildcard sızması:** `searchUsers` `ilike` desenini escape etmiyordu;
+  arama kutusuna `%` yazan biri tüm kullanıcıları çekiyordu. `literalPattern` bağlandı.
+- **Yarım yıldız kayboluyordu:** `ArtistReviewRow`'da `rating / 2` tam sayı bölmesi 3.5 puanı
+  3 yıldız çiziyordu. `star.leadinghalf.filled` ile düzeltildi.
+- **Klavye kapanmıyordu:** `AddLogView`, albüm inceleme sheet'i ve `EditProfileView` dikey
+  `TextField` kullanıyor (Return = yeni satır). Üçüne de klavye üstü **Done** butonu +
+  boşluğa dokununca kapanma eklendi.
+
+### Sonraki oturum için açık işler
+- Cihazda test (yukarıdakilerin hiçbiri gerçek donanımda denenmedi).
+- `avatars` bucket + storage policy'leri, RLS denetimi, artist_reviews migration.
+- iPad kararı, `EditProfileView`'daki Türkçe hata mesajları (karışık dil).
+- `SupabaseManager.blockedCache` düz `class` üzerinde mutable — strict concurrency'ye
+  geçilirse actor'a taşınmalı.
 
 ---
 

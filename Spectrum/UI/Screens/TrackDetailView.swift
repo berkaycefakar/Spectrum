@@ -470,7 +470,8 @@ struct TrackReviewCard: View {
             }
             
             if let text = review.reviewText, !text.isEmpty {
-                Text(text)
+                // Masked on read: rows written before the profanity filter are still in the DB.
+                Text(ProfanityFilter.masked(text))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
                     .lineLimit(4)
@@ -482,6 +483,15 @@ struct TrackReviewCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(.white.opacity(0.1), lineWidth: 1)
+        )
+        // Long press to report or block — the community list is where an offensive review is
+        // most likely to be seen, so the action has to be reachable from here too.
+        .moderationActions(
+            contentType: .songReview,
+            contentRef: review.id.uuidString,
+            authorId: review.userId,
+            authorUsername: profile?.username,
+            reportedText: review.reviewText
         )
     }
 }

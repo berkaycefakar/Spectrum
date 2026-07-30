@@ -14,7 +14,12 @@ class SupabaseManager {
     private let authRedirectURL = URL(string: "spectrum://auth-callback")!
     
     let client: SupabaseClient
-    
+
+    /// Blocked-user ids, cached for a minute: the feed, search, activity and profile screens
+    /// all need this on every load, and it only changes when the user blocks someone.
+    private var blockedCache: Set<UUID>?
+    private var blockedCacheStamp = Date.distantPast
+
     private init() {
         let options = SupabaseClientOptions(
             auth: SupabaseClientOptions.AuthOptions(
@@ -168,16 +173,32 @@ class SupabaseManager {
     /// account to let them delete it from inside the app. Spectrum had sign-up but no way
     /// out, which is a straightforward rejection.
     ///
+    /// Prefers the `delete-user` Edge Function (`supabase/functions/delete-user`), which is the
+    /// only thing that can remove the `auth.users` row — that needs the service-role key, and
+    /// shipping that key inside the app would hand every user full admin access to the
+    /// database. If the function isn't deployed yet, this falls back to clearing everything the
+    /// app itself owns, which leaves an orphaned auth row holding only the email address.
+    func deleteAccount() async throws {
+        do {
+            try await client.functions.invoke("delete-user")
+            // The server has already destroyed the account; all that's left is the local
+            // session. Sign-out failures are ignored: the account is gone either way, and
+            // `SessionStore` clears local state regardless.
+            try? await client.auth.signOut()
+            return
+        } catch {
+            print("delete-user Edge Function unavailable, falling back to client-side deletion:", error)
+        }
+
+        try await deleteAccountClientSide()
+    }
+
+    /// Fallback path: erases everything the app owns, then signs out.
+    ///
     /// Order matters. Owned content goes first, then the follow graph, then the avatar, then
     /// the profile row — so that if the run is interrupted we never leave a profile pointing
     /// at content that no longer exists (a half-deleted profile still reads as a live user).
-    ///
-    /// **The `auth.users` row is deliberately not touched here.** Deleting it requires the
-    /// service-role key, and shipping that key inside the app would hand every user full
-    /// admin access to the database. The row is orphaned by design: it retains only the email
-    /// address, and everything the user created is gone. See `APP_STORE_READINESS.md` for the
-    /// Edge Function that finishes the job server-side, which is what Apple expects.
-    func deleteAccount() async throws {
+    private func deleteAccountClientSide() async throws {
         guard let user = try await getCurrentUser() else {
             throw NSError(
                 domain: "Spectrum",
@@ -197,7 +218,12 @@ class SupabaseManager {
         try await client.from("follows").delete().eq("follower_id", value: userId).execute()
         try await client.from("follows").delete().eq("following_id", value: userId).execute()
 
-        // 3. The avatar. Best-effort: a storage failure must not block the deletion, and a
+        // 3. Their own block list. Rows where they are the *blocked* party can't be removed
+        //    from here — RLS scopes deletes to the blocker — and don't need to be: the
+        //    foreign key cascades once the Edge Function removes the auth row.
+        try? await client.from("user_blocks").delete().eq("blocker_id", value: userId).execute()
+
+        // 4. The avatar. Best-effort: a storage failure must not block the deletion, and a
         //    user who never uploaded one has nothing at this path.
         do {
             _ = try await client.storage
@@ -207,10 +233,10 @@ class SupabaseManager {
             print("Account deletion: couldn't remove avatar object:", error)
         }
 
-        // 4. The profile row — the last thing that makes the account visible to anyone else.
+        // 5. The profile row — the last thing that makes the account visible to anyone else.
         try await client.from("profiles").delete().eq("id", value: userId).execute()
 
-        // 5. Drop the local session.
+        // 6. Drop the local session.
         try await client.auth.signOut()
     }
     
@@ -379,6 +405,18 @@ class SupabaseManager {
         text: String,
         vibeColor: String
     ) async throws {
+        // The single choke point every review write goes through — song, album and artist. The
+        // check lives here rather than in each sheet so a screen added later can't skip it.
+        // App Store Review Guideline 1.2 requires filtering objectionable user content.
+        if let offending = ProfanityFilter.firstMatch(in: text) {
+            throw NSError(
+                domain: "Spectrum",
+                code: 422,
+                userInfo: [NSLocalizedDescriptionKey:
+                    "Please take out “\(offending)” — reviews can't contain offensive language."]
+            )
+        }
+
         guard let keeper = existingIds.first else {
             try await client.from(table).insert(insert).execute()
             return
@@ -454,7 +492,8 @@ class SupabaseManager {
             .order("created_at", ascending: false)
             .execute()
             .value
-        return response
+        let blocked = await blockedUserIds()
+        return response.filter { !blocked.contains($0.userId) }
     }
     
     // MARK: - Album Reviews
@@ -522,7 +561,8 @@ class SupabaseManager {
             .order("created_at", ascending: false)
             .execute()
             .value
-        return response
+        let blocked = await blockedUserIds()
+        return response.filter { !blocked.contains($0.userId) }
     }
     
     // MARK: - Artist Reviews
@@ -596,20 +636,25 @@ class SupabaseManager {
             .order("created_at", ascending: false)
             .execute()
             .value
-        return response
+        let blocked = await blockedUserIds()
+        return response.filter { !blocked.contains($0.userId) }
     }
     
     // MARK: - User Search
     
     func searchUsers(query: String) async throws -> [Profile] {
+        // Escaped: an unescaped `%` or `_` typed into the search field is a wildcard, so
+        // searching for "%" used to return every user in the database.
         let response: [Profile] = try await client
             .from("profiles")
             .select()
-            .ilike("username", pattern: "%\(query)%")
-            .limit(20)
+            .ilike("username", pattern: "%\(Self.literalPattern(query))%")
+            .limit(30)
             .execute()
             .value
-        return response
+
+        let blocked = await blockedUserIds()
+        return response.filter { !blocked.contains($0.id) }
     }
     
     // MARK: - Follows
@@ -723,11 +768,13 @@ class SupabaseManager {
             .from("reviews")
             .select()
             .order("created_at", ascending: false)
-            .limit(20)
+            // Over-fetch so that filtering out blocked users doesn't leave a short feed.
+            .limit(40)
             .execute()
             .value
-        
-        return response
+
+        let blocked = await blockedUserIds()
+        return response.filter { !blocked.contains($0.userId) }.prefix(20).map { $0 }
     }
     
     func fetchFollowingReviews(userId: UUID) async throws -> [Review] {
@@ -742,7 +789,12 @@ class SupabaseManager {
         
         // Fetch reviews from followed users
         // Convert UUID array to String array for .in() method
-        let userIdStrings = followingIds.map { $0.uuidString }
+        let blocked = await blockedUserIds()
+        let userIdStrings = followingIds
+            .filter { !blocked.contains($0) }
+            .map { $0.uuidString }
+        guard !userIdStrings.isEmpty else { return [] }
+
         let response: [Review] = try await client
             .from("reviews")
             .select()
@@ -751,7 +803,7 @@ class SupabaseManager {
             .limit(50)
             .execute()
             .value
-        
+
         return response
     }
 
@@ -916,7 +968,161 @@ class SupabaseManager {
             activityItems.append(item)
         }
         
-        // 5. Sort by date, newest first
-        return activityItems.sorted { $0.createdAt > $1.createdAt }
+        // 5. Sort by date, newest first, minus anyone the user has blocked.
+        let blocked = await blockedUserIds()
+        return activityItems
+            .filter { !blocked.contains($0.actorId) }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    // MARK: - Moderation: reports
+
+    /// Files a report against a piece of content.
+    ///
+    /// Required by App Store Review Guideline 1.2 for user-generated content. The reporter is
+    /// taken from the session, never from the caller — the RLS policy checks the same thing,
+    /// so a tampered client can't file reports as somebody else.
+    ///
+    /// Reporting the same thing twice is not an error: a unique index collapses it, and the UI
+    /// should read that as "already reported" rather than showing a failure.
+    func submitReport(
+        contentType: ReportedContentType,
+        contentRef: String?,
+        reportedUserId: UUID?,
+        reason: ReportReason,
+        details: String?,
+        reportedText: String?
+    ) async throws {
+        guard let user = try await getCurrentUser() else {
+            throw NSError(
+                domain: "Spectrum",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to report content."]
+            )
+        }
+
+        let trimmedDetails = details?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let payload = NewContentReport(
+            reporter_id: user.id,
+            reported_user_id: reportedUserId,
+            content_type: contentType.rawValue,
+            content_ref: contentRef,
+            reason: reason.rawValue,
+            details: (trimmedDetails?.isEmpty == false) ? trimmedDetails : nil,
+            reported_text: reportedText
+        )
+
+        do {
+            try await client.from("content_reports").insert(payload).execute()
+        } catch {
+            // 23505 = unique violation: this user already reported this content.
+            guard Self.isDuplicateKeyError(error) else { throw error }
+        }
+    }
+
+    private static func isDuplicateKeyError(_ error: Error) -> Bool {
+        let description = String(describing: error).lowercased()
+        return description.contains("23505") || description.contains("duplicate key")
+    }
+
+    // MARK: - Moderation: blocks
+
+    /// Blocks a user. The database trigger tears down the follow relationship in both
+    /// directions, so that can't be left half-done by a dropped connection.
+    func blockUser(_ userId: UUID) async throws {
+        guard let user = try await getCurrentUser() else {
+            throw NSError(
+                domain: "Spectrum",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to block someone."]
+            )
+        }
+        guard user.id != userId else {
+            throw NSError(
+                domain: "Spectrum",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "You can't block yourself."]
+            )
+        }
+
+        do {
+            try await client
+                .from("user_blocks")
+                .insert(NewUserBlock(blocker_id: user.id, blocked_id: userId))
+                .execute()
+        } catch {
+            // Already blocked — the caller asked for a state, and it's already the state.
+            guard Self.isDuplicateKeyError(error) else { throw error }
+        }
+        invalidateBlockedCache()
+    }
+
+    func unblockUser(_ userId: UUID) async throws {
+        guard let user = try await getCurrentUser() else { return }
+        try await client
+            .from("user_blocks")
+            .delete()
+            .eq("blocker_id", value: user.id)
+            .eq("blocked_id", value: userId)
+            .execute()
+        invalidateBlockedCache()
+    }
+
+    /// The ids the current user has blocked. Cached briefly because the feed, search, activity
+    /// and profile screens all need it and it changes only when the user blocks someone.
+    func blockedUserIds() async -> Set<UUID> {
+        if let cached = blockedCache, Date().timeIntervalSince(blockedCacheStamp) < 60 {
+            return cached
+        }
+        guard let user = try? await getCurrentUser() else { return [] }
+
+        struct BlockRow: Decodable { let blocked_id: UUID }
+        let rows: [BlockRow]? = try? await client
+            .from("user_blocks")
+            .select("blocked_id")
+            .eq("blocker_id", value: user.id)
+            .execute()
+            .value
+
+        let ids = Set((rows ?? []).map(\.blocked_id))
+        blockedCache = ids
+        blockedCacheStamp = Date()
+        return ids
+    }
+
+    func isBlocked(_ userId: UUID) async -> Bool {
+        await blockedUserIds().contains(userId)
+    }
+
+    /// Blocked users with their profiles, for the management screen in Settings. Apple expects
+    /// a block to be reversible, so this list has to exist.
+    func fetchBlockedUsers() async throws -> [BlockedUser] {
+        guard let user = try await getCurrentUser() else { return [] }
+
+        struct BlockRow: Decodable {
+            let blocked_id: UUID
+            let created_at: Date?
+        }
+        let rows: [BlockRow] = try await client
+            .from("user_blocks")
+            .select("blocked_id, created_at")
+            .eq("blocker_id", value: user.id)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        guard !rows.isEmpty else { return [] }
+
+        let profiles = try await batchGetProfiles(ids: rows.map { $0.blocked_id.uuidString })
+        let profilesById = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        return rows.compactMap { row in
+            guard let profile = profilesById[row.blocked_id] else { return nil }
+            return BlockedUser(profile: profile, blockedAt: row.created_at)
+        }
+    }
+
+    func invalidateBlockedCache() {
+        blockedCache = nil
     }
 }

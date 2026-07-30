@@ -9,6 +9,7 @@ struct AlbumDetailView: View {
     @State private var tracksLoading = true
     @State private var albumRating: Double = 0
     @State private var reviewText: String = ""
+    @FocusState private var reviewFieldFocused: Bool
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var userAlbumReview: AlbumReview?
@@ -268,6 +269,7 @@ struct AlbumDetailView: View {
                                 .textCase(.uppercase)
                                 .foregroundStyle(.white.opacity(0.5))
                             TextField("Add a short review...", text: $reviewText, axis: .vertical)
+                                .focused($reviewFieldFocused)
                                 .lineLimit(3...6)
                                 .padding()
                                 .background(.ultraThinMaterial)
@@ -328,6 +330,13 @@ struct AlbumDetailView: View {
                         showLogSheet = false
                     }
                     .foregroundStyle(Color(hex: "#FFCC00"))
+                }
+                // A vertical TextField makes Return a newline, so the keyboard needs its own
+                // way out — it sits on top of the save button otherwise.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { reviewFieldFocused = false }
+                        .fontWeight(.semibold)
                 }
             }
         }

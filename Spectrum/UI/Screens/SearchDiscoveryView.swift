@@ -39,6 +39,9 @@ struct SearchDiscoveryView: View {
     
     // A rotating selection is shown each launch (see `.task`) so Discover doesn't feel static.
     @State private var trendingVibes: [TrendingVibe] = []
+    @StateObject private var reselection = TabReselectionState.shared
+    /// Value-based navigation so tapping Discover while already on it returns to the root.
+    @State private var path = NavigationPath()
 
     /// Full pool of mood shortcuts to sample from.
     private static let vibePool: [TrendingVibe] = [
@@ -63,7 +66,7 @@ struct SearchDiscoveryView: View {
     // Artists sekmesini şimdilik devre dışı bıraktık.
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 // Background
                 Color.black.ignoresSafeArea()
@@ -102,7 +105,9 @@ struct SearchDiscoveryView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 100)
                 }
+                .tracksTabBarScroll(tab: 1)
             }
+            .appRouteDestinations()
             .navigationBarHidden(true)
             .task {
                 if trendingVibes.isEmpty {
@@ -118,6 +123,9 @@ struct SearchDiscoveryView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
+        }
+        .onChange(of: reselection.token(for: 1)) { _, _ in
+            path = NavigationPath()
         }
     }
     
@@ -547,7 +555,7 @@ struct QuickAddTrackRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Tappable area for track detail navigation
-            NavigationLink(destination: TrackDetailView(track: track)) {
+            NavigationLink(value: AppRoute.track(track)) {
                 HStack(spacing: 12) {
                     // Album Art
                     AsyncImage(url: URL(string: track.artworkUrl100)) { phase in
@@ -611,7 +619,7 @@ struct AlbumRow: View {
     let album: Album
     
     var body: some View {
-        NavigationLink(destination: AlbumDetailView(album: album)) {
+        NavigationLink(value: AppRoute.album(album)) {
             HStack(spacing: 12) {
                 AsyncImage(url: URL(string: album.artworkUrl100)) { phase in
                     if let image = phase.image {
@@ -664,7 +672,7 @@ struct ArtistRow: View {
     let artist: Artist
 
     var body: some View {
-        NavigationLink(destination: ArtistDetailView(artistName: artist.name, artistId: artist.id)) {
+        NavigationLink(value: AppRoute.artist(name: artist.name, id: artist.id)) {
             HStack(spacing: 12) {
                 // Artist artwork or initial
                 ZStack {
@@ -744,7 +752,7 @@ struct UserRow: View {
     let profile: Profile
     
     var body: some View {
-        NavigationLink(destination: UserProfileView(userId: profile.id)) {
+        NavigationLink(value: AppRoute.user(profile.id)) {
             HStack(spacing: 12) {
                 // Avatar
                 ZStack {
@@ -826,7 +834,12 @@ struct UserProfileView: View {
     @State private var followersCount = 0
     @State private var followingCount = 0
     @State private var showEditProfile = false
-    
+    @State private var showReportProfile = false
+    @State private var showBlockConfirm = false
+    @State private var didBlock = false
+    @State private var blockError: String?
+    @Environment(\.dismiss) private var dismiss
+
     @State private var userReviews: [Review] = []
     @State private var userAlbumReviews: [AlbumReview] = []
     @State private var userArtistReviews: [ArtistReview] = []
@@ -993,11 +1006,64 @@ struct UserProfileView: View {
         }
         .navigationTitle(profile?.username ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Report / block on someone else's profile — Guideline 1.2 wants both reachable
+            // from the person, not only from an individual post.
+            if !isCurrentUser, profile != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showReportProfile = true
+                        } label: {
+                            Label("Report", systemImage: "flag")
+                        }
+                        Button(role: .destructive) {
+                            showBlockConfirm = true
+                        } label: {
+                            Label("Block", systemImage: "hand.raised")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showReportProfile) {
+            ReportContentView(
+                contentType: .profile,
+                contentRef: userId.uuidString,
+                reportedUserId: userId,
+                reportedUsername: profile?.username,
+                reportedText: profile?.bio,
+                onBlockRequested: { Task { await blockThisUser() } }
+            )
+        }
+        .alert("Block \(profile?.username.map { "@\($0)" } ?? "this user")?", isPresented: $showBlockConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Block", role: .destructive) { Task { await blockThisUser() } }
+        } message: {
+            Text("You won't see their logs or reviews, and you'll stop following each other. You can undo this in Settings.")
+        }
+        .alert("Blocked", isPresented: $didBlock) {
+            Button("OK", role: .cancel) { dismiss() }
+        } message: {
+            Text("You won't see this user's content any more.")
+        }
         .task {
             await loadUserProfile()
         }
     }
-    
+
+    private func blockThisUser() async {
+        do {
+            try await SupabaseManager.shared.blockUser(userId)
+            didBlock = true
+        } catch {
+            blockError = error.localizedDescription
+        }
+    }
+
     private func loadUserProfile() async {
         do {
             let currentUser = try await SupabaseManager.shared.getCurrentUser()

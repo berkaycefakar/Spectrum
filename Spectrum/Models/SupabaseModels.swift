@@ -14,7 +14,7 @@ struct Profile: Codable, Identifiable {
     }
 }
 
-struct Review: Codable, Identifiable {
+struct Review: Codable, Identifiable, Hashable {
     let id: UUID
     let userId: UUID
     let itunesTrackId: Int64

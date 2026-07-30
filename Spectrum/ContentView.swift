@@ -8,7 +8,9 @@ struct ContentView: View {
     @State private var showAuthView = false
     
     init() {
-        // Customize Tab Bar Appearance for Glassmorphism
+        // Customize Tab Bar Appearance for Glassmorphism.
+        // Kept for the system bar — `SpectrumTabBar` currently stands in for it, but this is
+        // what the bar looks like the moment the custom one is taken back out.
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
         
@@ -83,37 +85,42 @@ struct ContentView: View {
     }
     
     // MARK: - Main Tab View
+    /// The system bar is hidden and `SpectrumTabBar` stands in for it: the system one can't
+    /// drop its labels or shrink on scroll. Note the scroll state is observed inside the bar,
+    /// not here — observing it at this level rebuilt all four screens on every collapse.
     private var mainTabView: some View {
-        TabView(selection: $selectedTab) {
-            // 1. Home Feed
-            FeedView()
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
-                }
-                .tag(0)
-            
-            // 2. Search & Discovery
-            SearchDiscoveryView()
-                .tabItem {
-                    Label("Discover", systemImage: "magnifyingglass")
-                }
-                .tag(1)
-            
-            // 3. Activity / Notifications
-            ActivityView()
-                .tabItem {
-                    Label("Activity", systemImage: "bell.fill")
-                }
-                .tag(2)
-            
-            // 4. Profile
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.fill")
-                }
-                .tag(3)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                // 1. Home Feed
+                FeedView()
+                    .toolbar(.hidden, for: .tabBar)
+                    .tag(0)
+
+                // 2. Search & Discovery
+                SearchDiscoveryView()
+                    .toolbar(.hidden, for: .tabBar)
+                    .tag(1)
+
+                // 3. Activity / Notifications
+                ActivityView()
+                    .toolbar(.hidden, for: .tabBar)
+                    .tag(2)
+
+                // 4. Profile
+                ProfileView()
+                    .toolbar(.hidden, for: .tabBar)
+                    .tag(3)
+            }
+            .tint(Color(hex: "#FF00FF")) // Neon Purple Tint
+
+            SpectrumTabBar(selection: $selectedTab)
+                .padding(.bottom, 6)
+                // Stays put when the search keyboard comes up instead of riding above it.
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
-        .tint(Color(hex: "#FF00FF")) // Neon Purple Tint
+        .onChange(of: selectedTab) { _, newTab in
+            TabBarScrollState.shared.activate(tab: newTab)
+        }
     }
 }
 

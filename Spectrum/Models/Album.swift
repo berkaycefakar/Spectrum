@@ -1,7 +1,7 @@
 import Foundation
 
 /// Simple album representation — supports both iTunes JSON and MusicKit data
-struct Album: Identifiable, Decodable {
+struct Album: Identifiable, Decodable, Hashable {
     let id: Int64              // collectionId
     let title: String          // collectionName
     let artist: String         // artistName

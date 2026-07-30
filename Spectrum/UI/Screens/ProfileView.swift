@@ -23,6 +23,9 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showLogoutAlert = false
     @State private var selectedCategory: ProfileCategory = .songs
+    @StateObject private var reselection = TabReselectionState.shared
+    /// Value-based navigation so tapping Profile while already on it returns to the top.
+    @State private var path = NavigationPath()
     
     // Computed Stats
     var vibeStats: [(color: String, percentage: CGFloat, label: String)] {
@@ -66,7 +69,7 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 // Background
                 Color.black.ignoresSafeArea()
@@ -182,7 +185,9 @@ struct ProfileView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 100) // Space for TabBar
                 }
+                .tracksTabBarScroll(tab: 3)
             }
+            .appRouteDestinations(onLogChanged: { Task { await loadProfileData() } })
             .navigationBarHidden(true)
             .task {
                 await loadProfileData()
@@ -230,6 +235,9 @@ struct ProfileView: View {
                 Text("Are you sure you want to log out?")
             }
         }
+        .onChange(of: reselection.token(for: 3)) { _, _ in
+            path = NavigationPath()
+        }
     }
     
     // MARK: - Category Content
@@ -244,9 +252,7 @@ struct ProfileView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(sortedReviews) { review in
                         if let track = tracks[review.itunesTrackId] {
-                            NavigationLink(destination: LogDetailView(track: track, review: review, isOwner: true, onChanged: {
-                                Task { await loadProfileData() }
-                            })) {
+                            NavigationLink(value: AppRoute.log(track: track, review: review, isOwner: true)) {
                                 AlbumGridItem(track: track, vibeColor: Color(hex: review.vibeColor))
                             }
                         } else {
@@ -266,7 +272,7 @@ struct ProfileView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(sortedAlbumReviews) { review in
                         if let album = albums[review.itunesCollectionId] {
-                            NavigationLink(destination: AlbumDetailView(album: album)) {
+                            NavigationLink(value: AppRoute.album(album)) {
                                 AlbumGridItemView(
                                     title: album.title,
                                     subtitle: album.artist,
@@ -480,8 +486,16 @@ struct ArtistReviewRow: View {
     /// Photo + catalog id resolved from MusicKit; nil until the lookup lands (or if it fails).
     var brief: ArtistBrief? = nil
 
+    /// Full, half or empty star for position `index`, from the 0–10 stored rating.
+    private func starSymbol(for index: Int) -> String {
+        let doubled = review.rating
+        if doubled >= index * 2 { return "star.fill" }
+        if doubled == index * 2 - 1 { return "star.leadinghalf.filled" }
+        return "star"
+    }
+
     var body: some View {
-        NavigationLink(destination: ArtistDetailView(artistName: review.artistName, artistId: brief?.id)) {
+        NavigationLink(value: AppRoute.artist(name: review.artistName, id: brief?.id)) {
             HStack(spacing: 16) {
                 artistAvatar
 
@@ -491,9 +505,12 @@ struct ArtistReviewRow: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
 
+                    // `rating` is stored 0–10 so half stars can be expressed. Dividing the
+                    // integer by 2 threw the half away, so a 3.5 rating drew as 3 flat — the
+                    // one place in the app where a user's own rating was displayed wrong.
                     HStack(spacing: 4) {
                         ForEach(1...5, id: \.self) { index in
-                            Image(systemName: index <= (review.rating / 2) ? "star.fill" : "star")
+                            Image(systemName: starSymbol(for: index))
                                 .font(.caption2)
                                 .foregroundStyle(Color(hex: review.vibeColor))
                         }

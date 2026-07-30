@@ -8,7 +8,7 @@ struct ArtistRef: Identifiable, Hashable {
     var id: String { artistId ?? name }
 }
 
-struct Track: Identifiable, Decodable {
+struct Track: Identifiable, Decodable, Hashable {
     let id: Int
     let title: String
     let artist: String

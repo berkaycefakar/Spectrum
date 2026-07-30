@@ -6,9 +6,12 @@ struct ActivityView: View {
     @State private var activities: [ActivityItem] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
-    
+    @StateObject private var reselection = TabReselectionState.shared
+    /// Value-based navigation so tapping Activity while already on it returns to the list.
+    @State private var path = NavigationPath()
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 // Background
                 Color.black.ignoresSafeArea()
@@ -31,6 +34,7 @@ struct ActivityView: View {
                     activityList
                 }
             }
+            .appRouteDestinations()
             .navigationBarHidden(true)
             .preferredColorScheme(.dark)
             .task {
@@ -41,6 +45,9 @@ struct ActivityView: View {
             .refreshable {
                 await loadNotifications()
             }
+        }
+        .onChange(of: reselection.token(for: 2)) { _, _ in
+            path = NavigationPath()
         }
     }
 
@@ -137,6 +144,7 @@ struct ActivityView: View {
             .padding(.top, 12)
             .padding(.bottom, 100)
         }
+        .tracksTabBarScroll(tab: 2)
     }
     
     // MARK: - Error State

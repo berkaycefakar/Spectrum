@@ -10,9 +10,12 @@ struct FeedView: View {
     @State private var errorMessage: String?
     /// True when feed is showing recent reviews (no one followed); false when showing following's reviews.
     @State private var isShowingRecentFallback = false
-    
+    @StateObject private var reselection = TabReselectionState.shared
+    /// Value-based navigation so tapping Home while already on Home can pop back to the feed.
+    @State private var path = NavigationPath()
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 // Background
                 Color.black.ignoresSafeArea()
@@ -93,16 +96,26 @@ struct FeedView: View {
                                 ForEach(reviews) { review in
                                     if let track = tracks[review.itunesTrackId],
                                        let profile = profiles[review.userId] {
-                                        NavigationLink(destination: TrackDetailView(track: track)) {
+                                        NavigationLink(value: AppRoute.track(track)) {
                                             FeedCardView(
                                                 track: track,
                                                 vibeLabel: profile.username ?? "User",
                                                 vibeColor: Color(hex: review.vibeColor),
                                                 rating: Double(review.rating) / 2.0,
-                                                reviewText: review.reviewText
+                                                // Masked on read: rows written before the
+                                                // profanity filter existed are still in the DB.
+                                                reviewText: review.reviewText.map(ProfanityFilter.masked)
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())
+                                        .moderationActions(
+                                            contentType: .songReview,
+                                            contentRef: review.id.uuidString,
+                                            authorId: review.userId,
+                                            authorUsername: profile.username,
+                                            reportedText: review.reviewText,
+                                            onBlocked: { Task { await loadFeedData() } }
+                                        )
                                     } else {
                                         RoundedRectangle(cornerRadius: 16)
                                             .fill(.white.opacity(0.05))
@@ -117,7 +130,9 @@ struct FeedView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 100)
                 }
+                .tracksTabBarScroll(tab: 0)
             }
+            .appRouteDestinations()
             .navigationBarHidden(true)
             .task {
                 await loadFeedData()
@@ -125,6 +140,9 @@ struct FeedView: View {
             .refreshable {
                 await loadFeedData()
             }
+        }
+        .onChange(of: reselection.token(for: 0)) { _, _ in
+            path = NavigationPath()
         }
     }
     

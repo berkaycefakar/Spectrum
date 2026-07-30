@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var email: String?
     @State private var showLogoutAlert = false
     @State private var showChangePassword = false
+    @State private var showBlockedUsers = false
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
     @State private var deleteError: String?
@@ -51,6 +52,29 @@ struct SettingsView: View {
                     Divider().background(.white.opacity(0.08))
                     infoRow(label: "Music data", value: "Apple Music (MusicKit)")
                 }
+
+                // Safety. Blocking has to be undoable from inside the app for Guideline 1.2,
+                // which means the list needs a home somewhere the user can find it.
+                Button {
+                    showBlockedUsers = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "hand.raised.fill")
+                        Text("Blocked Users").fontWeight(.semibold)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .contentShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .padding(.horizontal)
+                .disabled(isDeleting)
 
                 // Change password. Also the dependable way in if a future Supabase flow
                 // change stops the recovery link from being recognised.
@@ -95,6 +119,12 @@ struct SettingsView: View {
         }
         .task {
             email = try? await SupabaseManager.shared.getCurrentUser()?.email
+        }
+        .sheet(isPresented: $showBlockedUsers) {
+            NavigationStack {
+                BlockedUsersView()
+            }
+            .preferredColorScheme(.dark)
         }
         .alert("Log Out", isPresented: $showLogoutAlert) {
             Button("Cancel", role: .cancel) { }

@@ -11,6 +11,9 @@ struct EditProfileView: View {
 
     @State private var username: String
     @State private var bio: String
+    /// The bio field is vertical, so Return inserts a newline instead of dismissing — the
+    /// keyboard needs an explicit way out or it covers the Save button.
+    @FocusState private var fieldFocused: Bool
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -91,6 +94,9 @@ struct EditProfileView: View {
                             .foregroundStyle(.gray)
 
                         TextField("Username", text: $username)
+                            .focused($fieldFocused)
+                            .submitLabel(.done)
+                            .onSubmit { fieldFocused = false }
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
                             .padding()
@@ -106,6 +112,7 @@ struct EditProfileView: View {
                             .foregroundStyle(.gray)
 
                         TextField("Tell us about yourself...", text: $bio, axis: .vertical)
+                            .focused($fieldFocused)
                             .lineLimit(3...6)
                             .padding()
                             .background(.white.opacity(0.1))
@@ -143,6 +150,18 @@ struct EditProfileView: View {
                 .padding()
 
                 Spacer()
+            }
+        }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                if fieldFocused { fieldFocused = false }
+            }
+        )
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { fieldFocused = false }
+                    .fontWeight(.semibold)
             }
         }
     }

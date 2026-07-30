@@ -15,8 +15,9 @@
 | # | Severity | Item | State |
 | - | -------- | ---- | ----- |
 | 1 | **Rejection** | In-app account deletion (Guideline 5.1.1(v)) | **Client done**, server step outstanding — §1 |
-| 2 | **Rejection** | `auth.users` row survives deletion — needs an Edge Function | **[NEEDS YOU]** — §1.2 |
+| 2 | **Rejection** | `auth.users` row survives deletion — needs an Edge Function | **Function written** (`supabase/functions/delete-user`), **you must deploy it** — §1.2 |
 | 3 | **Rejection risk** | RLS not audited — the entire security model | **[NEEDS YOU]** — §6 |
+| 3b | **Rejection risk** | UGC: filter + report + block (Guideline 1.2) | **Implemented in app**, migration must be run — §8 |
 | 4 | **Was fatal, fixed** | Deployment target was iOS **26.2** → almost no installable devices | **Fixed → 17.0** — §3.1 |
 | 5 | **Rejection risk** | App declares **iPad** support but the UI is phone-portrait only | **Decision needed** — §3.2 |
 | 6 | **Upload blocker** | Privacy manifest missing | **Added** — §4 |
@@ -458,9 +459,23 @@ have **all** of:
 3. The ability to **block abusive users**.
 4. Published contact information for the developer.
 
-**None of these exist in the app today.** This is the second-most-likely rejection reason
-after account deletion, and it is not yet implemented. At minimum, add a "Report" action on
-review cards and a "Block user" action on profiles before submitting.
+**Status: 1–3 are now implemented in the app. 4 is still on you.**
+
+| Requirement | Where it lives now |
+| ----------- | ------------------ |
+| Filter objectionable material | `Core/Utils/ProfanityFilter.swift`. Enforced in `SupabaseManager.writeReview` — the single choke point all three review writes (song / album / artist) pass through, so a screen added later can't skip it. Also applied on *read* (`ProfanityFilter.masked`) in the feed card, track detail, log detail and activity card, because rows written before the filter existed are still in the database. |
+| Report offensive content | `UI/Screens/ReportContentView.swift` (reason picker + optional details + a stated 24-hour response commitment). Reachable by long-pressing a feed card or a community review (`UI/Components/ModerationActions.swift`), and from the ⋯ menu on another user's profile. Writes to `content_reports`. |
+| Block abusive users | Same long-press menu, the profile ⋯ menu, and offered again right after a report is filed. Blocked users disappear from the feed, search, activity, and every per-item review list. Reversible in **Settings → Blocked Users** (`UI/Screens/BlockedUsersView.swift`), which Apple expects. |
+| Published contact information | **[NEEDS YOU]** — App Store Connect support URL / email. Nothing in the code can satisfy this. |
+
+**Before this works you must run `Supabase_migration_ugc_reports_blocks.sql`** (creates
+`content_reports` and `user_blocks`, their RLS policies, and a trigger that tears down the
+follow relationship in both directions when a block is inserted — doing that in the app would
+leave it half-done whenever the connection drops).
+
+Moderation itself is manual: reports land in `content_reports` with `status = 'pending'`, and
+only the service role can read the queue or change a status. Check it in the dashboard —
+`select * from content_reports where status = 'pending' order by created_at;`
 
 ---
 
