@@ -29,8 +29,8 @@ GitHub Pages ile yayınlamak için:
 
 | Alan | Değer |
 | --- | --- |
-| Name | `Spectrum` |
-| Subtitle | `Log the music you love` |
+| Name | `Spectrum — Music Diary` (düz `Spectrum` App Store'da alınmış) |
+| Subtitle | `Rate every song you hear` |
 | Bundle ID | `berkay.Spectrum` |
 | Primary Category | **Music** |
 | Secondary Category | **Social Networking** |
@@ -97,8 +97,11 @@ Spectrum needs permission to use Apple Music so it can look music up.
 ## 5. Keywords (100 karakter sınırı, virgülle, boşluksuz)
 
 ```
-music,log,rate,review,album,artist,diary,tracker,letterboxd,taste,vibe,social,song,listening
+log,rate,review,album,artist,tracker,letterboxd,taste,vibe,social,song,listening,scrobble,rym
 ```
+
+> `music` ve `diary` bilerek çıkarıldı: uygulama adında geçtikleri için Apple onları zaten
+> indeksliyor, keywords'te tekrar etmek 100 karakterin boşa gitmesi olur.
 
 ---
 
@@ -140,9 +143,10 @@ IMPORTANT FOR REVIEW:
 
 USER-GENERATED CONTENT (Guideline 1.2):
 - Written reviews are filtered for offensive language on submit, and masked on display.
-- Every review card can be reported: long-press it, or tap the ellipsis button on the card.
-  A reason is required and we commit to responding within 24 hours.
-- Any user can be blocked from the same menu, and from the ellipsis menu on their profile.
+- Every review can be reported. Open any log from the feed or a profile and use the "..."
+  button in the top right of that screen; long-pressing a card in the feed opens the same
+  menu as a shortcut. A reason is required and we commit to responding within 24 hours.
+- Any user can be blocked from the same menu, and from the "..." menu on their profile.
   Blocking hides all of their content and removes the follow relationship in both directions.
 - Blocked users are listed and reversible under Settings > Blocked Users.
 - Terms of Service (with a stated zero-tolerance policy for objectionable content) and the
