@@ -39,6 +39,13 @@ class SessionStore: ObservableObject {
                 continue
             }
 
+            // Whoever is signed in now, the previous account's blocked-user list must not
+            // survive into their session: it silently filters the feed, and the Settings
+            // screen would disagree with what the feed shows.
+            if event == .signedIn || event == .signedOut {
+                await SupabaseManager.shared.invalidateBlockedCache()
+            }
+
             guard [.initialSession, .signedIn, .tokenRefreshed].contains(event) else {
                 if event == .signedOut {
                     self.currentUser = nil

@@ -17,8 +17,13 @@ class SupabaseManager {
 
     /// Blocked-user ids, cached for a minute: the feed, search, activity and profile screens
     /// all need this on every load, and it only changes when the user blocks someone.
-    private var blockedCache: Set<UUID>?
-    private var blockedCacheStamp = Date.distantPast
+    ///
+    /// An actor rather than two stored properties. Every method here is `nonisolated async`,
+    /// so each one resumes on an arbitrary cooperative thread — and the feed refresh, the
+    /// activity tab's `.task` and the four parallel searches in Discover routinely overlap.
+    /// Concurrent writes to a plain `Set<UUID>?` are a torn write on a refcounted box, i.e. a
+    /// crash in `swift_release`, not just a stale read.
+    private let blockedCache = BlockedIdsCache()
 
     private init() {
         let options = SupabaseClientOptions(
@@ -187,10 +192,30 @@ class SupabaseManager {
             try? await client.auth.signOut()
             return
         } catch {
-            print("delete-user Edge Function unavailable, falling back to client-side deletion:", error)
+            // Only a *missing* function is a reason to fall back. Any other status means the
+            // function ran and failed partway — swallowing that told the user their account
+            // was deleted while the auth.users row survived, so they could never re-register
+            // with the same address. That is exactly the 5.1.1(v) rejection this code exists
+            // to prevent, and it was invisible because the error was only printed.
+            guard Self.isFunctionMissing(error) else { throw error }
+            #if DEBUG
+            print("delete-user Edge Function not deployed, falling back to client-side deletion:", error)
+            #endif
         }
 
         try await deleteAccountClientSide()
+    }
+
+    /// True when the Edge Function simply isn't deployed, as opposed to having failed.
+    private static func isFunctionMissing(_ error: Error) -> Bool {
+        if let functionsError = error as? FunctionsError,
+           case let .httpError(code, _) = functionsError {
+            return code == 404
+        }
+        // No network at all: the function may well be there, but the client-side path can't
+        // reach the database either, so it will surface its own error a moment later.
+        let urlError = error as? URLError
+        return urlError?.code == .notConnectedToInternet || urlError?.code == .cannotFindHost
     }
 
     /// Fallback path: erases everything the app owns, then signs out.
@@ -386,26 +411,57 @@ class SupabaseManager {
         targetColumn: String,
         targetValue: String
     ) async throws -> [UUID] {
-        struct Row: Decodable { let id: UUID }
+        struct Row: Decodable {
+            let id: UUID
+            let artist_name: String
+        }
         let rows: [Row] = try await client
             .from(table)
-            .select("id")
+            .select("id, \(targetColumn)")
             .eq("user_id", value: userId)
             .ilike(targetColumn, pattern: Self.literalPattern(targetValue))
             .order("created_at", ascending: false)
             .execute()
             .value
-        return rows.map(\.id)
+        // The pattern is a superset (see `literalPattern`), so the name is compared here to
+        // make the match exact. Updating the wrong row would overwrite another rating.
+        return rows.filter { Self.matches($0.artist_name, targetValue) }.map(\.id)
     }
 
     /// Escapes a value so it can be used as an `ilike` pattern that matches it literally.
     /// Without this, an artist called "_" or one with a "%" in their name would match rows
     /// belonging to somebody else entirely.
+    ///
+    /// `*` cannot be escaped: PostgREST rewrites it to `%` on the server, *after* whatever
+    /// escaping we do here, so a backslash never reaches it. It is mapped to `_` instead,
+    /// which matches exactly one character and so always still matches the literal `*`. That
+    /// makes the pattern a superset rather than a wildcard, and callers narrow it with
+    /// `matches(_:_:)`. Left alone, an artist named `N*E*R*D` searched as `N%E%R%D` and could
+    /// select a *different* review by the same user — which `writeReview` would then update
+    /// and delete the rest of, losing a rating silently.
     static func literalPattern(_ value: String) -> String {
         value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")
+            .replacingOccurrences(of: "*", with: "_")
+    }
+
+    /// Pattern for a user-typed search box, where `*` carries no meaning worth preserving.
+    /// Dropped entirely rather than mapped: `%_%` still matches every row, so typing a single
+    /// `*` would keep listing the whole user table.
+    static func searchPattern(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "*", with: "")
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
+    }
+
+    /// Exact, case-insensitive name comparison. The `ilike` filters above are deliberately
+    /// permissive so no row is missed; this is what makes the result exact again.
+    static func matches(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.compare(rhs, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
     }
 
     /// Updates the newest existing row, or inserts when there is none.
@@ -622,10 +678,11 @@ class SupabaseManager {
             .eq("user_id", value: user.id)
             .ilike("artist_name", pattern: Self.literalPattern(artistName))
             .order("created_at", ascending: false)
-            .limit(1)
             .execute()
             .value
-        return rows.first
+        // No `.limit(1)`: the pattern is a superset, so the first row back isn't necessarily
+        // this artist. Narrow first, then take the newest.
+        return rows.first { Self.matches($0.artistName, artistName) }
     }
 
     func getUserArtistReviews(userId: UUID) async throws -> [ArtistReview] {
@@ -655,18 +712,20 @@ class SupabaseManager {
             .execute()
             .value
         let blocked = await blockedUserIds()
-        return response.filter { !blocked.contains($0.userId) }
+        return response.filter {
+            Self.matches($0.artistName, artistName) && !blocked.contains($0.userId)
+        }
     }
     
     // MARK: - User Search
     
     func searchUsers(query: String) async throws -> [Profile] {
-        // Escaped: an unescaped `%` or `_` typed into the search field is a wildcard, so
-        // searching for "%" used to return every user in the database.
+        // Escaped: an unescaped `%`, `_` or `*` typed into the search field is a wildcard, so
+        // searching for any one of them used to return every user in the database.
         let response: [Profile] = try await client
             .from("profiles")
             .select()
-            .ilike("username", pattern: "%\(Self.literalPattern(query))%")
+            .ilike("username", pattern: "%\(Self.searchPattern(query))%")
             .limit(30)
             .execute()
             .value
@@ -1072,7 +1131,7 @@ class SupabaseManager {
             // Already blocked — the caller asked for a state, and it's already the state.
             guard Self.isDuplicateKeyError(error) else { throw error }
         }
-        invalidateBlockedCache()
+        await invalidateBlockedCache()
     }
 
     func unblockUser(_ userId: UUID) async throws {
@@ -1083,29 +1142,44 @@ class SupabaseManager {
             .eq("blocker_id", value: user.id)
             .eq("blocked_id", value: userId)
             .execute()
-        invalidateBlockedCache()
+        await invalidateBlockedCache()
     }
 
     /// The ids the current user has blocked. Cached briefly because the feed, search, activity
     /// and profile screens all need it and it changes only when the user blocks someone.
+    ///
+    /// Two things this must get right, because a block that quietly stops applying is worse
+    /// than no block at all:
+    ///
+    /// * **A failed query is not an empty block list.** Losing the network used to produce an
+    ///   empty set that was then cached as authoritative, so for the next minute every blocked
+    ///   user reappeared across the feed, search and activity.
+    /// * **The cache belongs to one account.** Signing out and back in as somebody else used
+    ///   to inherit the previous user's list until it expired.
     func blockedUserIds() async -> Set<UUID> {
-        if let cached = blockedCache, Date().timeIntervalSince(blockedCacheStamp) < 60 {
-            return cached
+        guard let user = try? await getCurrentUser() else {
+            await blockedCache.clear()
+            return []
         }
-        guard let user = try? await getCurrentUser() else { return [] }
+
+        if let cached = await blockedCache.value(for: user.id) { return cached }
 
         struct BlockRow: Decodable { let blocked_id: UUID }
-        let rows: [BlockRow]? = try? await client
-            .from("user_blocks")
-            .select("blocked_id")
-            .eq("blocker_id", value: user.id)
-            .execute()
-            .value
-
-        let ids = Set((rows ?? []).map(\.blocked_id))
-        blockedCache = ids
-        blockedCacheStamp = Date()
-        return ids
+        do {
+            let rows: [BlockRow] = try await client
+                .from("user_blocks")
+                .select("blocked_id")
+                .eq("blocker_id", value: user.id)
+                .execute()
+                .value
+            let ids = Set(rows.map(\.blocked_id))
+            await blockedCache.store(ids, for: user.id)
+            return ids
+        } catch {
+            // Serve the last known good list rather than "nobody is blocked", and don't let
+            // the failure become the cached answer.
+            return await blockedCache.lastKnown(for: user.id) ?? []
+        }
     }
 
     func isBlocked(_ userId: UUID) async -> Bool {
@@ -1140,7 +1214,43 @@ class SupabaseManager {
         }
     }
 
-    func invalidateBlockedCache() {
-        blockedCache = nil
+    func invalidateBlockedCache() async {
+        await blockedCache.clear()
+    }
+}
+
+/// The blocked-id cache, isolated so the overlapping loads across tabs can't race on it.
+///
+/// Keyed by owner: `value(for:)` returns nothing when the id doesn't match, which is what
+/// stops one account's block list from applying to the next person who signs in on the
+/// same device.
+actor BlockedIdsCache {
+    private var ownerId: UUID?
+    private var ids: Set<UUID>?
+    private var stamp = Date.distantPast
+
+    private let lifetime: TimeInterval = 60
+
+    /// The cached list, but only while it is fresh *and* belongs to this user.
+    func value(for owner: UUID) -> Set<UUID>? {
+        guard ownerId == owner, Date().timeIntervalSince(stamp) < lifetime else { return nil }
+        return ids
+    }
+
+    /// The cached list regardless of age, used when a refresh fails and stale beats empty.
+    func lastKnown(for owner: UUID) -> Set<UUID>? {
+        ownerId == owner ? ids : nil
+    }
+
+    func store(_ newIds: Set<UUID>, for owner: UUID) {
+        ownerId = owner
+        ids = newIds
+        stamp = Date()
+    }
+
+    func clear() {
+        ownerId = nil
+        ids = nil
+        stamp = .distantPast
     }
 }
