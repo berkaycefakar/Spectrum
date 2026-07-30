@@ -5,7 +5,11 @@ import SwiftUI
 struct BlockedUsersView: View {
     @State private var blocked: [BlockedUser] = []
     @State private var isLoading = true
+    /// Only for a load that produced nothing to show. A failed *unblock* goes to
+    /// `unblockError` instead — routing it here swapped the whole populated list for a
+    /// full-screen warning that nothing could clear, since `load()` runs once from `.task`.
     @State private var errorMessage: String?
+    @State private var unblockError: String?
     @State private var unblocking: Set<UUID> = []
 
     var body: some View {
@@ -14,7 +18,7 @@ struct BlockedUsersView: View {
 
             if isLoading {
                 ProgressView().tint(.white)
-            } else if let errorMessage {
+            } else if let errorMessage, blocked.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.largeTitle)
@@ -53,6 +57,15 @@ struct BlockedUsersView: View {
         }
         .navigationTitle("Blocked Users")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Couldn't unblock", isPresented: Binding(
+            get: { unblockError != nil },
+            set: { if !$0 { unblockError = nil } }
+        )) {
+            Button("OK", role: .cancel) { unblockError = nil }
+        } message: {
+            Text(unblockError ?? "")
+        }
+        .refreshable { await load() }
         .task { await load() }
     }
 
@@ -100,6 +113,7 @@ struct BlockedUsersView: View {
                 .contentShape(Capsule())
             }
             .disabled(unblocking.contains(entry.id))
+            .accessibilityLabel("Unblock \(entry.profile.username ?? "user")")
         }
         .padding(12)
         .background(.white.opacity(0.05))
@@ -123,7 +137,7 @@ struct BlockedUsersView: View {
             try await SupabaseManager.shared.unblockUser(entry.profile.id)
             blocked.removeAll { $0.id == entry.id }
         } catch {
-            errorMessage = error.localizedDescription
+            unblockError = error.localizedDescription
         }
         unblocking.remove(entry.id)
     }

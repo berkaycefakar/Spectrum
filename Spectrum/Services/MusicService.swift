@@ -50,9 +50,9 @@ class MusicService {
     }
 
     private func logFailure(_ context: String, _ error: Error) {
-        print("MusicKit failure in \(context): \(error)")
+        debugLog("MusicKit failure in \(context): \(error)")
         if MusicAuthorization.currentStatus != .authorized {
-            print("  → authorization is \(MusicAuthorization.currentStatus). This is the likely cause.")
+            debugLog("  → authorization is \(MusicAuthorization.currentStatus). This is the likely cause.")
         }
     }
 

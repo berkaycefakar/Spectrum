@@ -198,9 +198,7 @@ class SupabaseManager {
             // with the same address. That is exactly the 5.1.1(v) rejection this code exists
             // to prevent, and it was invisible because the error was only printed.
             guard Self.isFunctionMissing(error) else { throw error }
-            #if DEBUG
-            print("delete-user Edge Function not deployed, falling back to client-side deletion:", error)
-            #endif
+            debugLog("delete-user Edge Function not deployed, falling back to client-side deletion:", error)
         }
 
         try await deleteAccountClientSide()
@@ -255,7 +253,7 @@ class SupabaseManager {
                 .from("avatars")
                 .remove(paths: ["\(userId.uuidString)/avatar.jpg"])
         } catch {
-            print("Account deletion: couldn't remove avatar object:", error)
+            debugLog("Account deletion: couldn't remove avatar object:", error)
         }
 
         // 5. The profile row — the last thing that makes the account visible to anyone else.
@@ -509,7 +507,7 @@ class SupabaseManager {
             do {
                 try await client.from(table).delete().in("id", values: stale).execute()
             } catch {
-                print("Couldn't clean up \(stale.count) duplicate \(table) row(s):", error)
+                debugLog("Couldn't clean up \(stale.count) duplicate \(table) row(s):", error)
             }
         }
     }
@@ -910,7 +908,7 @@ class SupabaseManager {
                 .execute()
                 .value
         } catch {
-            print("Activity: failed to load following relations:", error)
+            debugLog("Activity: failed to load following relations:", error)
             followingRelations = []
         }
         
@@ -923,7 +921,7 @@ class SupabaseManager {
                 .execute()
                 .value
         } catch {
-            print("Activity: failed to load follower relations:", error)
+            debugLog("Activity: failed to load follower relations:", error)
             followerRelations = []
         }
         
@@ -947,7 +945,7 @@ class SupabaseManager {
                     profilesById[profile.id] = profile
                 }
             } catch {
-                print("Activity: failed to load profiles:", error)
+                debugLog("Activity: failed to load profiles:", error)
             }
         }
         
@@ -968,7 +966,7 @@ class SupabaseManager {
                     .execute()
                     .value
             } catch {
-                print("Activity: failed to load track reviews:", error)
+                debugLog("Activity: failed to load track reviews:", error)
                 trackReviews = []
             }
             
@@ -1002,7 +1000,7 @@ class SupabaseManager {
                     .execute()
                     .value
             } catch {
-                print("Activity: failed to load album reviews:", error)
+                debugLog("Activity: failed to load album reviews:", error)
                 albumReviews = []
             }
             

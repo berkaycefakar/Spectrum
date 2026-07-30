@@ -254,6 +254,7 @@ struct TrackDetailView: View {
                 .shadow(color: dominantColor.opacity(0.35), radius: 8)
                 .animation(.easeInOut(duration: 0.45), value: dominantColor)
             }
+            .accessibilityLabel(isPlaying ? "Pause preview" : "Play preview")
 
             // Share — circle button
             Button {
@@ -272,6 +273,7 @@ struct TrackDetailView: View {
                 }
                 .frame(width: 48, height: 48)
             }
+            .accessibilityLabel("Share")
         }
     }
 

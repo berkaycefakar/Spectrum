@@ -13,7 +13,11 @@ struct EditProfileView: View {
     @State private var bio: String
     /// The bio field is vertical, so Return inserts a newline instead of dismissing — the
     /// keyboard needs an explicit way out or it covers the Save button.
-    @FocusState private var fieldFocused: Bool
+    /// One value per field. A single `Bool` shared by both text fields can't express *which*
+    /// one is focused, so SwiftUI drove them from the same state and focus jumped back to the
+    /// username field whenever the bio was tapped.
+    private enum Field: Hashable { case username, bio }
+    @FocusState private var focusedField: Field?
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -94,9 +98,9 @@ struct EditProfileView: View {
                             .foregroundStyle(.gray)
 
                         TextField("Username", text: $username)
-                            .focused($fieldFocused)
-                            .submitLabel(.done)
-                            .onSubmit { fieldFocused = false }
+                            .focused($focusedField, equals: .username)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .bio }
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
                             .padding()
@@ -112,7 +116,7 @@ struct EditProfileView: View {
                             .foregroundStyle(.gray)
 
                         TextField("Tell us about yourself...", text: $bio, axis: .vertical)
-                            .focused($fieldFocused)
+                            .focused($focusedField, equals: .bio)
                             .lineLimit(3...6)
                             .padding()
                             .background(.white.opacity(0.1))
@@ -154,13 +158,13 @@ struct EditProfileView: View {
         }
         .simultaneousGesture(
             TapGesture().onEnded {
-                if fieldFocused { fieldFocused = false }
+                if focusedField != nil { focusedField = nil }
             }
         )
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { fieldFocused = false }
+                Button("Done") { focusedField = nil }
                     .fontWeight(.semibold)
             }
         }
@@ -229,7 +233,7 @@ struct EditProfileView: View {
     private func saveProfile() {
         let name = trimmedUsername
         guard !name.isEmpty else {
-            errorMessage = "Kullanıcı adı boş olamaz."
+            errorMessage = "Username can't be empty."
             return
         }
 
@@ -244,7 +248,7 @@ struct EditProfileView: View {
                 guard let user = try await SupabaseManager.shared.getCurrentUser() else {
                     await MainActor.run {
                         isLoading = false
-                        errorMessage = "Oturumun sona ermiş görünüyor. Lütfen tekrar giriş yap."
+                        errorMessage = "Your session has expired. Please log in again."
                     }
                     return
                 }
@@ -272,11 +276,11 @@ struct EditProfileView: View {
                     isLoading = false
                     let message = error.localizedDescription
                     if message.contains("profiles_username_key") || message.contains("duplicate key value") {
-                        errorMessage = "Bu kullanıcı adı zaten kullanılıyor. Lütfen başka bir kullanıcı adı dene."
+                        errorMessage = "That username is already taken. Try another one."
                     } else if message.lowercased().contains("bucket") || message.contains("avatars") {
-                        errorMessage = "Fotoğraf yüklenemedi. Supabase'de 'avatars' storage bucket'ı oluşturulmalı."
+                        errorMessage = "Couldn't upload your photo. Please try again."
                     } else {
-                        errorMessage = "Profil güncellenemedi: \(message)"
+                        errorMessage = "Couldn't update your profile: \(message)"
                     }
                 }
             }

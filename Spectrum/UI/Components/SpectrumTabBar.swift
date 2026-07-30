@@ -242,6 +242,13 @@ struct SpectrumTabBar: View {
         .frame(maxWidth: .infinity)
         .frame(height: itemHeight)
         .contentShape(Capsule())
+        // The title is driven to zero height and zero opacity when the bar collapses, which
+        // drops it out of the accessibility tree — so after any downward scroll all four tabs
+        // announced as unlabelled buttons. The label is stated here instead, where collapsing
+        // can't reach it.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.title)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .background {
             if isSelected {
                 Capsule()

@@ -46,7 +46,10 @@ Deno.serve(async (req) => {
 
   // Owned content first, then the social graph, then the profile — same order as the client
   // path, so an interrupted run never leaves a live-looking profile pointing at nothing.
-  const steps: Array<[string, Promise<{ error: unknown }>]> = [
+  // `PromiseLike`, not `Promise`: a PostgREST builder has `then` but no `catch`/`finally`,
+  // so the stricter annotation fails Deno's type check. It is also lazy — nothing is sent
+  // until the `await` below — which is what keeps the deletion order the comment describes.
+  const steps: Array<[string, PromiseLike<{ error: unknown }>]> = [
     ["reviews", admin.from("reviews").delete().eq("user_id", id)],
     ["album_reviews", admin.from("album_reviews").delete().eq("user_id", id)],
     ["artist_reviews", admin.from("artist_reviews").delete().eq("user_id", id)],

@@ -33,13 +33,13 @@ final class MusicAuthorizationStore: ObservableObject {
     func requestIfNeeded() async {
         if MusicAuthorization.currentStatus == .notDetermined {
             status = await MusicAuthorization.request()
-            print("MusicKit: authorization status = \(status)")
+            debugLog("MusicKit: authorization status = \(status)")
         } else {
             refresh()
         }
 
         if isBlocked {
-            print("MusicKit: NOT authorized (\(status)) — catalog search and lookups will fail until the user grants access in Settings.")
+            debugLog("MusicKit: NOT authorized (\(status)) — catalog search and lookups will fail until the user grants access in Settings.")
         }
     }
 

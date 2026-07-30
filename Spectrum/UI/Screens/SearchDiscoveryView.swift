@@ -172,6 +172,7 @@ struct SearchDiscoveryView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.white.opacity(0.5))
                 }
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(.horizontal, 16)
@@ -1026,6 +1027,7 @@ struct UserProfileView: View {
                         Image(systemName: "ellipsis.circle")
                             .foregroundStyle(.white)
                     }
+                    .accessibilityLabel("More options")
                 }
             }
         }

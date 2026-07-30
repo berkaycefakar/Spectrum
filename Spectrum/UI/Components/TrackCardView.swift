@@ -79,6 +79,7 @@ struct TrackCardView: View {
                         .frame(width: 44, height: 44)
                         .contentShape(Circle())
                     }
+                    .accessibilityLabel(isPlaying ? "Pause preview" : "Play preview")
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)

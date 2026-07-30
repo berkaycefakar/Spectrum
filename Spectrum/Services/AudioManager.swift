@@ -39,7 +39,7 @@ final class AudioManager: ObservableObject {
                 try session.setCategory(.playback, mode: .default)
                 try session.setActive(true)
             } catch {
-                print("Audio session error: \(error)")
+                debugLog("Audio session error: \(error)")
             }
         }
     }
@@ -50,7 +50,7 @@ final class AudioManager: ObservableObject {
             do {
                 try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             } catch {
-                print("Audio session deactivation error: \(error)")
+                debugLog("Audio session deactivation error: \(error)")
             }
         }
     }

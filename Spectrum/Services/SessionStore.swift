@@ -81,7 +81,7 @@ class SessionStore: ObservableObject {
                 self.currentProfile = nil
             }
         } catch {
-            print("Session check error: \(error)")
+            debugLog("Session check error: \(error)")
             self.currentUser = nil
             self.currentProfile = nil
         }
@@ -220,7 +220,7 @@ class SessionStore: ObservableObject {
             // signed-in tabs after the user asked to leave — and after deleting their
             // account, where the second sign-out call naturally fails because the session is
             // already gone.
-            print("Sign out request failed (clearing local session anyway):", error)
+            debugLog("Sign out request failed (clearing local session anyway):", error)
         }
 
         self.currentUser = nil
@@ -237,7 +237,7 @@ class SessionStore: ObservableObject {
             let profile = try await SupabaseManager.shared.getProfile(userId: userId)
             self.currentProfile = profile
         } catch {
-            print("Failed to load profile: \(error)")
+            debugLog("Failed to load profile: \(error)")
             // Don't set error message - profile might not exist yet
         }
     }

@@ -56,6 +56,9 @@ struct ContentView: View {
                 }
             }
         }
+        // Every screen paints its own black background, so a light-mode device rendered
+        // system alerts, action sheets and the photo picker light-on-black.
+        .preferredColorScheme(.dark)
         .task {
             await sessionStore.checkSession()
         }
