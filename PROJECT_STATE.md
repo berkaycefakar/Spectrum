@@ -259,6 +259,71 @@ UI test ile swipe/tap attırıp ekran görüntüsüyle doğrulandı.
 
 ---
 
+## 30 Temmuz 2026 (2) — App Store hazırlık geçişi
+
+Hepsi `xcodebuild` ile temiz derleniyor, hiçbiri cihazda test edilmedi. Commit'ler:
+`e99e1ac`, `38385a3`, `07e7d23`, `96ab5f1`, `70d639e` — hepsi push'landı.
+
+### Yapılandırma
+- **`TARGETED_DEVICE_FAMILY = "1,2,7"` → `1`** ve `SUPPORTED_PLATFORMS` sadece iOS. Uygulama
+  iPad + Mac + **Vision Pro** beyan ediyordu; her layout telefon-dikey. iPad ekran görüntüsü
+  zorunluluğu da böylece kalktı.
+- Yönelim sadece **portrait** (landscape beyan ediliyordu).
+- `PrivacyInfo.xcprivacy`'den **`NSPrivacyCollectedDataTypeContacts` silindi** — o tip rehber
+  demek, uygulama rehbere dokunmuyor. Takip grafiği zaten `UserID` altında.
+- `AccentColor` colorset boştu (sistem vurguları maviye düşüyordu) → `#FF00FF`.
+- Launch screen siyah (`LaunchBackground` colorset) + kökte `.preferredColorScheme(.dark)`.
+
+### UGC / Guideline 1.2
+- **Aktivite kartları ve `LogDetailView`'da rapor/engelle yolu yoktu** — ikisi de başkasının
+  yorum metnini gösteriyordu. `.moderationActions` eklendi (`ActivityItem.reportedContentType`).
+- Feed ve Aktivite kartlarına **görünür ⋯ butonu** (`showsAffordance`). Sadece uzun basma
+  görünmez bir yol; "rapor mekanizması bulunamadı" en sık 1.2 ret gerekçesi.
+- **Kullanıcı adı ve bio artık filtreden geçiyor** (`rejectProfanity`) — ikisi de herkese açık.
+- `content_reports`: `status`/`content_type`/`reason` CHECK kısıtlı, insert policy `status`'u
+  `'pending'`e sabitliyor. Anon key çıkarılabilir olduğu için istemci `'dismissed'` gönderip
+  raporu triyajdan kalıcı olarak gizleyebiliyordu.
+- **Şartlar/gizlilik/destek sayfaları yazıldı** (`docs/`), `LegalLinks.swift` üzerinden giriş
+  ekranına ve Settings → About'a bağlandı. Öncesinde tıklanamaz düz metindi.
+
+### Küfür filtresi — kritik false positive
+`ı→i` ve `ş→s` katlaması yüzünden `"sik"` terimi **"sık"** ("sık sık dinliyorum") ve **"şık"**
+("bu şarkı çok şık") kelimelerini reddediyordu. `"amina"` substring olarak **"stamina"** içinde
+eşleşiyordu. İkisi de çıkarıldı; çekimli formlar (`siktir`, `sikeyim`, `sikerim`) kaldı.
+
+### Doğruluk
+- **`blockedCache` actor'a taşındı** ve sahibine (`user.id`) göre anahtarlandı. Düz mutable
+  state'ti, üst üste binen sekme yüklemelerinden okunuyordu; çıkış yaptıktan sonra da hayatta
+  kalıp bir sonraki hesabın feed'ini süzüyordu.
+- **Başarısız blok sorgusu artık "engel yok" diye cache'lenmiyor** — şebeke gidince 60 saniye
+  boyunca engellenen herkes geri geliyordu.
+- **`deleteAccount` sadece fonksiyon gerçekten yoksa (404) fallback'e düşüyor.** Önceden her
+  hata yutuluyordu: kullanıcıya "hesabın silindi" denip `auth.users` satırı hayatta kalıyordu.
+- **PostgREST `*`'ı sunucu tarafında `%`'e çeviriyor**, bizim escape'imizden sonra. Desenler
+  artık `_`'e eşliyor + `matches(_:_:)` ile kesinleştiriliyor; arama kutusu tamamen atıyor.
+  `*` yazan biri hâlâ tüm kullanıcı tablosunu çekebiliyordu, ve `N*E*R*D` gibi bir isim aynı
+  kullanıcının **başka** bir yorumunu update edip gerisini siliyordu.
+
+### UI / erişilebilirlik
+- `EditProfileView`'daki **Türkçe hata mesajları İngilizceye çevrildi**; fotoğraf yükleme hatası
+  artık "Supabase" ve "storage bucket" demiyor.
+- İki `TextField` tek `Bool` `@FocusState` paylaşıyordu → `enum Field` ile ayrıldı.
+- İkon-only butonlara `accessibilityLabel` (önceden kod tabanında **0** adet vardı).
+- Tab bar küçülünce başlık `opacity(0)` olup erişilebilirlik ağacından düşüyordu → etiket
+  artık kapsayıcıda beyan ediliyor + `.isSelected` trait'i.
+- `BlockedUsersView`: başarısız unblock tüm listeyi temizlenemez hata ekranına çeviriyordu.
+- `UserProfileView`: `blockError` yazılıp hiç gösterilmiyordu.
+- Servis logları `debugLog` ile Release'te derlenmiyor.
+
+### Senden kalan işler
+- `supabase login` → sonra `supabase functions deploy delete-user` (deploy hâlâ YAPILMADI)
+- GitHub Pages: Settings → Pages → branch `main`, folder `/docs`
+- Developer portal: `berkay.Spectrum` → **MusicKit** ve **Sign In with Apple** açık mı?
+- RLS denetimi, `artist_reviews` migration, `avatars` bucket + policy'ler
+- Cihazda test, ekran görüntüleri, App Store Connect (metinler `APP_STORE_CONNECT.md`'de)
+
+---
+
 ## Bilinen açık uçlar / riskler
 - **Karışık dil:** `EditProfileView` hata mesajları Türkçe, gerisi İngilizce. Mağaza öncesi karar ver.
 - **Şifre sıfırlama:** Supabase Redirect URL eklenmeden linkler uygulamayı açmaz (`AUTH_SETUP.md` Bölüm 0).
