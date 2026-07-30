@@ -72,19 +72,11 @@
 			</array>
 		</dict>
 
-		<!-- The follow graph. -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeContacts</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
+		<!--
+		  The follow graph is deliberately NOT declared as Contacts: that type means the
+		  user's address book, which this app never reads. Who follows whom is already
+		  covered by UserID above, and the reviews themselves by OtherUserContent.
+		-->
 	</array>
 
 	<!--
