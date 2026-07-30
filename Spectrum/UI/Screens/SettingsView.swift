@@ -51,6 +51,14 @@ struct SettingsView: View {
                     infoRow(label: "Version", value: appVersion)
                     Divider().background(.white.opacity(0.08))
                     infoRow(label: "Music data", value: "Apple Music (MusicKit)")
+                    Divider().background(.white.opacity(0.08))
+                    // Reachable after sign-up too, not only on the landing screen: a user who
+                    // wants to re-read what they agreed to shouldn't have to log out.
+                    linkRow(label: "Terms of Service", url: LegalLinks.terms)
+                    Divider().background(.white.opacity(0.08))
+                    linkRow(label: "Privacy Policy", url: LegalLinks.privacy)
+                    Divider().background(.white.opacity(0.08))
+                    linkRow(label: "Contact Support", url: LegalLinks.support)
                 }
 
                 // Safety. Blocking has to be undoable from inside the app for Guideline 1.2,
@@ -261,5 +269,23 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
+    }
+
+    private func linkRow(label: String, url: URL) -> some View {
+        Link(destination: url) {
+            HStack {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.7))
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            // Inside the label so the whole row is the tap target, not just the text.
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
     }
 }

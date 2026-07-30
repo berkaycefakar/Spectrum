@@ -226,10 +226,22 @@ struct LandingView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             
-            // Terms text
-            Text("By continuing, you agree to our Terms of Service")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.4))
+            // Terms text. These have to be real links, not a sentence: Guideline 1.2 expects
+            // an EULA the user can actually read and agree to before posting content.
+            VStack(spacing: 2) {
+                Text("By continuing, you agree to our")
+                HStack(spacing: 4) {
+                    Link("Terms of Service", destination: LegalLinks.terms)
+                        .underline()
+                    Text("and")
+                    Link("Privacy Policy", destination: LegalLinks.privacy)
+                        .underline()
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.white.opacity(0.4))
+            .tint(.white.opacity(0.7))
+            .multilineTextAlignment(.center)
         }
         .padding(24)
         .padding(.bottom, 10)

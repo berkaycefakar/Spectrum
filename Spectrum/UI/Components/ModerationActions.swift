@@ -12,6 +12,13 @@ struct ModerationActions: ViewModifier {
     let authorId: UUID?
     let authorUsername: String?
     let reportedText: String?
+    /// Draws a visible ⋯ button on the card as well as the long-press menu.
+    ///
+    /// A context menu alone is invisible: nothing on screen says the content can be reported,
+    /// and "we were unable to locate a mechanism for reporting objectionable content" is the
+    /// usual wording of a Guideline 1.2 rejection. On cards that fill the screen edge to edge
+    /// this is the affordance a reviewer looks for.
+    var showsAffordance: Bool = false
     /// Called after a successful block so the host screen can drop the content from view.
     var onBlocked: (() -> Void)?
 
@@ -21,6 +28,27 @@ struct ModerationActions: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .overlay(alignment: .topTrailing) {
+                if showsAffordance && isOtherUsersContent {
+                    Menu {
+                        Button { showReport = true } label: {
+                            Label("Report", systemImage: "flag")
+                        }
+                        Button(role: .destructive) { showBlockConfirm = true } label: {
+                            Label("Block \(authorUsername.map { "@\($0)" } ?? "user")", systemImage: "hand.raised")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.75))
+                            .frame(width: 32, height: 32)
+                            .background(.black.opacity(0.35), in: Circle())
+                            .contentShape(Circle())
+                    }
+                    .accessibilityLabel("Report or block")
+                    .padding(10)
+                }
+            }
             .contextMenu {
                 if isOtherUsersContent {
                     Button {
@@ -87,6 +115,7 @@ extension View {
         authorId: UUID?,
         authorUsername: String?,
         reportedText: String? = nil,
+        showsAffordance: Bool = false,
         onBlocked: (() -> Void)? = nil
     ) -> some View {
         modifier(ModerationActions(
@@ -95,6 +124,7 @@ extension View {
             authorId: authorId,
             authorUsername: authorUsername,
             reportedText: reportedText,
+            showsAffordance: showsAffordance,
             onBlocked: onBlocked
         ))
     }

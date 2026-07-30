@@ -114,6 +114,7 @@ struct FeedView: View {
                                             authorId: review.userId,
                                             authorUsername: profile.username,
                                             reportedText: review.reviewText,
+                                            showsAffordance: true,
                                             onBlocked: { Task { await loadFeedData() } }
                                         )
                                     } else {

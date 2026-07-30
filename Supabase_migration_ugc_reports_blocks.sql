@@ -41,15 +41,39 @@ create index if not exists content_reports_reporter_idx
 create unique index if not exists content_reports_unique_per_reporter
     on public.content_reports (reporter_id, content_type, coalesce(content_ref, ''));
 
+-- The app writes these columns, so the database has to be the thing that constrains them:
+-- the anon key is extractable from the IPA, and anyone holding it can POST whatever they like.
+alter table public.content_reports
+    drop constraint if exists content_reports_status_valid;
+alter table public.content_reports
+    add constraint content_reports_status_valid
+    check (status in ('pending', 'reviewed', 'dismissed'));
+
+alter table public.content_reports
+    drop constraint if exists content_reports_type_valid;
+alter table public.content_reports
+    add constraint content_reports_type_valid
+    check (content_type in ('song_review', 'album_review', 'artist_review', 'profile'));
+
+alter table public.content_reports
+    drop constraint if exists content_reports_reason_valid;
+alter table public.content_reports
+    add constraint content_reports_reason_valid
+    check (reason in ('offensive', 'harassment', 'spam', 'sexual', 'violence', 'other'));
+
 alter table public.content_reports enable row level security;
 
 -- A user may file a report as themselves, and read only their own. Nobody can update or
 -- delete through the anon key — moderation happens in the dashboard with the service role.
+--
+-- `status = 'pending'` is enforced here rather than left to the column default: the default
+-- only applies when the client omits the field, and a client that sends 'dismissed' would
+-- otherwise file reports that never appear in the triage query.
 drop policy if exists "reports: insert own" on public.content_reports;
 create policy "reports: insert own"
     on public.content_reports for insert
     to authenticated
-    with check (auth.uid() = reporter_id);
+    with check (auth.uid() = reporter_id and status = 'pending');
 
 drop policy if exists "reports: read own" on public.content_reports;
 create policy "reports: read own"
