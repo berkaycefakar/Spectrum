@@ -920,7 +920,7 @@ struct UserProfileView: View {
                                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                                         ForEach(sortedUserReviews) { review in
                                             if let track = userTracks[review.itunesTrackId] {
-                                                NavigationLink(destination: LogDetailView(track: track, review: review)) {
+                                                NavigationLink(destination: LogDetailView(track: track, review: review, authorUsername: profile?.username)) {
                                                     AlbumGridItem(track: track, vibeColor: Color(hex: review.vibeColor))
                                                 }
                                             } else {
@@ -1049,6 +1049,16 @@ struct UserProfileView: View {
             Button("OK", role: .cancel) { dismiss() }
         } message: {
             Text("You won't see this user's content any more.")
+        }
+        // Without this the catch below wrote `blockError` and nothing ever read it: tapping
+        // Block while offline looked identical to a block that worked.
+        .alert("Couldn't block", isPresented: Binding(
+            get: { blockError != nil },
+            set: { if !$0 { blockError = nil } }
+        )) {
+            Button("OK", role: .cancel) { blockError = nil }
+        } message: {
+            Text(blockError ?? "")
         }
         .task {
             await loadUserProfile()

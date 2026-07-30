@@ -22,18 +22,26 @@ enum ProfanityFilter {
         "asshole", "assholes", "dickhead", "bastard", "whore", "slut", "faggot", "fag",
         "nigger", "nigga", "retard", "retarded", "rape", "rapist",
         // Turkish
-        "amk", "aq", "sik", "siktir", "sikeyim", "sikerim", "orospu", "kahpe",
+        "amk", "aq", "siktir", "sikeyim", "sikerim", "orospu", "kahpe",
         "amina", "aminakoyayim", "yavsak", "gavat", "pezevenk", "pust", "ibne",
         "gotveren", "serefsiz", "salak", "gerizekali", "ananisikeyim"
         // Deliberately absent: "mal", "oc" — real words in other contexts, and a review that
         // refuses to save over a false positive is worse than a mild insult getting through.
+        //
+        // Also deliberately absent: "sik". Folding maps ı→i and ş→s, so it swallowed "sık"
+        // ("often" — *sık sık dinliyorum*) and "şık" ("stylish" — *bu şarkı çok şık*), two of
+        // the most ordinary words a Turkish music review can contain. The conjugated forms
+        // above are unambiguous and stay.
     ]
 
     /// Words unambiguous enough that they can be caught inside a longer run of characters —
     /// the usual way people dodge a word-boundary filter ("fuuuckthis").
+    ///
+    /// Everything here must be a string that cannot appear inside an innocent word. "amina"
+    /// used to be in this list and matched inside **stamina**, examination and contamination.
     private static let substringTerms: [String] = [
         "fuck", "motherfuck", "cunt", "nigger", "nigga", "faggot",
-        "orospu", "siktir", "amina", "pezevenk"
+        "orospu", "siktir", "pezevenk"
     ]
 
     /// Leet-speak and Turkish characters folded to their plain ASCII equivalent, so "s1kt1r"

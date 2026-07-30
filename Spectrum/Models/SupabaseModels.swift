@@ -193,4 +193,14 @@ struct ActivityItem: Codable, Identifiable {
         case reviewText = "review_text"
         case createdAt = "created_at"
     }
+
+    /// Which kind of content a report filed from this row is about. A follow has no text to
+    /// report, but the *actor* can still be reported, so it maps to their profile.
+    var reportedContentType: ReportedContentType {
+        switch type {
+        case .trackReview: return .songReview
+        case .albumReview: return .albumReview
+        case .newFollower: return .profile
+        }
+    }
 }

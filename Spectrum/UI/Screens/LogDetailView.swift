@@ -6,6 +6,8 @@ struct LogDetailView: View {
     /// Only the log's owner sees edit/delete controls. Others viewing this log from a profile
     /// see it read-only.
     var isOwner: Bool = false
+    /// Shown in the Report / Block wording when someone else's log is open.
+    var authorUsername: String? = nil
     /// Called after the owner edits or deletes, so the presenting screen can refresh.
     var onChanged: (() -> Void)? = nil
 
@@ -122,6 +124,17 @@ struct LogDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        // Opened from someone else's profile this screen shows their review text full-width,
+        // so it needs Report / Block like every other content surface. The modifier hides
+        // itself for your own logs, which is why it can sit outside the `isOwner` branch.
+        .moderationActions(
+            contentType: .songReview,
+            contentRef: review.id.uuidString,
+            authorId: review.userId,
+            authorUsername: authorUsername,
+            reportedText: review.reviewText,
+            onBlocked: { dismiss() }
+        )
         .toolbar {
             if isOwner {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -140,6 +153,7 @@ struct LogDetailView: View {
                         Image(systemName: "ellipsis.circle")
                             .foregroundStyle(.white)
                     }
+                    .accessibilityLabel("Log options")
                 }
             }
         }

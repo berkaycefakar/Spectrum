@@ -134,7 +134,19 @@ struct ActivityView: View {
 
                         LazyVStack(spacing: 12) {
                             ForEach(group.items) { item in
+                                // Activity cards render other people's review text, so they
+                                // need the same Report / Block pair the feed has — Apple
+                                // checks every surface that displays user content, not just
+                                // the main one. Follows carry no text, hence the switch.
                                 ActivityItemCard(activity: item)
+                                    .moderationActions(
+                                        contentType: item.reportedContentType,
+                                        contentRef: item.id.uuidString,
+                                        authorId: item.actorId,
+                                        authorUsername: item.actorUsername,
+                                        reportedText: item.reviewText,
+                                        onBlocked: { Task { await loadNotifications() } }
+                                    )
                             }
                         }
                     }

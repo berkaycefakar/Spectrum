@@ -254,6 +254,7 @@ class SupabaseManager {
     }
     
     func updateProfile(userId: UUID, username: String, bio: String) async throws {
+        try Self.rejectProfanity(username: username, bio: bio)
         let updateData = ProfileUpdate(username: username, bio: bio)
         try await client
             .from("profiles")
@@ -264,12 +265,29 @@ class SupabaseManager {
 
     /// Updates username, bio, and (optionally) the avatar URL in one call.
     func updateProfile(userId: UUID, username: String, bio: String, avatarUrl: String?) async throws {
+        try Self.rejectProfanity(username: username, bio: bio)
         let updateData = ProfileUpdateFull(username: username, bio: bio, avatar_url: avatarUrl)
         try await client
             .from("profiles")
             .update(updateData)
             .eq("id", value: userId)
             .execute()
+    }
+
+    /// Usernames and bios are user-generated content too: they render on every card in the
+    /// feed and in search results, and a bio is what a profile report quotes. Guideline 1.2
+    /// makes no distinction between a review and a display name, so both go through the same
+    /// filter that `writeReview` applies.
+    private static func rejectProfanity(username: String, bio: String) throws {
+        let offending = ProfanityFilter.firstMatch(in: username)
+            ?? ProfanityFilter.firstMatch(in: bio)
+        guard let offending else { return }
+        throw NSError(
+            domain: "Spectrum",
+            code: 422,
+            userInfo: [NSLocalizedDescriptionKey:
+                "Please take out “\(offending)” — your profile can't contain offensive language."]
+        )
     }
 
     /// Uploads avatar image data to the `avatars` storage bucket and returns its public URL.
