@@ -315,12 +315,33 @@ eşleşiyordu. İkisi de çıkarıldı; çekimli formlar (`siktir`, `sikeyim`, `
 - `UserProfileView`: `blockError` yazılıp hiç gösterilmiyordu.
 - Servis logları `debugLog` ile Release'te derlenmiyor.
 
+## 31 Temmuz 2026 — backend denetimi TAMAM
+
+Management API ile denetlendi (`supabase login` token'ı üzerinden). **Backend tarafında açık iş
+kalmadı:**
+
+- **RLS yedi tabloda da açık** — `profiles`, `reviews`, `album_reviews`, `artist_reviews`,
+  `follows`, `content_reports`, `user_blocks`.
+- **Yazma policy'lerinin hiçbirinde `true` yok** — hepsi `auth.uid() = <owner>` ile kilitli.
+  Silme policy'leri de var, yani hesap silme gerçekten satırları kaldırabiliyor.
+- `artist_reviews` **zaten oluşturulmuş** (migration dosyası artık gereksiz).
+- `avatars` bucket var, **public**, SELECT/INSERT/UPDATE/DELETE policy'leri tam.
+- Unique constraint'ler ve indeksler **uygulanmış**; kopya satır sayısı dört tabloda da **0**.
+- `delete-user` Edge Function **deploy edildi** ve doğrulandı (yetkisiz çağrı 401).
+- `content_reports` sıkılaştırması **uygulandı**: `status`/`content_type`/`reason` CHECK kısıtlı
+  ve insert policy `status`'u `'pending'`e sabitliyor.
+- `docs/` sayfaları GitHub Pages'te **canlı** (üçü de 200).
+
+> Fazlalık: `follows`, `profiles` ve `reviews`'ta aynı koşulu tekrarlayan mükerrer policy'ler
+> var (ör. `reviews` için 3 ayrı DELETE policy'si). Postgres bunları OR'ladığı için davranış
+> doğru, sadece kalabalık. Temizlemek isteğe bağlı, aciliyeti yok.
+
 ### Senden kalan işler
-- `supabase login` → sonra `supabase functions deploy delete-user` (deploy hâlâ YAPILMADI)
-- GitHub Pages: Settings → Pages → branch `main`, folder `/docs`
-- Developer portal: `berkay.Spectrum` → **MusicKit** ve **Sign In with Apple** açık mı?
-- RLS denetimi, `artist_reviews` migration, `avatars` bucket + policy'ler
-- Cihazda test, ekran görüntüleri, App Store Connect (metinler `APP_STORE_CONNECT.md`'de)
+- **Cihazda test** — hiçbir şey gerçek donanımda denenmedi (özellikle hesap silme, tek
+  kullanımlık hesapla)
+- Ekran görüntüleri (cihazdan — simülatörde MusicKit boş)
+- App Store Connect metinleri (`APP_STORE_CONNECT.md`) + build yükleme
+- Doğrulanmış bir demo hesabı (Confirm email açık)
 
 ---
 
