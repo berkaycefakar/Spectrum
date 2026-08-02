@@ -336,12 +336,43 @@ kalmadı:**
 > var (ör. `reviews` için 3 ayrı DELETE policy'si). Postgres bunları OR'ladığı için davranış
 > doğru, sadece kalabalık. Temizlemek isteğe bağlı, aciliyeti yok.
 
+---
+
+## 2 Ağustos 2026 — App Store Connect dolduruldu, build yüklendi
+
+App Store Connect API ile (key `22H7A52C65`, App Manager yetkisi) yapıldı:
+
+- Subtitle, description, keywords, promotional text, support + privacy URL, copyright
+- Kategoriler: **Music** / **Social Networking**
+- Content Rights: **USES_THIRD_PARTY_CONTENT** (MusicKit kapak + preview gösteriliyor)
+- Yaş sınırı beyanı: `matureOrSuggestiveThemes` ve `profanityOrCrudeHumor` = Infrequent/Mild,
+  `userGeneratedContent` = true, `socialMedia` = true, geri kalan hepsi None/false
+- App Review Information: ad, telefon, e-posta, 1739 karakterlik review notu
+- **Build 1.0 (1) yüklendi, işlendi (VALID) ve sürüme bağlandı**
+
+### İmzalama — PC değişikliğinin kalıntısı çözüldü
+Hesapta bir `iOS Distribution` sertifikası vardı ama **özel anahtarı eski bilgisayarda** kaldı,
+bu yüzden arşiv App Store için yeniden imzalanamıyordu (`Cloud signing permission error`).
+Bu Mac için yenisi üretildi:
+
+- Sertifika `V32J9SMM8B` — *iPhone Distribution: Berkay CEFAKAR*, keychain'de kurulu
+- Profil `84Z2JN5QDR` — *Spectrum App Store 2026*, `IOS_APP_STORE`, Sign in with Apple
+  entitlement'ını içeriyor (App ID'nin doğru yapılandırıldığının kanıtı)
+- API key ayrıca `~/.appstoreconnect/private_keys/` altına kopyalandı (`altool` orada arıyor)
+
+> **Yedek al:** yeni dağıtım sertifikasının özel anahtarı sadece bu Mac'in keychain'inde.
+> Keychain Access → "iPhone Distribution: Berkay CEFAKAR" → sağ tık → Export → `.p12`.
+> Bu dosya olmadan başka bir bilgisayarda App Store build'i imzalayamazsın.
+
 ### Senden kalan işler
-- **Cihazda test** — hiçbir şey gerçek donanımda denenmedi (özellikle hesap silme, tek
-  kullanımlık hesapla)
-- Ekran görüntüleri (cihazdan — simülatörde MusicKit boş)
-- App Store Connect metinleri (`APP_STORE_CONNECT.md`) + build yükleme
-- Doğrulanmış bir demo hesabı (Confirm email açık)
+- **Ekran görüntüleri** — App Store Connect'te 0 set var, zorunlu. Cihazdan çek
+  (simülatörde MusicKit boş döner)
+- **App Privacy anketi** — API'de endpoint'i yok, panelden: Email Address, User ID,
+  Photos or Videos, Other User Content; hepsi "Linked: Yes", "Tracking: No"
+- **Demo hesabı** — Confirm email açık olduğu için doğrulanmış olmalı.
+  `berkaycefakar+demo@icloud.com` gibi bir + takma adı işe yarar
+- **Cihazda test** — hiçbir şey gerçek donanımda denenmedi (özellikle hesap silme,
+  tek kullanımlık hesapla)
 
 ---
 
