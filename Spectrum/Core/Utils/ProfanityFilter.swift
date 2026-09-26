@@ -11,7 +11,9 @@ import Foundation
 ///
 /// The list is deliberately short and unambiguous. A long list is worse than a short one: it
 /// starts eating innocent words, and a review that silently fails to save is its own bug.
-enum ProfanityFilter {
+/// `nonisolated` because the project defaults to `MainActor` isolation: every member here is
+/// a pure string transform, and the feed maps review text off the main actor.
+nonisolated enum ProfanityFilter {
 
     /// Words rejected as whole words only. Substring matching on these would flag ordinary
     /// text — the classic example being "Scunthorpe" for a word contained inside it.
@@ -116,10 +118,27 @@ enum ProfanityFilter {
     }
 
     private static func normalize(_ token: String) -> String {
+        // Case- and diacritic-fold through Foundation first, then apply the leet table.
+        //
+        // Doing this with `lowercased()` alone had a hole: Turkish `İ` (U+0130) lowercases to
+        // `i` + U+0307 (combining dot above), a two-scalar grapheme that matches neither the
+        // `"İ"` entry in `characterFolding` — that lookup ran *after* lowercasing, so it never
+        // fired — nor a plain `i`. "SİKTİR" normalised to "si̇ktir" and sailed through the
+        // filter. Anyone typing in caps bypassed it.
+        //
+        // `.diacriticInsensitive` also covers ş→s, ğ→g, ü→u and the accented vowels, so the
+        // letter rows in `characterFolding` are now belt-and-braces; the digit, `@` and `$`
+        // rows are the part that still does work, along with dotless `ı`, which carries no
+        // diacritic to strip.
+        let folded = token.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: nil
+        )
+
         var result = ""
-        for character in token.lowercased() {
-            if let folded = characterFolding[character] {
-                result.append(folded)
+        for character in folded {
+            if let mapped = characterFolding[character] {
+                result.append(mapped)
             } else if character.isLetter || character.isNumber {
                 result.append(character)
             }
