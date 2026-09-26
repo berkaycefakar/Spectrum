@@ -376,6 +376,183 @@ Bu Mac için yenisi üretildi:
 
 ---
 
+## 26 Eylül 2026 — eksik kapatma turu
+
+Submit işleri bilerek ertelendi; bu tur tamamen ürün ve kod eksiklerine ayrıldı. **Her adımda
+`xcodebuild` temiz derledi, build artık SIFIR uyarı veriyor.** Cihazda test edildiği teyit
+edildi (kullanıcı beyanı).
+
+### Test altyapısı: 0 → çalışan suite
+`SpectrumTests.swift` boş Xcode şablonuydu. Silindi, yerine dört dosya:
+`ProfanityFilterTests`, `QueryPatternTests`, `ModelTests`, `ListeningStatsTests`.
+Hepsi geçmişte gerçekten yaşanmış bug'ların regresyonu.
+
+> **Test, canlı bir açık buldu:** Türkçe `İ` (U+0130) `lowercased()` ile `i` + U+0307
+> (birleşen nokta) oluyor. `ProfanityFilter.normalize` önce küçültüp sonra folding tablosuna
+> baktığı için `"İ": "i"` satırı **hiç çalışmıyordu** — `SİKTİR` "si̇ktir"e dönüşüp filtreden
+> geçiyordu. Yani **caps yazmak küfür filtresinin tamamını bypass ediyordu.** `normalize`
+> artık Foundation'ın `.caseInsensitive + .diacriticInsensitive` folding'ini önce uyguluyor;
+> `sık`/`şık` false-positive koruması caps'te de doğrulandı.
+
+### Düzeltilenler
+- **Paylaşım Spotify'a gidiyordu.** `spotify:search:...` bir URI şeması: Messages/WhatsApp'ta
+  tıklanabilir link değil, alıcıda Spotify yoksa ölü, ve tüm veri Apple Music'ten gelirken
+  rakibe yönlendiriyordu. `Track.appleMusicUrl` MusicKit'in kanonik `song.url`'ünden
+  doldu, `music.apple.com/song/<id>` fallback'i var. Elle `UIActivityViewController`
+  sunumu da `ShareLink`'e çevrildi — eski kod `connectedScenes.first`'e uzanıyordu, bu
+  ekran bir sheet içindeyken paylaşım **sessizce hiç açılmıyordu.**
+- **15 çıplak `print(` → `debugLog`.** `DebugLog.swift` yazılmıştı ama sadece servis
+  katmanına uygulanmıştı; 9 View dosyası Release'te de konsola yazıyordu.
+- **`ArtistDetailView` bomboş sayfa**: id lookup + isim araması ikisi de patlarsa hiçbir şey
+  yoktu. "Couldn't load this artist" + Try Again eklendi.
+- **`SpotifyCredentials.txt` silindi.** ⚠️ Dosya gitti ama **anahtar hâlâ geçerli** —
+  Spotify panelinden secret'ı iptal et.
+- **3 derleme uyarısı kapandı.** Proje `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`
+  kullanıyor, bu yüzden saf yardımcılar arka plan bağlamından çağrılınca uyarı veriyordu
+  (Swift 6'da hata olacaklardı): `ProfanityFilter` ve `Album.newestFirst` artık
+  `nonisolated`. `URLQueryRepresentable` → `PostgrestFilterValue`.
+- **`SupabaseManager` artık `final`** (default argümanda `Self` kullanılamıyordu).
+
+### Pagination — üç ekranda
+`SupabaseManager.pageSize = 30`. Profil sorguları `.range()` alıyor ve **benzersiz
+tie-break**'le sıralı (`rating → created_at → id`): rating 0-10 olduğu için eşitlik kural,
+tie-break olmadan sayfalar arası satır hem tekrarlanır hem kaybolur. Feed
+`ReviewPage { reviews, hasMore }` döndürüyor; `hasMore` **sunucunun** döndürdüğü satır
+sayısına bakıyor, filtreden geçenlere değil — yoksa tamamı engelli kullanıcılardan oluşan
+bir sayfa "feed bitti" gibi görünürdü.
+
+Sayfalamanın açığa çıkardığı iki sessiz hata:
+- Sekme sayıları `reviews.count`'tan geliyordu → "yüklenen kadar" demeye başlardı.
+  `countUserLogs` (head request) eklendi.
+- "Your Spectrum" grafiği ve ortalama puan da yüklü sayfadan hesaplanıyordu → sessizce
+  "son 30 logun özeti" olurdu. `fetchUserLogSummary` sadece `vibe_color,rating,created_at`
+  çekiyor.
+- Client tarafı `sorted` kaldırıldı: sayfa 2'nin 5 yıldızı ekrandaki 3 yıldızın üstüne
+  zıplıyordu. Sıralama artık sunucuda.
+
+### Beğeni sistemi
+`Supabase_migration_review_likes.sql` — tek polimorfik tablo, RLS (okuma herkese,
+yazma/silme `auth.uid()`), tekil indeks (çift dokunuş 23505 → "zaten beğenilmiş"),
+`review_like_counts` RPC'si (PostgREST `group by` yapamıyor; popüler bir log'un her
+kaydırmada beğeni başına bir satır indirmesini engelliyor), silinen log'un beğenilerini
+temizleyen üç trigger. İstemci tarafı: `LikeButton` + `HapticFeedback` (tek hazırlanmış
+generator), iyimser toggle (kalp dokunuşla aynı karede döner, sadece yazma patlarsa geri
+alınır), feed sayfa başına tek istekle tüm durumları çekiyor, kendi logunda kalp gizli.
+`deleteAccountClientSide` verilen beğenileri de siliyor.
+
+> 🔴 **SENDE:** `Supabase_migration_review_likes.sql`'i SQL Editor'de çalıştır. Çalışana
+> kadar kalpler görünür ama sayı 0 kalır ve dokunuş sessizce geri alınır.
+
+### Discover gerçek verilere bağlandı
+`MusicService.fetchTopSongs` / `fetchTopAlbums` (`MusicCatalogChartsRequest`). 15
+sanatçılık sabit tohum havuzu **silindi** — her yeni kullanıcı aynı altı şarkıyı
+görüyordu. Yeni "Top Charts" yatay satırı + topluluk logları "Logged Recently".
+Hiçbir şey yapmayan "See All" butonu kaldırıldı (`TODO: Navigate to full list` idi).
+
+### MusicKit'te bedava duran alanlar
+Hepsi zaten yapılan isteklerle geliyordu: albüm sayfasında **Explicit / Dolby Atmos /
+Lossless / Hi-Res** rozetleri + "plak şirketi · yıl · N şarkı" satırı
+(`CatalogBadges.swift`), şarkı sayfasında **besteci** ("Written by…", sanatçıyla aynıysa
+gizli) ve Explicit, sanatçı sayfasında **Latest Release** kartı.
+Not: `MusicKit.Track` (Song ∪ MusicVideo) `composerName` taşımıyor — albüm parça
+listelerinde besteci yok, şarkının kendi sayfasında var.
+
+### Mini-player
+`AudioManager` artık `currentTrack` yayınlıyor. Tab bar'ın üstünde kapsül: kapak, başlık,
+play/pause, kapat; dokununca şarkının sayfasını sheet olarak açıyor. **`TrackDetailView`
+artık `onDisappear`'da sesi durdurmuyor** — mini-player varken sayfadan çıkmak sesi kesen
+tek eylem olurdu. Çıkış yapınca ses susuyor (`SessionStore.signOut`).
+
+### Bildirim rozeti (push değil)
+Gerçek push APNs anahtarı + DB yazmalarına tepki veren bir sunucu ister; ikisi de yok.
+Yapılabilen kısım yapıldı: `ActivityBadgeStore` + `latestActivityTimestamp` (üç adet
+`limit 1` okuma) → uygulama öne gelince Activity sekmesinde nokta. "Görüldü" işareti
+`UserDefaults`'ta **kullanıcı id'sine göre** (aynı telefonda ikinci hesap birincinin
+durumunu devralmasın) ve `now` yerine **o fetch'in bildiği en yeni timestamp**'e
+ayarlanıyor — saat kullanmak, fetch ile dokunuş arasında yazılanı sessizce okundu yapardı.
+
+### Dynamic Type — iddia değil, doğrulama
+60 sabit `.system(size:)`in sadece 8'i metin, gerisi ikon. Metin olanlar `@ScaledMetric`'e
+çevrildi (Activity başlığı, log başlığı, sanatçı adı). Sabit yükseklikli chrome (tab bar,
+mini-player) `dynamicTypeSize(...xxLarge)` ile sınırlandı.
+
+> **Simülatörde AccessibilityXXXL ile doğrulandı ve gerçek bir taşma buldu:** LandingView'da
+> tagline 3 satıra çıkıp "Spectrum" wordmark'ını durum çubuğunun/Dynamic Island'ın altına
+> itiyordu. `VStack` + `Spacer()` taşamaz, sadece kırpar. `GeometryReader` + `ScrollView` +
+> `frame(minHeight:)` yapıldı — normal boyutlarda ortalama aynı, büyük boyutta kayıyor.
+> Ekran görüntüleriyle önce/sonra doğrulandı.
+
+### Yeni: istatistik ekranı ve paylaşım kartı
+- **`ListeningStatsView`** — profildeki "Your Spectrum" bloğu artık tıklanabilir. Toplam
+  log, ortalama, gün serisi, renk dağılımı (tek spektrum çubuğu), puan histogramı, son 12
+  ay. Tamamı `ListeningStats` saf değer tipinde ve test edilmiş. **Bilerek sanatçı
+  istatistiği yok:** bir ömürlük track id'yi isme çevirmek yüzlerce katalog isteği demek.
+- **`ShareCard`** — log'u 1080×1080 karta çeviriyor (kapak, yıldız, vibe rengi, yorum,
+  @kullanıcı adı), `ImageRenderer` ile ekran dışında. Log sayfasında paylaş butonu; görsel
+  + Apple Music linki birlikte gidiyor. `AsyncImage` değil `Image(uiImage:)` — renderer
+  senkron çalışır ve placeholder'ı yakalardı.
+
+### Listeler — Letterboxd'un en ayırt edici özelliği
+`Supabase_migration_lists.sql`: `lists` + `list_items`, manuel sıralamalı (`position`) ve
+kayıt başına not alanlı. Varsayılan **private** — kullanıcının yazdığı bir şey, sahibi aksini
+söyleyene kadar taslaktır.
+
+RLS'in dikkat edilen yeri: `list_items` SELECT policy'si `exists (... lists ...)` ile
+ebeveynine bakıyor. Bu olmasa bir item satırı kendi başına okunabilirdi ve istemci
+`list_items`'ı doğrudan tarayıp **birinin yayınlanmamış listesini yeniden kurabilirdi.**
+
+Ayrıca: `list_item_counts` RPC'si (on listeli bir profil, on sayı yazdırmak için hepsinin
+bütün içeriğini indirmesin), item değişince ebeveynin `updated_at`'ini güncelleyen trigger
+(profil `updated_at`'e göre sıralı; "son güncellenen" listeye kayıt eklemeyi de kapsamalı).
+
+İstemci: profilde Lists bölümü (kendi profilinde private'lar da, başkasınınkinde sadece
+public — **filtreleme istemcide değil RLS'te**, anon key IPA'dan çıkarılabiliyor),
+`ListDetailView` (sürükle-bırak sıralama, kaydırıp silme, iki toplu MusicKit isteğiyle
+çözümleme), `EditListView`, şarkı/albüm/sanatçı sayfalarında **Add to List**.
+
+`reorderList` bilerek satır satır UPDATE yapıyor, toplu upsert değil: `list_items`'ta bu
+payload şekli için conflict target yok ve bu, inceleme tablolarının düştüğü tuzağın aynısı —
+oradaki upsert sessizce kopya satır ekliyordu.
+
+`rejectProfanity` genelleştirildi (`context:` parametresi): mesaj koşulsuz "your profile"
+diyordu, liste başlığı için yanlıştı.
+
+### Kararlar (26 Eylül, kullanıcı onayı)
+- **Türkçe + İngilizce yapılacak.** ~190 benzersiz kullanıcı metni. Altyapı kuruldu:
+  `Spectrum/Localizable.xcstrings`, `SWIFT_EMIT_LOC_STRINGS = YES` (6 hedef yapılandırması),
+  `knownRegions`'a `tr`. **Yarım bırakılmayacak** — karışık dil hiç çeviri yapmamaktan kötü.
+- **Crash reporting ertelendi.** 1.0 sonrasına. Eklenince `PrivacyInfo.xcprivacy` ve App
+  Privacy anketi de güncellenmeli.
+
+### Türkçe yerelleştirme — tamamlandı
+`Spectrum/Localizable.xcstrings` (205 anahtar) + `Spectrum/SpectrumInfoPlist.xcstrings`.
+**200 çeviri + 11 çevrilmeyecek format/marka dizesi, eksik sıfır.** Kod değişmedi: SwiftUI'da
+`Text("literal")` zaten kataloğa bağlanıyor, `NSLocalizedString` sarmalamaya gerek yok.
+
+Ayarlar: `SWIFT_EMIT_LOC_STRINGS = YES`, `STRING_CATALOG_GENERATE_SYMBOLS = NO`,
+`knownRegions`'a `tr`. Altı yapılandırmanın her birinde **tam bir kez** — Xcode bu iki
+anahtarı zaten tanımlamıştı, ilk denemede aynı sözlüğe çakışan ikinci kopyalar eklenmişti,
+temizlendi.
+
+> **Sembol üretimi neden kapalı:** katalog her anahtarı bir Swift tanıtıcısına çeviriyor ve
+> bu burada mümkün değil — on bir anahtar saf format dizesi (`%lld`, `/ %lld`, `·`), tanıtıcı
+> türetilecek harf yok. Üretilen semboller zaten hiçbir yerde kullanılmıyor.
+
+**Bu arada kaynakta beş çift ikiz metin tekilleştirildi** (yalnızca büyük/küçük harfle
+ayrılan anahtarlar aynı sembolü üretip derlemeyi kırıyordu): `Add to list`→`Add to List`,
+`New list`→`New List`, `No Activity Yet`→`No activity yet`, `Play preview`→`Play Preview`.
+Sabit büyük harfli başlıklar (`ARTIST`, `USERNAME`) `.textCase(.uppercase)`'e çevrildi —
+bu zaten doğru biçim: **Türkçe'de büyük harfe çevirme yerele bağlı** (i→İ) ve elle yazılmış
+ASCII "ARTIST" bunu hiçbir zaman veremez.
+
+### Bu turda YAPILMAYAN, sende kalan
+1. **`Supabase_migration_review_likes.sql` çalıştırılacak.**
+2. **`Supabase_migration_lists.sql` çalıştırılacak.** Çalışana kadar Lists bölümü boş görünür
+   ve liste oluşturma hata verir.
+3. **Spotify client secret iptal edilecek** (dosya silindi, anahtar hâlâ geçerli).
+
+---
+
 ## Bilinen açık uçlar / riskler
 - **Karışık dil:** `EditProfileView` hata mesajları Türkçe, gerisi İngilizce. Mağaza öncesi karar ver.
 - **Şifre sıfırlama:** Supabase Redirect URL eklenmeden linkler uygulamayı açmaz (`AUTH_SETUP.md` Bölüm 0).
