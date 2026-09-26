@@ -1,0 +1,37 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "CFBundleName": {
+      "comment": "Bundle name",
+      "extractionState": "manual",
+      "shouldTranslate": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum"
+          }
+        }
+      }
+    },
+    "NSAppleMusicUsageDescription": {
+      "comment": "Privacy - Media Library Usage Description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum uses Apple Music to search the catalog and play song previews."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum, katalogda arama yapmak ve şarkı önizlemelerini çalmak için Apple Music'i kullanır."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

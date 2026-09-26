@@ -1,0 +1,2191 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    " %@": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "·": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "· Private": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Özel"
+          }
+        }
+      }
+    },
+    "\"%@\"": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "“%@”": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "“Best albums of 2026”, “songs for driving at night”.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“2026'nın en iyi albümleri”, “gece sürüşü şarkıları”."
+          }
+        }
+      }
+    },
+    "@%@": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "/ %lld": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "%@ — %@": {
+      "shouldTranslate": false
+    },
+    "%@ %@": {
+      "shouldTranslate": false
+    },
+    "%@ stars, %lld logs": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ yıldız, %2$lld log"
+          }
+        }
+      }
+    },
+    "%@, %lld logs": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$lld log"
+          }
+        }
+      }
+    },
+    "%@, already added": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, zaten ekli"
+          }
+        }
+      }
+    },
+    "%lld": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "%lld likes": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld beğeni"
+          }
+        }
+      }
+    },
+    "%lld records": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kayıt"
+          }
+        }
+      }
+    },
+    "%lld Songs • %lld Albums • %lld Artists • %lld Users": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld Şarkı • %2$lld Albüm • %3$lld Sanatçı • %4$lld Kullanıcı"
+          }
+        }
+      }
+    },
+    "%lld tracks": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld parça"
+          }
+        }
+      }
+    },
+    "%lld%%": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "1 like": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 beğeni"
+          }
+        }
+      }
+    },
+    "1 record": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 kayıt"
+          }
+        }
+      }
+    },
+    "About": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hakkında"
+          }
+        }
+      }
+    },
+    "Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesap"
+          }
+        }
+      }
+    },
+    "Activity": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etkinlik"
+          }
+        }
+      }
+    },
+    "Activity Error": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etkinlik Hatası"
+          }
+        }
+      }
+    },
+    "Add a short review...": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kısa bir yorum yaz..."
+          }
+        }
+      }
+    },
+    "Add details": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayrıntı ekle"
+          }
+        }
+      }
+    },
+    "Add to %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ listesine ekle"
+          }
+        }
+      }
+    },
+    "Add to List": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listeye Ekle"
+          }
+        }
+      }
+    },
+    "Albums": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albümler"
+          }
+        }
+      }
+    },
+    "Also block %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kullanıcısını da engelle"
+          }
+        }
+      }
+    },
+    "and": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ve"
+          }
+        }
+      }
+    },
+    "Anyone can open this list from your profile.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu listeyi profilinden herkes açabilir."
+          }
+        }
+      }
+    },
+    "Anything else we should know? (optional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilmemiz gereken başka bir şey var mı? (isteğe bağlı)"
+          }
+        }
+      }
+    },
+    "Apple Music didn't return a page for %@. Check your connection and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music, %@ için bir sayfa döndürmedi. Bağlantını kontrol edip tekrar dene."
+          }
+        }
+      }
+    },
+    "Are you sure you want to log out?": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çıkış yapmak istediğine emin misin?"
+          }
+        }
+      }
+    },
+    "Artist": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanatçı"
+          }
+        }
+      }
+    },
+    "Artists": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanatçılar"
+          }
+        }
+      }
+    },
+    "avg rating": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ort. puan"
+          }
+        }
+      }
+    },
+    "BIO": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BİYOGRAFİ"
+          }
+        }
+      }
+    },
+    "Block": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engelle"
+          }
+        }
+      }
+    },
+    "Block %@?": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ engellensin mi?"
+          }
+        }
+      }
+    },
+    "Blocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellendi"
+          }
+        }
+      }
+    },
+    "Blocked Users": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellenen Kullanıcılar"
+          }
+        }
+      }
+    },
+    "Busiest: **%@** — %lld logs": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En yoğun: **%1$@** — %2$lld log"
+          }
+        }
+      }
+    },
+    "By continuing, you agree to our": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devam ederek şunları kabul etmiş olursun:"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vazgeç"
+          }
+        }
+      }
+    },
+    "Cancel and sign out": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vazgeç ve çıkış yap"
+          }
+        }
+      }
+    },
+    "Change Password": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şifre Değiştir"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aramayı temizle"
+          }
+        }
+      }
+    },
+    "Content unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İçerik kullanılamıyor"
+          }
+        }
+      }
+    },
+    "Continue with Google": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google ile devam et"
+          }
+        }
+      }
+    },
+    "Could not load album": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albüm yüklenemedi"
+          }
+        }
+      }
+    },
+    "Could not load track": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkı yüklenemedi"
+          }
+        }
+      }
+    },
+    "Couldn't block": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellenemedi"
+          }
+        }
+      }
+    },
+    "Couldn't load this artist": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu sanatçı yüklenemedi"
+          }
+        }
+      }
+    },
+    "Couldn't unblock": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engel kaldırılamadı"
+          }
+        }
+      }
+    },
+    "Create Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesap Oluştur"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sil"
+          }
+        }
+      }
+    },
+    "Delete Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesabı Sil"
+          }
+        }
+      }
+    },
+    "Delete List": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listeyi Sil"
+          }
+        }
+      }
+    },
+    "Delete Log": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logu Sil"
+          }
+        }
+      }
+    },
+    "Deleting...": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siliniyor..."
+          }
+        }
+      }
+    },
+    "Description (optional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Açıklama (isteğe bağlı)"
+          }
+        }
+      }
+    },
+    "Discover": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keşfet"
+          }
+        }
+      }
+    },
+    "Done": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitti"
+          }
+        }
+      }
+    },
+    "Done Reordering": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sıralama Bitti"
+          }
+        }
+      }
+    },
+    "Edit Details": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayrıntıları Düzenle"
+          }
+        }
+      }
+    },
+    "Edit List": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listeyi Düzenle"
+          }
+        }
+      }
+    },
+    "Edit Log": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logu Düzenle"
+          }
+        }
+      }
+    },
+    "Edit Profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profili Düzenle"
+          }
+        }
+      }
+    },
+    "Edit your rating": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puanını düzenle"
+          }
+        }
+      }
+    },
+    "Every song, album and artist in Spectrum comes from the Apple Music catalogue. Without access there's nothing to search, log or rate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum'daki her şarkı, albüm ve sanatçı Apple Music kataloğundan geliyor. Erişim olmadan arayacak, loglayacak ya da puanlayacak bir şey kalmıyor."
+          }
+        }
+      }
+    },
+    "Explicit": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explicit"
+          }
+        }
+      }
+    },
+    "Feel the Music in Color": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Müziği Renkle Hisset"
+          }
+        }
+      }
+    },
+    "Follow": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takip Et"
+          }
+        }
+      }
+    },
+    "Following": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takip Ediliyor"
+          }
+        }
+      }
+    },
+    "Forgot password?": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şifreni mi unuttun?"
+          }
+        }
+      }
+    },
+    "From everyone — follow users to personalize your feed": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herkesten — akışını kişiselleştirmek için kullanıcıları takip et"
+          }
+        }
+      }
+    },
+    "FROM THE ALBUM": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ALBÜMDEN"
+          }
+        }
+      }
+    },
+    "Genres": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Türler"
+          }
+        }
+      }
+    },
+    "Get Started": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başla"
+          }
+        }
+      }
+    },
+    "Join the Vibe": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aramıza Katıl"
+          }
+        }
+      }
+    },
+    "Latest Release": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son Çıkan"
+          }
+        }
+      }
+    },
+    "Like": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beğen"
+          }
+        }
+      }
+    },
+    "List options": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste seçenekleri"
+          }
+        }
+      }
+    },
+    "Lists": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listeler"
+          }
+        }
+      }
+    },
+    "Loading...": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yükleniyor..."
+          }
+        }
+      }
+    },
+    "Log": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logla"
+          }
+        }
+      }
+    },
+    "Log a few songs and your spectrum starts taking shape.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birkaç şarkı logla, spektrumun şekillenmeye başlasın."
+          }
+        }
+      }
+    },
+    "Log a song from Discover, or follow users to see their logs here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keşfet'ten bir şarkı logla ya da kullanıcıları takip et, logları burada görünsün."
+          }
+        }
+      }
+    },
+    "Log In": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giriş Yap"
+          }
+        }
+      }
+    },
+    "Log options": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log seçenekleri"
+          }
+        }
+      }
+    },
+    "Log Out": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çıkış Yap"
+          }
+        }
+      }
+    },
+    "Logged on %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tarihinde loglandı"
+          }
+        }
+      }
+    },
+    "Logged Recently": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son Loglananlar"
+          }
+        }
+      }
+    },
+    "Look around anyway": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yine de göz at"
+          }
+        }
+      }
+    },
+    "Make your first list": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İlk listeni oluştur"
+          }
+        }
+      }
+    },
+    "More options": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diğer seçenekler"
+          }
+        }
+      }
+    },
+    "Mostly **%@**": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çoğunlukla **%@**"
+          }
+        }
+      }
+    },
+    "New": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni"
+          }
+        }
+      }
+    },
+    "New activity": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni etkinlik"
+          }
+        }
+      }
+    },
+    "New List": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni Liste"
+          }
+        }
+      }
+    },
+    "No activity yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz etkinlik yok"
+          }
+        }
+      }
+    },
+    "No albums rated yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz puanlanmış albüm yok"
+          }
+        }
+      }
+    },
+    "No artists rated yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz puanlanmış sanatçı yok"
+          }
+        }
+      }
+    },
+    "No blocked users": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellenen kullanıcı yok"
+          }
+        }
+      }
+    },
+    "No lists yet. Make one — “best of 2026”, “songs for driving at night”.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz liste yok. Bir tane yap — “2026'nın en iyileri”, “gece sürüşü şarkıları”."
+          }
+        }
+      }
+    },
+    "No public lists.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herkese açık liste yok."
+          }
+        }
+      }
+    },
+    "No songs logged yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz loglanmış şarkı yok"
+          }
+        }
+      }
+    },
+    "No tracks found": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parça bulunamadı"
+          }
+        }
+      }
+    },
+    "No users yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz kullanıcı yok"
+          }
+        }
+      }
+    },
+    "No written review.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazılı yorum yok."
+          }
+        }
+      }
+    },
+    "Note (optional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not (isteğe bağlı)"
+          }
+        }
+      }
+    },
+    "Nothing in this list yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu listede henüz bir şey yok"
+          }
+        }
+      }
+    },
+    "Nothing to summarise yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz özetlenecek bir şey yok"
+          }
+        }
+      }
+    },
+    "Number %lld, %@ by %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld numara, %3$@ – %2$@"
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamam"
+          }
+        }
+      }
+    },
+    "Only you can see this list.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu listeyi yalnızca sen görebilirsin."
+          }
+        }
+      }
+    },
+    "Oops!": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hay aksi!"
+          }
+        }
+      }
+    },
+    "Open a song, album or artist and use “Add to List”.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir şarkı, albüm ya da sanatçı aç ve “Listeye Ekle”yi kullan."
+          }
+        }
+      }
+    },
+    "Open Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarları Aç"
+          }
+        }
+      }
+    },
+    "or": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "veya"
+          }
+        }
+      }
+    },
+    "Password updated.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şifre güncellendi."
+          }
+        }
+      }
+    },
+    "Pause preview": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi duraklat"
+          }
+        }
+      }
+    },
+    "Pause Preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi Duraklat"
+          }
+        }
+      }
+    },
+    "People you block stop appearing in your feed, search and activity.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellediğin kişiler akışında, aramada ve etkinliklerde görünmez."
+          }
+        }
+      }
+    },
+    "Permanently removes your account and all your logs.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesabını ve tüm loglarını kalıcı olarak siler."
+          }
+        }
+      }
+    },
+    "Play Preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi Çal"
+          }
+        }
+      }
+    },
+    "Playing Preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizleme Çalıyor"
+          }
+        }
+      }
+    },
+    "Privacy Policy": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gizlilik Politikası"
+          }
+        }
+      }
+    },
+    "Private": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Özel"
+          }
+        }
+      }
+    },
+    "Public": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herkese açık"
+          }
+        }
+      }
+    },
+    "Quick Add": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hızlı Ekle"
+          }
+        }
+      }
+    },
+    "Rate this album": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu albümü puanla"
+          }
+        }
+      }
+    },
+    "Rate. Log. Discover.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puanla. Logla. Keşfet."
+          }
+        }
+      }
+    },
+    "Rating": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puan"
+          }
+        }
+      }
+    },
+    "Rating saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puan kaydedildi"
+          }
+        }
+      }
+    },
+    "Reactions and new followers": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tepkiler ve yeni takipçiler"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaldır"
+          }
+        }
+      }
+    },
+    "Reorder": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sırala"
+          }
+        }
+      }
+    },
+    "Report": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildir"
+          }
+        }
+      }
+    },
+    "Report or block": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildir veya engelle"
+          }
+        }
+      }
+    },
+    "Reports are reviewed within 24 hours. Content that breaks the rules is removed and repeat offenders lose access.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimler 24 saat içinde incelenir. Kuralları ihlal eden içerik kaldırılır, tekrarlayanlar erişimini kaybeder."
+          }
+        }
+      }
+    },
+    "Reset your password": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şifreni sıfırla"
+          }
+        }
+      }
+    },
+    "Resume preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi sürdür"
+          }
+        }
+      }
+    },
+    "Reviews": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorumlar"
+          }
+        }
+      }
+    },
+    "Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydet"
+          }
+        }
+      }
+    },
+    "Save Changes": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Değişiklikleri Kaydet"
+          }
+        }
+      }
+    },
+    "Save Log": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logu Kaydet"
+          }
+        }
+      }
+    },
+    "Save new password": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni şifreyi kaydet"
+          }
+        }
+      }
+    },
+    "Saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydedildi"
+          }
+        }
+      }
+    },
+    "Saving...": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydediliyor..."
+          }
+        }
+      }
+    },
+    "Saving…": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydediliyor…"
+          }
+        }
+      }
+    },
+    "See all": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tümünü gör"
+          }
+        }
+      }
+    },
+    "See more": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daha fazla"
+          }
+        }
+      }
+    },
+    "Send again": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekrar gönder"
+          }
+        }
+      }
+    },
+    "Send reset link": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sıfırlama bağlantısı gönder"
+          }
+        }
+      }
+    },
+    "Sending…": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gönderiliyor…"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar"
+          }
+        }
+      }
+    },
+    "Settings → Spectrum → Media & Apple Music": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar → Spectrum → Ortam ve Apple Music"
+          }
+        }
+      }
+    },
+    "Share": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paylaş"
+          }
+        }
+      }
+    },
+    "Share this log": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu logu paylaş"
+          }
+        }
+      }
+    },
+    "Show less": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daha az göster"
+          }
+        }
+      }
+    },
+    "Sign Up": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıt Ol"
+          }
+        }
+      }
+    },
+    "Similar Artists": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benzer Sanatçılar"
+          }
+        }
+      }
+    },
+    "Songs": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkılar"
+          }
+        }
+      }
+    },
+    "Songs, albums, artists, users...": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkı, albüm, sanatçı, kullanıcı..."
+          }
+        }
+      }
+    },
+    "Spectrum": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "Spectrum needs Apple Music": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum'un Apple Music'e ihtiyacı var"
+          }
+        }
+      }
+    },
+    "Stop preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi durdur"
+          }
+        }
+      }
+    },
+    "Submit report": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimi gönder"
+          }
+        }
+      }
+    },
+    "Tell us about yourself...": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendinden bahset..."
+          }
+        }
+      }
+    },
+    "Terms of Service": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kullanım Koşulları"
+          }
+        }
+      }
+    },
+    "Thanks — we're on it": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teşekkürler — ilgileniyoruz"
+          }
+        }
+      }
+    },
+    "This deletes “%@” and everything in it. This can't be undone.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” listesini ve içindeki her şeyi siler. Bu geri alınamaz."
+          }
+        }
+      }
+    },
+    "This permanently deletes your profile, every song, album and artist you've logged, and everyone you follow. This can't be undone.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu işlem profilini, logladığın her şarkıyı, albümü ve sanatçıyı ve takip ettiğin herkesi kalıcı olarak siler. Bu geri alınamaz."
+          }
+        }
+      }
+    },
+    "This will remove your log for \"%@\". This can't be undone.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” için logunu kaldırır. Bu geri alınamaz."
+          }
+        }
+      }
+    },
+    "Title": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlık"
+          }
+        }
+      }
+    },
+    "Top Charts": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En Çok Dinlenenler"
+          }
+        }
+      }
+    },
+    "Top Songs": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popüler Şarkılar"
+          }
+        }
+      }
+    },
+    "top vibe · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "baskın vibe · %@"
+          }
+        }
+      }
+    },
+    "Tracks": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parçalar"
+          }
+        }
+      }
+    },
+    "Trending Vibes": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popüler Vibe'lar"
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekrar Dene"
+          }
+        }
+      }
+    },
+    "Unblock": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engeli Kaldır"
+          }
+        }
+      }
+    },
+    "Unblock %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kullanıcısının engelini kaldır"
+          }
+        }
+      }
+    },
+    "Unlike": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beğenmekten vazgeç"
+          }
+        }
+      }
+    },
+    "Update Log": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logu Güncelle"
+          }
+        }
+      }
+    },
+    "Username": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kullanıcı adı"
+          }
+        }
+      }
+    },
+    "Users": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kullanıcılar"
+          }
+        }
+      }
+    },
+    "We review reports within 24 hours. You won't be told who reported what.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimleri 24 saat içinde inceliyoruz. Kimin ne bildirdiği sana söylenmez."
+          }
+        }
+      }
+    },
+    "We'll email you a link to set a new one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni bir şifre belirlemen için sana e-postayla bağlantı göndereceğiz."
+          }
+        }
+      }
+    },
+    "Welcome Back": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekrar Hoş Geldin"
+          }
+        }
+      }
+    },
+    "What's the vibe?": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vibe nedir?"
+          }
+        }
+      }
+    },
+    "When people interact with your logs,\nyou'll see it here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İnsanlar loglarınla etkileşime geçtiğinde\nburada göreceksin."
+          }
+        }
+      }
+    },
+    "Why it's on the list": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neden bu listede"
+          }
+        }
+      }
+    },
+    "Written by %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Söz & müzik: %@"
+          }
+        }
+      }
+    },
+    "You don't have any lists yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz hiç listen yok."
+          }
+        }
+      }
+    },
+    "You won't see their logs or reviews, and you'll stop following each other. You can undo this in Settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loglarını ve yorumlarını görmeyeceksin, birbirinizi takipten çıkacaksınız. Bunu Ayarlar'dan geri alabilirsin."
+          }
+        }
+      }
+    },
+    "You won't see this user's content any more.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kullanıcının içeriğini artık görmeyeceksin."
+          }
+        }
+      }
+    },
+    "Your rating": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senin puanın"
+          }
+        }
+      }
+    },
+    "Your Spectrum": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senin Spektrumun"
+          }
+        }
+      }
+    },
+    "Your Spectrum, see full statistics": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senin Spektrumun, tüm istatistikleri gör"
+          }
+        }
+      }
+    },
+    "Your thoughts": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düşüncelerin"
+          }
+        }
+      }
+    },
+    "Your vibe": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senin vibe'ın"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
