@@ -1,5 +1,33 @@
 import Foundation
 
+/// A playback-quality badge an album can carry.
+///
+/// These come free with every `MusicKit.Album` already being fetched — `audioVariants` — and
+/// they are the difference between a page that looks like a database row and one that looks
+/// like a music app. Ordered by how much people care: Atmos is a feature you seek out,
+/// lossless is a preference, hi-res is a footnote.
+enum AudioBadge: String, CaseIterable, Hashable {
+    case dolbyAtmos
+    case lossless
+    case hiRes
+
+    var label: String {
+        switch self {
+        case .dolbyAtmos: "Dolby Atmos"
+        case .lossless: "Lossless"
+        case .hiRes: "Hi-Res"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .dolbyAtmos: "airpods.max"
+        case .lossless: "waveform"
+        case .hiRes: "waveform.badge.plus"
+        }
+    }
+}
+
 /// Simple album representation — supports both iTunes JSON and MusicKit data
 struct Album: Identifiable, Decodable, Hashable {
     let id: Int64              // collectionId
@@ -13,6 +41,11 @@ struct Album: Identifiable, Decodable, Hashable {
     let genreNames: [String]?
     let editorialNotes: String?
     let artistId: String?
+    /// Apple's explicit/clean marking. `nil` when the catalog doesn't say.
+    let isExplicit: Bool?
+    /// Dolby Atmos / Lossless / Hi-Res badges, already filtered to the ones worth showing.
+    let audioBadges: [AudioBadge]
+    let recordLabel: String?
 
     var artworkUrl600: URL? {
         let highResString = artworkUrl100.replacingOccurrences(of: "100x100", with: "600x600")
@@ -28,7 +61,10 @@ struct Album: Identifiable, Decodable, Hashable {
         releaseDate: Date? = nil,
         genreNames: [String]? = nil,
         editorialNotes: String? = nil,
-        artistId: String? = nil
+        artistId: String? = nil,
+        isExplicit: Bool? = nil,
+        audioBadges: [AudioBadge] = [],
+        recordLabel: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -39,6 +75,9 @@ struct Album: Identifiable, Decodable, Hashable {
         self.genreNames = genreNames
         self.editorialNotes = editorialNotes
         self.artistId = artistId
+        self.isExplicit = isExplicit
+        self.audioBadges = audioBadges
+        self.recordLabel = recordLabel
     }
 
     init(from decoder: Decoder) throws {
@@ -52,12 +91,16 @@ struct Album: Identifiable, Decodable, Hashable {
         self.genreNames = try container.decodeIfPresent([String].self, forKey: .genreNames)
         self.editorialNotes = try container.decodeIfPresent(String.self, forKey: .editorialNotes)
         self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId)
+        // MusicKit-only: nothing in the stored JSON carries these.
+        self.isExplicit = nil
+        self.audioBadges = []
+        self.recordLabel = nil
     }
 
     /// The one ordering rule for "a list of albums": newest release first, undated releases
     /// last, ties broken by title so the order can't shuffle between two loads of the same
     /// data. Shared so the artist page, search and profile can't drift apart.
-    static func newestFirst(_ lhs: Album, _ rhs: Album) -> Bool {
+    nonisolated static func newestFirst(_ lhs: Album, _ rhs: Album) -> Bool {
         switch (lhs.releaseDate, rhs.releaseDate) {
         case let (l?, r?):
             // Same-day releases (very common for a deluxe edition shipped alongside the

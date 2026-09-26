@@ -24,6 +24,14 @@ struct Track: Identifiable, Decodable, Hashable {
     let artistId: String?
     /// All credited artists (for collaborations). Empty when only the combined name is known.
     let artists: [ArtistRef]
+    /// Canonical `music.apple.com` page for the song, straight from MusicKit. Only present on
+    /// tracks that came back from a catalog request; `appleMusicLink` covers the rest.
+    let appleMusicUrl: String?
+    /// Who wrote it. The closest thing music has to Letterboxd's director field, and the
+    /// reason a classical or jazz log can say something a rating can't.
+    let composerName: String?
+    /// Apple's explicit marking. `nil` when the catalog doesn't say.
+    let isExplicit: Bool?
 
     /// Artists to display/link. Falls back to the single primary artist when the per-artist
     /// list isn't populated (e.g. album track lists or legacy data).
@@ -37,10 +45,16 @@ struct Track: Identifiable, Decodable, Hashable {
         return URL(string: highResString)
     }
     
-    // Spotify Deep Link Fallback
-    var spotifyDeepLink: URL? {
-        let query = "\(artist) \(title)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        return URL(string: "spotify:search:\(query)")
+    /// The link to hand to a share sheet.
+    ///
+    /// This used to be `spotify:search:<artist> <title>` — a URI scheme, which is not a
+    /// tappable link in Messages or WhatsApp, dies when the recipient has no Spotify, and
+    /// pointed at a competitor of the catalog every track here comes from. MusicKit already
+    /// carries the canonical page; `music.apple.com/song/<id>` is the documented fallback for
+    /// tracks rebuilt from a stored id, and Apple redirects it to the viewer's storefront.
+    var appleMusicLink: URL? {
+        if let appleMusicUrl, let url = URL(string: appleMusicUrl) { return url }
+        return URL(string: "https://music.apple.com/song/\(id)")
     }
     
     /// Convenience initializer used throughout the UI (previews, mock data).
@@ -56,7 +70,10 @@ struct Track: Identifiable, Decodable, Hashable {
         durationInMillis: Int? = nil,
         releaseDate: Date? = nil,
         artistId: String? = nil,
-        artists: [ArtistRef] = []
+        artists: [ArtistRef] = [],
+        appleMusicUrl: String? = nil,
+        composerName: String? = nil,
+        isExplicit: Bool? = nil
     ) {
         self.id = id
         self.title = title
@@ -69,6 +86,9 @@ struct Track: Identifiable, Decodable, Hashable {
         self.releaseDate = releaseDate
         self.artistId = artistId
         self.artists = artists
+        self.appleMusicUrl = appleMusicUrl
+        self.composerName = composerName
+        self.isExplicit = isExplicit
     }
     
     /// Custom Decodable implementation to support the new `collectionId` field
@@ -86,6 +106,10 @@ struct Track: Identifiable, Decodable, Hashable {
         self.releaseDate = try container.decodeIfPresent(Date.self, forKey: .releaseDate)
         self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId)
         self.artists = []  // populated from MusicKit relationships, not JSON
+        self.appleMusicUrl = try container.decodeIfPresent(String.self, forKey: .appleMusicUrl)
+        // MusicKit-only: nothing in the stored JSON carries these.
+        self.composerName = nil
+        self.isExplicit = nil
     }
     
     enum CodingKeys: String, CodingKey {
@@ -99,5 +123,6 @@ struct Track: Identifiable, Decodable, Hashable {
         case durationInMillis
         case releaseDate
         case artistId
+        case appleMusicUrl
     }
 }

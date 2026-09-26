@@ -56,6 +56,49 @@ class MusicService {
         }
     }
 
+    // MARK: - Charts
+
+    /// Apple Music's own most-played chart.
+    ///
+    /// Discover's "trending" row is built from what *this app's* users have logged, which on
+    /// a fresh install is nothing at all — it fell back to a hardcoded list of fifteen
+    /// artists, so every new user saw the same six songs. The real chart fills the screen on
+    /// day one and keeps changing without anybody editing the app.
+    ///
+    /// Returns an empty array rather than throwing: this is supplementary content, and a
+    /// chart outage should leave the rest of Discover alone.
+    func fetchTopSongs(limit: Int = 20) async -> [Track] {
+        do {
+            var request = MusicCatalogChartsRequest(kinds: [.mostPlayed], types: [Song.self])
+            request.limit = limit
+            let response = try await request.response()
+
+            guard let chart = response.songCharts.first else { return [] }
+            // Charts come back without relationships, same as search — without this every
+            // track maps with a nil collectionId and tapping through to the album is dead.
+            let songs = await withRelationships(Array(chart.items))
+            return songs.map { mapSongToTrack($0) }
+        } catch {
+            logFailure("fetchTopSongs", error)
+            return []
+        }
+    }
+
+    /// Apple Music's most-played albums. Same contract as `fetchTopSongs`.
+    func fetchTopAlbums(limit: Int = 20) async -> [Album] {
+        do {
+            var request = MusicCatalogChartsRequest(kinds: [.mostPlayed], types: [MusicKit.Album.self])
+            request.limit = limit
+            let response = try await request.response()
+
+            guard let chart = response.albumCharts.first else { return [] }
+            return chart.items.map { mapMusicKitAlbumToAlbum($0) }
+        } catch {
+            logFailure("fetchTopAlbums", error)
+            return []
+        }
+    }
+
     // MARK: - Search: Albums
 
     func searchAlbums(query: String) async throws -> [Album] {
@@ -221,7 +264,7 @@ class MusicService {
     func fetchArtist(id: String) async throws -> Artist? {
         let musicItemId = MusicItemID(id)
         var request = MusicCatalogResourceRequest<MusicKit.Artist>(matching: \.id, equalTo: musicItemId)
-        request.properties = [.topSongs, .albums, .genres, .similarArtists]
+        request.properties = [.topSongs, .albums, .genres, .similarArtists, .latestRelease]
         let response = try await request.response()
         guard let artist = response.items.first else { return nil }
         return mapMusicKitArtistToArtistDetailed(artist)
@@ -251,7 +294,12 @@ class MusicService {
             artworkUrl100: artworkUrl100,
             previewUrl: previewUrl,
             collectionId: albumId,
-            durationInMillis: mkTrack.duration.map { Int($0 * 1000) }
+            durationInMillis: mkTrack.duration.map { Int($0 * 1000) },
+            appleMusicUrl: mkTrack.url?.absoluteString,
+            // No composer here: `MusicKit.Track` is the union of Song and MusicVideo and
+            // doesn't surface it. Album track lists therefore have no composer; the song's
+            // own page, which maps from `Song`, does.
+            isExplicit: mkTrack.contentRating.map { $0 == .explicit }
         )
     }
 
@@ -290,7 +338,10 @@ class MusicService {
             durationInMillis: song.duration.map { Int($0 * 1000) },
             releaseDate: song.releaseDate,
             artistId: artistId,
-            artists: artistRefs
+            artists: artistRefs,
+            appleMusicUrl: song.url?.absoluteString,
+            composerName: song.composerName,
+            isExplicit: song.contentRating.map { $0 == .explicit }
         )
     }
 
@@ -309,8 +360,27 @@ class MusicService {
             releaseDate: mkAlbum.releaseDate,
             genreNames: mkAlbum.genreNames,
             editorialNotes: mkAlbum.editorialNotes?.standard ?? mkAlbum.editorialNotes?.short,
-            artistId: artistId
+            artistId: artistId,
+            isExplicit: mkAlbum.contentRating.map { $0 == .explicit },
+            audioBadges: Self.audioBadges(for: mkAlbum.audioVariants),
+            recordLabel: mkAlbum.recordLabelName
         )
+    }
+
+    /// Maps MusicKit's audio variants to the three badges worth putting on screen.
+    ///
+    /// The raw list also carries `.lossyStereo` (i.e. "normal"), which is not a badge — it's
+    /// the absence of one. Spatial audio comes in two flavours and only Atmos is a name
+    /// anybody recognises, so `.dolbyAudio` folds into it rather than getting its own chip.
+    private static func audioBadges(for variants: [AudioVariant]?) -> [AudioBadge] {
+        guard let variants else { return [] }
+        var badges: [AudioBadge] = []
+        if variants.contains(.dolbyAtmos) || variants.contains(.dolbyAudio) {
+            badges.append(.dolbyAtmos)
+        }
+        if variants.contains(.lossless) { badges.append(.lossless) }
+        if variants.contains(.highResolutionLossless) { badges.append(.hiRes) }
+        return badges
     }
 
     // MARK: - Mapping: MusicKit Artist -> Artist (basic, from search)
@@ -404,7 +474,8 @@ class MusicService {
             topSongs: topSongs,
             albums: albums,
             editorialNotes: mkArtist.editorialNotes?.standard ?? mkArtist.editorialNotes?.short,
-            similarArtists: similar
+            similarArtists: similar,
+            latestRelease: mkArtist.latestRelease.map { mapMusicKitAlbumToAlbum($0) }
         )
     }
 }

@@ -20,6 +20,9 @@ struct Artist: Identifiable {
     /// "Fans also like" — MusicKit's `similarArtists` relationship. Only populated by the
     /// detailed lookup (`fetchArtist(id:)`); search results leave it empty.
     let similarArtists: [ArtistBrief]
+    /// The artist's newest record, if MusicKit knows of one. Rides along on the same request
+    /// as `similarArtists`, so it costs nothing extra.
+    let latestRelease: Album?
 
     init(
         id: String,
@@ -29,7 +32,8 @@ struct Artist: Identifiable {
         topSongs: [Track] = [],
         albums: [Album] = [],
         editorialNotes: String? = nil,
-        similarArtists: [ArtistBrief] = []
+        similarArtists: [ArtistBrief] = [],
+        latestRelease: Album? = nil
     ) {
         self.id = id
         self.name = name
@@ -39,5 +43,6 @@ struct Artist: Identifiable {
         self.albums = albums
         self.editorialNotes = editorialNotes
         self.similarArtists = similarArtists
+        self.latestRelease = latestRelease
     }
 }
