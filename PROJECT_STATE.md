@@ -545,11 +545,32 @@ Sabit büyük harfli başlıklar (`ARTIST`, `USERNAME`) `.textCase(.uppercase)`'
 bu zaten doğru biçim: **Türkçe'de büyük harfe çevirme yerele bağlı** (i→İ) ve elle yazılmış
 ASCII "ARTIST" bunu hiçbir zaman veremez.
 
+### Migration'lar ÇALIŞTIRILDI (26 Eylül)
+Her ikisi de Management API üzerinden `ysgbqlltzdhgsezukxxm` projesine uygulandı ve
+denetlendi:
+
+- `review_likes`, `lists`, `list_items` — üçünde de **RLS açık**, policy'ler eksiksiz
+  (lists/list_items: SELECT+INSERT+UPDATE+DELETE; review_likes: SELECT+INSERT+DELETE,
+  UPDATE bilerek yok — bir beğeninin değişecek bir şeyi yok).
+- `review_like_counts` ve `list_item_counts` RPC'leri **anon anahtarıyla çağrılabiliyor**
+  (uygulamanın kendi yolundan doğrulandı).
+- Dört trigger yerinde: üç inceleme tablosunda `*_delete_likes`, `list_items`'ta
+  `list_items_touch_list`.
+- Benzersiz indeksler yerinde: `review_likes_unique_per_user`, `list_items_unique_per_list`.
+
+**RLS gerçek veriyle test edildi** (rollback içinde, kalıcı veri bırakmadan). Kritik olan
+`list_items`'ın ebeveynine bakan SELECT policy'siydi:
+
+| Kim | Gördüğü liste | Gördüğü item |
+|---|---|---|
+| Başka oturumlu kullanıcı | 0 | 0 |
+| Sahibi | 2 (private + public) | 2 |
+| Oturumsuz ziyaretçi | 1 (sadece public) | 1 |
+
 ### Bu turda YAPILMAYAN, sende kalan
-1. **`Supabase_migration_review_likes.sql` çalıştırılacak.**
-2. **`Supabase_migration_lists.sql` çalıştırılacak.** Çalışana kadar Lists bölümü boş görünür
-   ve liste oluşturma hata verir.
-3. **Spotify client secret iptal edilecek** (dosya silindi, anahtar hâlâ geçerli).
+1. **Spotify client secret iptal edilecek** (dosya silindi, anahtar hâlâ geçerli).
+2. **Cihazda yeni özellikleri dene** — beğeni, listeler, mini-player, istatistik ekranı,
+   paylaşım kartı. Hiçbiri gerçek donanımda çalıştırılmadı.
 
 ---
 
