@@ -46,7 +46,13 @@ struct SpectrumApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     // iOS doesn't notify us when the user flips the Media & Apple Music switch
                     // in Settings, so re-read it whenever we come back to the foreground.
-                    if newPhase == .active { musicAuth.refresh() }
+                    if newPhase == .active {
+                        musicAuth.refresh()
+                        // With no push notifications, coming back to the app is the only
+                        // moment we get to find out that something happened while it was
+                        // closed. Three `limit 1` reads — cheap enough to do every time.
+                        Task { await ActivityBadgeStore.shared.refresh() }
+                    }
                 }
         }
     }

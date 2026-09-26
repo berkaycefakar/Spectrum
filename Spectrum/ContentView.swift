@@ -6,6 +6,10 @@ struct ContentView: View {
     @StateObject private var musicAuth = MusicAuthorizationStore.shared
     @State private var selectedTab = 0
     @State private var showAuthView = false
+    @ObservedObject private var audioManager = AudioManager.shared
+    /// Set when the mini-player is tapped; presents that track's page over whatever tab the
+    /// user is on.
+    @State private var nowPlayingTrack: Track?
     
     init() {
         // Customize Tab Bar Appearance for Glassmorphism.
@@ -116,13 +120,34 @@ struct ContentView: View {
             }
             .tint(Color(hex: "#FF00FF")) // Neon Purple Tint
 
-            SpectrumTabBar(selection: $selectedTab)
-                .padding(.bottom, 6)
-                // Stays put when the search keyboard comes up instead of riding above it.
-                .ignoresSafeArea(.keyboard, edges: .bottom)
+            VStack(spacing: 8) {
+                // Sits above the tab bar rather than inside a screen: a preview started in
+                // the feed keeps playing after you switch to Discover, and the control has
+                // to follow it. Animated on `currentTrackId` so it slides rather than pops.
+                MiniPlayer { track in
+                    // Route into whichever tab is open, so tapping it doesn't also teleport
+                    // the user somewhere else.
+                    nowPlayingTrack = track
+                }
+                .padding(.horizontal, 22)
+
+                SpectrumTabBar(selection: $selectedTab)
+                    .padding(.bottom, 6)
+            }
+            // Stays put when the search keyboard comes up instead of riding above it.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .animation(.spring(response: 0.34, dampingFraction: 0.85), value: audioManager.currentTrackId)
         }
         .onChange(of: selectedTab) { _, newTab in
             TabBarScrollState.shared.activate(tab: newTab)
+        }
+        // Presented rather than pushed: the mini-player is above every tab's navigation
+        // stack, so there is no one stack to push onto.
+        .sheet(item: $nowPlayingTrack) { track in
+            NavigationStack {
+                TrackDetailView(track: track)
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }

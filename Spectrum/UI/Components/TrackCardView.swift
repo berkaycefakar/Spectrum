@@ -79,7 +79,7 @@ struct TrackCardView: View {
                         .frame(width: 44, height: 44)
                         .contentShape(Circle())
                     }
-                    .accessibilityLabel(isPlaying ? "Pause preview" : "Play preview")
+                    .accessibilityLabel(isPlaying ? "Pause Preview" : "Play Preview")
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
@@ -92,7 +92,7 @@ struct TrackCardView: View {
     }
 
     private func toggleAudio() {
-        audioManager.toggle(trackId: track.id, previewUrl: track.previewUrl)
+        audioManager.toggle(track: track)
     }
 }
 

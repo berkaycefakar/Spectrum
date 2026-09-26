@@ -225,6 +225,11 @@ class SessionStore: ObservableObject {
 
         self.currentUser = nil
         self.currentProfile = nil
+        // Silence any preview still running. The mini-player is only drawn inside the signed-
+        // in tabs, so without this the sound carries on over the login screen with nothing
+        // left on screen to stop it.
+        AudioManager.shared.stop()
+        ActivityBadgeStore.shared.reset()
         isLoading = false
     }
     

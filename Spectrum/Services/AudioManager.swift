@@ -8,6 +8,12 @@ final class AudioManager: ObservableObject {
     static let shared = AudioManager()
 
     @Published var currentTrackId: Int?
+    /// The track behind `currentTrackId`.
+    ///
+    /// The id alone was enough while the only controls were on the card that started the
+    /// sound. A mini-player outlives that card — you scroll it away, or push a whole screen
+    /// on top — so the player has to carry enough to draw itself.
+    @Published var currentTrack: Track?
     @Published var isPlaying = false
     /// True while the preview is fetched/buffered but no sound is coming out yet.
     ///
@@ -66,7 +72,12 @@ final class AudioManager: ObservableObject {
     }
 
     /// Toggle play/pause for a track. Stops any other playing track.
-    func toggle(trackId: Int, previewUrl: String?) {
+    func toggle(track: Track) {
+        toggle(trackId: track.id, previewUrl: track.previewUrl, track: track)
+    }
+
+    /// Toggle play/pause for a track. Stops any other playing track.
+    func toggle(trackId: Int, previewUrl: String?, track: Track? = nil) {
         // Same track — toggle
         if currentTrackId == trackId {
             if isPlaying {
@@ -98,6 +109,7 @@ final class AudioManager: ObservableObject {
 
         player = newPlayer
         currentTrackId = trackId
+        currentTrack = track
         isPlaying = true
         isBuffering = true
         newPlayer.play()
@@ -118,6 +130,7 @@ final class AudioManager: ObservableObject {
                 self?.isPlaying = false
                 self?.isBuffering = false
                 self?.currentTrackId = nil
+                self?.currentTrack = nil
                 self?.deactivateSession()
             }
     }
@@ -129,6 +142,7 @@ final class AudioManager: ObservableObject {
         endObserver = nil
         statusObserver = nil
         currentTrackId = nil
+        currentTrack = nil
         isPlaying = false
         isBuffering = false
         if wasActive { deactivateSession() }

@@ -9,6 +9,10 @@ struct ActivityView: View {
     @StateObject private var reselection = TabReselectionState.shared
     /// Value-based navigation so tapping Activity while already on it returns to the list.
     @State private var path = NavigationPath()
+    /// `.font(.system(size:))` is frozen at whatever number you type — it ignores the
+    /// reader's text size entirely. `@ScaledMetric` is the fixed-size equivalent that still
+    /// responds to Settings, scaled against the text style this heading stands in for.
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 28
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -39,11 +43,15 @@ struct ActivityView: View {
             .preferredColorScheme(.dark)
             .task {
                 await loadNotifications()
+                // Reaching this screen is what "seen" means. Marked after the load so the
+                // read marker can't jump ahead of rows the user never actually got.
+                ActivityBadgeStore.shared.markSeen()
             }
             // `.task` only runs once per view identity, so the tab showed whatever was true
             // when the app launched — new followers never appeared until a relaunch.
             .refreshable {
                 await loadNotifications()
+                ActivityBadgeStore.shared.markSeen()
             }
         }
         .onChange(of: reselection.token(for: 2)) { _, _ in
@@ -62,7 +70,7 @@ struct ActivityView: View {
                 )
             VStack(alignment: .leading, spacing: 1) {
                 Text("Activity")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: titleSize, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                 Text("Reactions and new followers")
                     .font(.caption)
@@ -103,7 +111,7 @@ struct ActivityView: View {
                 .font(.system(size: 50))
                 .foregroundStyle(.white.opacity(0.3))
             
-            Text("No Activity Yet")
+            Text("No activity yet")
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundStyle(.white)

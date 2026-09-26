@@ -157,6 +157,7 @@ struct SpectrumTabBar: View {
     @Binding var selection: Int
 
     @StateObject private var scrollState = TabBarScrollState.shared
+    @StateObject private var activityBadge = ActivityBadgeStore.shared
     @Namespace private var pillNamespace
 
     /// The highlight follows this, not `selection`, so it moves on the very frame of the tap.
@@ -193,6 +194,11 @@ struct SpectrumTabBar: View {
         .padding(3)
         .background(barBackground)
         .padding(.horizontal, sideInset)
+        // The capsule's height is fixed (40pt collapsed, 52pt open) to match the system bar
+        // it replaces, so its labels have to be bounded too — at accessibility sizes they
+        // otherwise grow straight through the chrome. VoiceOver users get the full label
+        // regardless: it's declared on the container, not on this text.
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .onAppear {
             pillSelection = selection
             haptics.prepare()
@@ -227,10 +233,24 @@ struct SpectrumTabBar: View {
     private func tabLabel(for item: SpectrumTabItem) -> some View {
         let isSelected = (pillSelection ?? selection) == item.id
 
+        // Unread dot on Activity only, and never while you're standing on that tab.
+        let showsBadge = item.id == 2 && activityBadge.hasUnseen && selection != 2
+
         return VStack(spacing: isCollapsed ? 0 : 3) {
             Image(systemName: item.icon)
                 .font(.system(size: 19, weight: .semibold))
                 .frame(height: 22)
+                .overlay(alignment: .topTrailing) {
+                    if showsBadge {
+                        Circle()
+                            .fill(Color(hex: "#FF00FF"))
+                            .frame(width: 7, height: 7)
+                            // A ring in the bar's own colour so the dot reads as a dot
+                            // rather than as part of the bell.
+                            .overlay(Circle().stroke(.black.opacity(0.45), lineWidth: 1.5))
+                            .offset(x: 5, y: -2)
+                    }
+                }
 
             Text(item.title)
                 .font(.system(size: 10, weight: .semibold))
@@ -248,6 +268,8 @@ struct SpectrumTabBar: View {
         // can't reach it.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(item.title)
+        // The dot is decorative on its own; VoiceOver needs to be told what it means.
+        .accessibilityValue(showsBadge ? "New activity" : "")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .background {
             if isSelected {
