@@ -1,7 +1,7 @@
 import Foundation
 import Supabase
 
-class SupabaseManager {
+final class SupabaseManager {
     static let shared = SupabaseManager()
     
     // Configuration Placeholders
@@ -14,6 +14,11 @@ class SupabaseManager {
     private let authRedirectURL = URL(string: "spectrum://auth-callback")!
     
     let client: SupabaseClient
+
+    /// Rows per page for the lists that grow without limit — profile logs and the feed.
+    /// Sized so the first page fills a screen with room to spare, because that page also
+    /// decides how many ids get sent to MusicKit for artwork.
+    static let pageSize = 30
 
     /// Blocked-user ids, cached for a minute: the feed, search, activity and profile screens
     /// all need this on every load, and it only changes when the user blocks someone.
@@ -241,12 +246,16 @@ class SupabaseManager {
         try await client.from("follows").delete().eq("follower_id", value: userId).execute()
         try await client.from("follows").delete().eq("following_id", value: userId).execute()
 
-        // 3. Their own block list. Rows where they are the *blocked* party can't be removed
+        // 3. Likes they gave. Rows where *their* log was liked by somebody else are removed
+        //    by the review deletes above, via the triggers in the likes migration.
+        try? await client.from("review_likes").delete().eq("user_id", value: userId).execute()
+
+        // 4. Their own block list. Rows where they are the *blocked* party can't be removed
         //    from here — RLS scopes deletes to the blocker — and don't need to be: the
         //    foreign key cascades once the Edge Function removes the auth row.
         try? await client.from("user_blocks").delete().eq("blocker_id", value: userId).execute()
 
-        // 4. The avatar. Best-effort: a storage failure must not block the deletion, and a
+        // 5. The avatar. Best-effort: a storage failure must not block the deletion, and a
         //    user who never uploaded one has nothing at this path.
         do {
             _ = try await client.storage
@@ -256,10 +265,10 @@ class SupabaseManager {
             debugLog("Account deletion: couldn't remove avatar object:", error)
         }
 
-        // 5. The profile row — the last thing that makes the account visible to anyone else.
+        // 6. The profile row — the last thing that makes the account visible to anyone else.
         try await client.from("profiles").delete().eq("id", value: userId).execute()
 
-        // 6. Drop the local session.
+        // 7. Drop the local session.
         try await client.auth.signOut()
     }
     
@@ -301,7 +310,14 @@ class SupabaseManager {
     /// feed and in search results, and a bio is what a profile report quotes. Guideline 1.2
     /// makes no distinction between a review and a display name, so both go through the same
     /// filter that `writeReview` applies.
-    private static func rejectProfanity(username: String, bio: String) throws {
+    /// `context` names the thing being rejected. The message used to say "your profile"
+    /// unconditionally, which was correct for the two callers that existed and wrong the
+    /// moment lists started using the same filter.
+    private static func rejectProfanity(
+        username: String,
+        bio: String,
+        context: String = "your profile"
+    ) throws {
         let offending = ProfanityFilter.firstMatch(in: username)
             ?? ProfanityFilter.firstMatch(in: bio)
         guard let offending else { return }
@@ -309,7 +325,7 @@ class SupabaseManager {
             domain: "Spectrum",
             code: 422,
             userInfo: [NSLocalizedDescriptionKey:
-                "Please take out “\(offending)” — your profile can't contain offensive language."]
+                "Please take out “\(offending)” — \(context) can't contain offensive language."]
         )
     }
 
@@ -336,17 +352,100 @@ class SupabaseManager {
     
     // MARK: - Reviews
     
-    func getUserReviews(userId: UUID) async throws -> [Review] {
+    /// One page of a user's song logs, newest first.
+    ///
+    /// This used to be unbounded. A profile with several hundred logs pulled every row and
+    /// then asked MusicKit to resolve every distinct track id in one request — the slowest
+    /// screen in the app, growing with use, for a list nobody scrolls to the bottom of.
+    func getUserReviews(userId: UUID, limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> [Review] {
         let response: [Review] = try await client
             .from("reviews")
             .select()
             .eq("user_id", value: userId)
+            // Ordered the way the profile displays them — highest rated first. Sorting a
+            // *page* client-side would let a five-star log from page two jump above a
+            // three-star one already on screen.
+            .order("rating", ascending: false)
             .order("created_at", ascending: false)
+            // `id` breaks ties: two logs saved in the same second would otherwise be free to
+            // swap places between pages, showing one twice and hiding the other.
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
             .execute()
             .value
         return response
     }
     
+    /// Total logs per category, for the profile's tab labels.
+    ///
+    /// Needed once the lists became paged: `reviews.count` is now "how many are loaded",
+    /// which would have shown "Songs 30" to somebody with two hundred. These are head
+    /// requests — the server returns the count and no rows.
+    func countUserLogs(userId: UUID) async -> (songs: Int, albums: Int, artists: Int) {
+        async let songs = countRows(table: "reviews", userId: userId)
+        async let albums = countRows(table: "album_reviews", userId: userId)
+        async let artists = countRows(table: "artist_reviews", userId: userId)
+        return await (songs, albums, artists)
+    }
+
+    private func countRows(table: String, userId: UUID) async -> Int {
+        let response = try? await client
+            .from(table)
+            .select("id", head: true, count: .exact)
+            .eq("user_id", value: userId)
+            .execute()
+        return response?.count ?? 0
+    }
+
+    /// The two numbers the profile header summarises, over the user's whole history:
+    /// every vibe colour and every rating. Two short columns, no rows of review text.
+    ///
+    /// "Your Spectrum" and the average score describe a lifetime of logs. Computing them from
+    /// the loaded page would silently have turned them into a summary of the most recent
+    /// thirty, with nothing on screen to say so.
+    struct UserLogSummary {
+        /// One entry per song log: the three columns every statistic on the profile is
+        /// derived from. Deliberately not the whole row — no review text, no ids.
+        struct Entry {
+            let vibeColor: String
+            let rating: Int
+            let createdAt: Date
+        }
+
+        let entries: [Entry]
+
+        var vibeColors: [String] { entries.map(\.vibeColor) }
+        var ratings: [Int] { entries.map(\.rating) }
+
+        /// 0...5, averaged from the 0...10 integers stored.
+        var averageRating: Double {
+            guard !entries.isEmpty else { return 0 }
+            return Double(entries.reduce(0) { $0 + $1.rating }) / Double(entries.count) / 2.0
+        }
+
+        static let empty = UserLogSummary(entries: [])
+    }
+
+    func fetchUserLogSummary(userId: UUID) async -> UserLogSummary {
+        struct Row: Decodable {
+            let vibe_color: String
+            let rating: Int
+            let created_at: Date
+        }
+        guard let rows: [Row] = try? await client
+            .from("reviews")
+            .select("vibe_color,rating,created_at")
+            .eq("user_id", value: userId)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        else { return .empty }
+
+        return UserLogSummary(entries: rows.map {
+            .init(vibeColor: $0.vibe_color, rating: $0.rating, createdAt: $0.created_at)
+        })
+    }
+
     func saveReview(trackId: Int, rating: Int, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
             throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
@@ -386,7 +485,7 @@ class SupabaseManager {
         table: String,
         userId: UUID,
         targetColumn: String,
-        targetValue: any URLQueryRepresentable
+        targetValue: any PostgrestFilterValue
     ) async throws -> [UUID] {
         struct Row: Decodable { let id: UUID }
         let rows: [Row] = try await client
@@ -614,12 +713,18 @@ class SupabaseManager {
         return rows.first
     }
 
-    func getUserAlbumReviews(userId: UUID) async throws -> [AlbumReview] {
+    func getUserAlbumReviews(userId: UUID, limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> [AlbumReview] {
         let response: [AlbumReview] = try await client
             .from("album_reviews")
             .select()
             .eq("user_id", value: userId)
             .order("rating", ascending: false) // Highest first
+            // Ratings are 0...10, so ties are the norm, not the exception. Without a unique
+            // tie-break the server is free to order them differently per request and paging
+            // duplicates and drops rows.
+            .order("created_at", ascending: false)
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
             .execute()
             .value
         return response
@@ -683,12 +788,15 @@ class SupabaseManager {
         return rows.first { Self.matches($0.artistName, artistName) }
     }
 
-    func getUserArtistReviews(userId: UUID) async throws -> [ArtistReview] {
+    func getUserArtistReviews(userId: UUID, limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> [ArtistReview] {
         let response: [ArtistReview] = try await client
             .from("artist_reviews")
             .select()
             .eq("user_id", value: userId)
             .order("rating", ascending: false) // Highest first
+            .order("created_at", ascending: false)
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
             .execute()
             .value
         return response
@@ -837,49 +945,70 @@ class SupabaseManager {
     }
     
     // MARK: - Feed
-    
-    func fetchRecentReviews() async throws -> [Review] {
+
+    /// One page of the feed, plus whether there is another one behind it.
+    struct ReviewPage {
+        let reviews: [Review]
+        /// False once the server ran out of rows. The feed uses this to stop asking.
+        let hasMore: Bool
+
+        static let empty = ReviewPage(reviews: [], hasMore: false)
+    }
+
+    /// Everyone's recent logs, one page at a time.
+    ///
+    /// `hasMore` is judged on the number of rows the *server* returned, not on the number
+    /// left after blocked users are filtered out — otherwise a page consisting entirely of
+    /// blocked users would look like the end of the feed. The visible page can therefore come
+    /// back short; the next page picks up right after it.
+    func fetchRecentReviews(limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> ReviewPage {
         let response: [Review] = try await client
             .from("reviews")
             .select()
             .order("created_at", ascending: false)
-            // Over-fetch so that filtering out blocked users doesn't leave a short feed.
-            .limit(40)
+            // Unique tie-break: without it two logs saved in the same second can swap between
+            // pages, which shows one of them twice and hides the other entirely.
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
             .execute()
             .value
 
         let blocked = await blockedUserIds()
-        return response.filter { !blocked.contains($0.userId) }.prefix(20).map { $0 }
+        return ReviewPage(
+            reviews: response.filter { !blocked.contains($0.userId) },
+            hasMore: response.count == limit
+        )
     }
-    
-    func fetchFollowingReviews(userId: UUID) async throws -> [Review] {
-        // Get list of following user IDs
+
+    /// Logs from the people this user follows, one page at a time.
+    ///
+    /// Blocked users are removed from the id list *before* the query here rather than after
+    /// it, so unlike `fetchRecentReviews` this page is never short.
+    func fetchFollowingReviews(
+        userId: UUID,
+        limit: Int = SupabaseManager.pageSize,
+        offset: Int = 0
+    ) async throws -> ReviewPage {
         let following = try await getFollowing(userId: userId)
-        let followingIds = following.map { $0.id }
-        
-        guard !followingIds.isEmpty else {
-            // If not following anyone, return empty or fallback to recent reviews
-            return []
-        }
-        
-        // Fetch reviews from followed users
-        // Convert UUID array to String array for .in() method
         let blocked = await blockedUserIds()
-        let userIdStrings = followingIds
+        let userIdStrings = following
+            .map(\.id)
             .filter { !blocked.contains($0) }
-            .map { $0.uuidString }
-        guard !userIdStrings.isEmpty else { return [] }
+            .map(\.uuidString)
+
+        guard !userIdStrings.isEmpty else { return .empty }
 
         let response: [Review] = try await client
             .from("reviews")
             .select()
             .in("user_id", values: userIdStrings)
             .order("created_at", ascending: false)
-            .limit(50)
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
             .execute()
             .value
 
-        return response
+        return ReviewPage(reviews: response, hasMore: response.count == limit)
     }
 
     // MARK: - Activity Feed
@@ -1048,6 +1177,342 @@ class SupabaseManager {
         return activityItems
             .filter { !blocked.contains($0.actorId) }
             .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// Timestamp of the newest thing that would appear in this user's activity feed.
+    ///
+    /// The point is the dot on the Activity tab. Building the whole feed just to find out
+    /// whether anything is new would cost four queries and a profile join every time the app
+    /// came to the foreground; this is three `limit 1` reads of a single column.
+    ///
+    /// Returns nil when there is nothing at all — which reads as "no badge", not as an error.
+    func latestActivityTimestamp(userId: UUID) async -> Date? {
+        struct TimeRow: Decodable { let created_at: Date }
+
+        func newest(_ table: String, column: String, values: [String]) async -> Date? {
+            guard !values.isEmpty else { return nil }
+            let rows: [TimeRow]? = try? await client
+                .from(table)
+                .select("created_at")
+                .in(column, values: values)
+                .order("created_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+            return rows?.first?.created_at
+        }
+
+        // Someone following you is activity in its own right, and needs no follow list.
+        async let newFollower = newest("follows", column: "following_id", values: [userId.uuidString])
+
+        let following = (try? await getFollowing(userId: userId)) ?? []
+        let blocked = await blockedUserIds()
+        let followingIds = following
+            .map(\.id)
+            .filter { !blocked.contains($0) }
+            .map(\.uuidString)
+
+        async let newTrackLog = newest("reviews", column: "user_id", values: followingIds)
+        async let newAlbumLog = newest("album_reviews", column: "user_id", values: followingIds)
+
+        return await [newFollower, newTrackLog, newAlbumLog]
+            .compactMap { $0 }
+            .max()
+    }
+
+    // MARK: - Lists
+
+    /// Lists belonging to one user, newest activity first.
+    ///
+    /// RLS decides what comes back: your own profile returns private lists too, somebody
+    /// else's returns only the public ones. The client never filters on `is_public` itself —
+    /// a client-side filter is a suggestion, and the anon key is extractable from the IPA.
+    func fetchLists(userId: UUID) async throws -> [MusicListSummary] {
+        let lists: [MusicList] = try await client
+            .from("lists")
+            .select()
+            .eq("user_id", value: userId)
+            .order("updated_at", ascending: false)
+            .execute()
+            .value
+
+        guard !lists.isEmpty else { return [] }
+
+        let counts = await listItemCounts(listIds: lists.map(\.id))
+        return lists.map { MusicListSummary(list: $0, itemCount: counts[$0.id] ?? 0) }
+    }
+
+    /// Item counts for a set of lists, grouped in Postgres.
+    ///
+    /// Downloading the items just to count them would mean a profile with ten lists pulling
+    /// every record in all ten to print ten numbers.
+    private func listItemCounts(listIds: [UUID]) async -> [UUID: Int] {
+        guard !listIds.isEmpty else { return [:] }
+
+        struct CountRow: Decodable {
+            let list_id: UUID
+            let item_count: Int
+        }
+        nonisolated struct Params: Encodable, Sendable {
+            let p_list_ids: [UUID]
+        }
+
+        let rows: [CountRow]? = try? await client
+            .rpc("list_item_counts", params: Params(p_list_ids: listIds))
+            .execute()
+            .value
+
+        return Dictionary(uniqueKeysWithValues: (rows ?? []).map { ($0.list_id, $0.item_count) })
+    }
+
+    func fetchListItems(listId: UUID) async throws -> [MusicListItem] {
+        try await client
+            .from("list_items")
+            .select()
+            .eq("list_id", value: listId)
+            .order("position", ascending: true)
+            // Everything added in one go shares position 0 until the list is reordered, so
+            // creation time is what keeps that batch in a stable order.
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+    }
+
+    @discardableResult
+    func createList(title: String, description: String?, isPublic: Bool) async throws -> MusicList {
+        guard let user = try await getCurrentUser() else {
+            throw NSError(
+                domain: "Spectrum",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to make a list."]
+            )
+        }
+
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanDescription = description?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // A list title and blurb are public the moment `is_public` is set, so they go through
+        // the same filter as a username or a review rather than a looser one.
+        try Self.rejectProfanity(
+            username: cleanTitle,
+            bio: cleanDescription ?? "",
+            context: "a list"
+        )
+
+        let created: MusicList = try await client
+            .from("lists")
+            .insert(NewMusicList(
+                user_id: user.id,
+                title: cleanTitle,
+                description: (cleanDescription?.isEmpty == false) ? cleanDescription : nil,
+                is_public: isPublic
+            ))
+            .select()
+            .single()
+            .execute()
+            .value
+        return created
+    }
+
+    func updateList(
+        listId: UUID,
+        title: String,
+        description: String?,
+        isPublic: Bool
+    ) async throws {
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanDescription = description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        try Self.rejectProfanity(
+            username: cleanTitle,
+            bio: cleanDescription ?? "",
+            context: "a list"
+        )
+
+        try await client
+            .from("lists")
+            .update(MusicListUpdate(
+                title: cleanTitle,
+                description: (cleanDescription?.isEmpty == false) ? cleanDescription : nil,
+                is_public: isPublic,
+                updated_at: Date()
+            ))
+            .eq("id", value: listId)
+            .execute()
+    }
+
+    /// Deletes a list. Its items go with it via `on delete cascade`.
+    func deleteList(listId: UUID) async throws {
+        try await client.from("lists").delete().eq("id", value: listId).execute()
+    }
+
+    /// Appends one record to a list.
+    ///
+    /// Adding the same thing twice is not an error — the unique index collapses it, and the
+    /// caller should read that as "already in this list" rather than showing a failure.
+    func addToList(
+        listId: UUID,
+        kind: ListItemKind,
+        contentRef: String,
+        note: String? = nil
+    ) async throws {
+        let cleanNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let cleanNote, !cleanNote.isEmpty {
+            try Self.rejectProfanity(username: "", bio: cleanNote, context: "a list note")
+        }
+
+        // Append rather than insert at the top: a list is read in the order it was built.
+        let existing = (try? await fetchListItems(listId: listId)) ?? []
+        let nextPosition = (existing.map(\.position).max() ?? -1) + 1
+
+        do {
+            try await client
+                .from("list_items")
+                .insert(NewListItem(
+                    list_id: listId,
+                    content_type: kind.rawValue,
+                    content_ref: contentRef,
+                    note: (cleanNote?.isEmpty == false) ? cleanNote : nil,
+                    position: nextPosition
+                ))
+                .execute()
+        } catch {
+            guard Self.isDuplicateKeyError(error) else { throw error }
+        }
+    }
+
+    func removeFromList(itemId: UUID) async throws {
+        try await client.from("list_items").delete().eq("id", value: itemId).execute()
+    }
+
+    /// Writes a new manual order.
+    ///
+    /// Sent as one request per row rather than a bulk upsert: `list_items` has a unique index
+    /// on (list_id, content_type, content_ref) and no conflict target for the primary key on
+    /// this payload shape, which is the exact trap the review tables fell into — an upsert
+    /// there silently inserted duplicates instead of updating.
+    func reorderList(items: [MusicListItem]) async throws {
+        struct PositionUpdate: Encodable { let position: Int }
+
+        for (index, item) in items.enumerated() where item.position != index {
+            try await client
+                .from("list_items")
+                .update(PositionUpdate(position: index))
+                .eq("id", value: item.id)
+                .execute()
+        }
+    }
+
+    // MARK: - Likes
+
+    /// Likes one log. Liking something twice is not an error — the unique index collapses it.
+    func like(contentType: LikeableContentType, contentId: UUID) async throws {
+        guard let user = try await getCurrentUser() else {
+            throw NSError(
+                domain: "Spectrum",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to like a log."]
+            )
+        }
+
+        struct NewLike: Encodable {
+            let user_id: UUID
+            let content_type: String
+            let content_id: UUID
+        }
+
+        do {
+            try await client
+                .from("review_likes")
+                .insert(NewLike(
+                    user_id: user.id,
+                    content_type: contentType.rawValue,
+                    content_id: contentId
+                ))
+                .execute()
+        } catch {
+            // 23505 = unique violation: already liked, which is the state the caller wanted.
+            guard Self.isDuplicateKeyError(error) else { throw error }
+        }
+    }
+
+    /// Removes this user's like. Unliking something that isn't liked is a no-op, not an error.
+    func unlike(contentType: LikeableContentType, contentId: UUID) async throws {
+        guard let user = try await getCurrentUser() else { return }
+
+        try await client
+            .from("review_likes")
+            .delete()
+            .eq("user_id", value: user.id)
+            .eq("content_type", value: contentType.rawValue)
+            .eq("content_id", value: contentId)
+            .execute()
+    }
+
+    /// Like counts and "did I like it" for a screenful of logs, in two requests total.
+    ///
+    /// The counts come from a `group by` in Postgres rather than by downloading every like
+    /// row: a popular log would otherwise cost one row per like, every time it scrolled past.
+    /// Ids missing from the result simply have no likes.
+    func likeStates(
+        contentType: LikeableContentType,
+        contentIds: [UUID]
+    ) async -> [UUID: LikeState] {
+        guard !contentIds.isEmpty else { return [:] }
+
+        struct CountRow: Decodable {
+            let content_id: UUID
+            let like_count: Int
+        }
+        struct MineRow: Decodable {
+            let content_id: UUID
+        }
+
+        // `nonisolated` because the project defaults to MainActor isolation, and the RPC
+        // parameter has to cross into the Supabase client's own executor as a Sendable value.
+        nonisolated struct CountParams: Encodable, Sendable {
+            let p_content_type: String
+            let p_content_ids: [UUID]
+        }
+
+        async let countsTask: [CountRow]? = try? await client
+            .rpc("review_like_counts", params: CountParams(
+                p_content_type: contentType.rawValue,
+                p_content_ids: contentIds
+            ))
+            .execute()
+            .value
+
+        async let mineTask: [MineRow]? = await likedByCurrentUser(
+            contentType: contentType,
+            contentIds: contentIds
+        )
+
+        let (counts, mine) = await (countsTask, mineTask)
+
+        var states: [UUID: LikeState] = [:]
+        for id in contentIds { states[id] = .unknown }
+        for row in counts ?? [] {
+            states[row.content_id, default: .unknown].count = row.like_count
+        }
+        for row in mine ?? [] {
+            states[row.content_id, default: .unknown].likedByMe = true
+        }
+        return states
+    }
+
+    private func likedByCurrentUser<Row: Decodable>(
+        contentType: LikeableContentType,
+        contentIds: [UUID]
+    ) async -> [Row]? {
+        guard let user = try? await getCurrentUser() else { return nil }
+        return try? await client
+            .from("review_likes")
+            .select("content_id")
+            .eq("user_id", value: user.id)
+            .eq("content_type", value: contentType.rawValue)
+            .in("content_id", values: contentIds.map(\.uuidString))
+            .execute()
+            .value
     }
 
     // MARK: - Moderation: reports

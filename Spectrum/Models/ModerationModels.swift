@@ -68,3 +68,29 @@ struct BlockedUser: Identifiable {
 
     var id: UUID { profile.id }
 }
+
+// MARK: - Likes
+
+/// Which review table a like points at.
+///
+/// Deliberately separate from `ReportedContentType` even though the raw values overlap: that
+/// one includes `profile`, and a profile is not a thing you can like. Sharing the enum would
+/// have made an unrepresentable state representable.
+enum LikeableContentType: String, Codable, Sendable {
+    case songReview = "song_review"
+    case albumReview = "album_review"
+    case artistReview = "artist_review"
+}
+
+/// The like state of one log, as far as the current user is concerned.
+struct LikeState: Equatable, Sendable {
+    var count: Int
+    var likedByMe: Bool
+
+    static let unknown = LikeState(count: 0, likedByMe: false)
+
+    /// Optimistic toggle: applied immediately on tap, reverted if the write fails.
+    func toggled() -> LikeState {
+        LikeState(count: likedByMe ? max(0, count - 1) : count + 1, likedByMe: !likedByMe)
+    }
+}
