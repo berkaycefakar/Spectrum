@@ -10,6 +10,17 @@ struct FeedView: View {
     @State private var errorMessage: String?
     /// True when feed is showing recent reviews (no one followed); false when showing following's reviews.
     @State private var isShowingRecentFallback = false
+    /// Paging. The feed used to fetch a single fixed page — 50 rows from people you follow,
+    /// or 20 from everyone — and simply stop. An active account hit that ceiling in a week
+    /// and there was no way to see anything older.
+    @State private var offset = 0
+    @State private var hasMore = false
+    @State private var isLoadingMore = false
+    /// Like count + "did I like it", keyed by review id. Loaded one page at a time alongside
+    /// the artwork, never per card — thirty cards fetching their own would be thirty requests.
+    @State private var likes: [UUID: LikeState] = [:]
+    /// Needed to hide the heart on your own logs.
+    @State private var currentUserId: UUID?
     @StateObject private var reselection = TabReselectionState.shared
     /// Value-based navigation so tapping Home while already on Home can pop back to the feed.
     @State private var path = NavigationPath()
@@ -104,7 +115,14 @@ struct FeedView: View {
                                                 rating: Double(review.rating) / 2.0,
                                                 // Masked on read: rows written before the
                                                 // profanity filter existed are still in the DB.
-                                                reviewText: review.reviewText.map(ProfanityFilter.masked)
+                                                reviewText: review.reviewText.map(ProfanityFilter.masked),
+                                                likeState: likes[review.id] ?? .unknown,
+                                                // Nil on your own log: liking yourself isn't
+                                                // a thing, and a disabled heart reads better
+                                                // than one that silently does nothing.
+                                                onToggleLike: review.userId == currentUserId
+                                                    ? nil
+                                                    : { toggleLike(review) }
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())
@@ -122,6 +140,16 @@ struct FeedView: View {
                                             .frame(height: 200)
                                             .overlay(ProgressView().tint(.white))
                                     }
+                                }
+
+                                if hasMore {
+                                    // Appears only once it scrolls into view, which is what
+                                    // starts the next page — no button to hunt for.
+                                    ProgressView()
+                                        .tint(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 24)
+                                        .task(id: offset) { await loadNextPage() }
                                 }
                             }
                             .padding(.horizontal)
@@ -152,56 +180,133 @@ struct FeedView: View {
             self.isLoading = true
             self.errorMessage = nil
         }
-        
+
         do {
             guard let currentUser = try await SupabaseManager.shared.getCurrentUser() else {
-                await MainActor.run {
-                    self.isLoading = false
-                }
+                await MainActor.run { self.isLoading = false }
                 return
             }
-            
-            // Try to fetch following reviews first (may fail if follows table doesn't exist)
-            var feedReviews = (try? await SupabaseManager.shared.fetchFollowingReviews(userId: currentUser.id)) ?? []
+
+            // Try the people you follow first (may fail if the follows table doesn't exist).
+            var page = (try? await SupabaseManager.shared.fetchFollowingReviews(userId: currentUser.id))
+                ?? .empty
             var showingRecent = false
-            
-            // Kimseyi takip etmiyorsa veya takip ettiklerinden review yoksa: tüm kullanıcıların son review'larını göster (bomboş kalmasın)
-            if feedReviews.isEmpty {
-                feedReviews = (try? await SupabaseManager.shared.fetchRecentReviews()) ?? []
+
+            // Following nobody, or nobody you follow has logged anything: fall back to
+            // everyone's recent logs so the first screen isn't empty.
+            if page.reviews.isEmpty && !page.hasMore {
+                page = (try? await SupabaseManager.shared.fetchRecentReviews()) ?? .empty
                 showingRecent = true
             }
-            
+
             await MainActor.run {
-                self.reviews = feedReviews
+                self.currentUserId = currentUser.id
+                self.reviews = page.reviews
+                self.offset = SupabaseManager.pageSize
+                self.hasMore = page.hasMore
                 self.isShowingRecentFallback = showingRecent
                 self.isLoading = false
             }
-            
-            // Load track details and user profiles
-            let trackIds = Set(feedReviews.map { $0.itunesTrackId })
-            let userIds = Set(feedReviews.map { $0.userId })
-            
-            // Fetch all track details in one batched request instead of one-by-one.
-            let fetchedTracks = await MusicService.shared.fetchTracks(ids: Array(trackIds))
-            await MainActor.run {
-                for (id, track) in fetchedTracks { self.tracks[id] = track }
-            }
-            
-            // Fetch user profiles (batch)
-            let userIdStrings = userIds.map { $0.uuidString }
-            if let fetchedProfiles = try? await SupabaseManager.shared.batchGetProfiles(ids: userIdStrings) {
-                await MainActor.run {
-                    for profile in fetchedProfiles {
-                        self.profiles[profile.id] = profile
-                    }
-                }
-            }
-            
+
+            await hydrate(page.reviews)
         } catch {
-            print("Failed to load feed: \(error)")
+            debugLog("Failed to load feed: \(error)")
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
                 self.isLoading = false
+            }
+        }
+    }
+
+    /// Appends the next page. Guarded against re-entry: the spinner's `.task` fires again
+    /// whenever the view is recreated, and two overlapping fetches would append the same
+    /// rows twice.
+    private func loadNextPage() async {
+        guard hasMore, !isLoadingMore else { return }
+        await MainActor.run { self.isLoadingMore = true }
+        defer { Task { @MainActor in self.isLoadingMore = false } }
+
+        guard let currentUser = try? await SupabaseManager.shared.getCurrentUser() else { return }
+
+        let currentOffset = offset
+        let page: SupabaseManager.ReviewPage
+        if isShowingRecentFallback {
+            page = (try? await SupabaseManager.shared.fetchRecentReviews(offset: currentOffset)) ?? .empty
+        } else {
+            page = (try? await SupabaseManager.shared.fetchFollowingReviews(
+                userId: currentUser.id,
+                offset: currentOffset
+            )) ?? .empty
+        }
+
+        await MainActor.run {
+            // A blocked-user page comes back empty but is not the end of the feed, so the
+            // offset advances on every page regardless of how many rows survived the filter.
+            let known = Set(self.reviews.map(\.id))
+            self.reviews.append(contentsOf: page.reviews.filter { !known.contains($0.id) })
+            self.offset = currentOffset + SupabaseManager.pageSize
+            self.hasMore = page.hasMore
+        }
+
+        await hydrate(page.reviews)
+    }
+
+    /// Resolves the artwork and author for a page of reviews. Both caches are additive, so
+    /// appending a page never re-fetches what earlier pages already hold.
+    private func hydrate(_ page: [Review]) async {
+        guard !page.isEmpty else { return }
+
+        let knownTracks = await MainActor.run { Set(self.tracks.keys) }
+        let knownProfiles = await MainActor.run { Set(self.profiles.keys) }
+
+        let trackIds = Set(page.map(\.itunesTrackId)).subtracting(knownTracks)
+        let userIds = Set(page.map(\.userId)).subtracting(knownProfiles)
+
+        if !trackIds.isEmpty {
+            let fetched = await MusicService.shared.fetchTracks(ids: Array(trackIds))
+            await MainActor.run {
+                for (id, track) in fetched { self.tracks[id] = track }
+            }
+        }
+
+        if !userIds.isEmpty,
+           let fetched = try? await SupabaseManager.shared.batchGetProfiles(ids: userIds.map(\.uuidString)) {
+            await MainActor.run {
+                for profile in fetched { self.profiles[profile.id] = profile }
+            }
+        }
+
+        let states = await SupabaseManager.shared.likeStates(
+            contentType: .songReview,
+            contentIds: page.map(\.id)
+        )
+        await MainActor.run {
+            // Merge rather than replace: an optimistic toggle the user made while this page
+            // was in flight must not be overwritten by the older server value.
+            for (id, state) in states where self.likes[id] == nil {
+                self.likes[id] = state
+            }
+        }
+    }
+
+    /// Optimistic like: the heart flips in the same frame as the tap, and only reverts if
+    /// the write actually fails. Waiting for the round-trip made every tap feel broken on a
+    /// slow connection.
+    private func toggleLike(_ review: Review) {
+        let previous = likes[review.id] ?? .unknown
+        let next = previous.toggled()
+        likes[review.id] = next
+
+        Task {
+            do {
+                if next.likedByMe {
+                    try await SupabaseManager.shared.like(contentType: .songReview, contentId: review.id)
+                } else {
+                    try await SupabaseManager.shared.unlike(contentType: .songReview, contentId: review.id)
+                }
+            } catch {
+                debugLog("Like toggle failed: \(error)")
+                await MainActor.run { self.likes[review.id] = previous }
             }
         }
     }

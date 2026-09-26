@@ -59,8 +59,10 @@ struct SearchDiscoveryView: View {
         TrendingVibe(name: "Midnight Mood", gradient: [Color(hex: "#232526"), Color(hex: "#414345")], icon: "moon.stars.fill", query: "midnight r&b")
     ]
     
-    // Sample tracks for discovery - Mock data (TODO: Replace with backend recommendations)
+    /// What this app's own users have logged recently. Empty until the community is active.
     @State private var discoverTracks: [Track] = []
+    /// Apple Music's most-played chart — the half of Discover that is full on day one.
+    @State private var chartTracks: [Track] = []
     
     // NOTE: iTunes tarafında doğrudan "artist entity" araması/sonucu kullanmadığımız için
     // Artists sekmesini şimdilik devre dışı bıraktık.
@@ -93,6 +95,7 @@ struct SearchDiscoveryView: View {
                             // Show discovery content when not searching
                             DiscoveryContentView(
                                 trendingVibes: trendingVibes,
+                                chartTracks: chartTracks,
                                 discoverTracks: discoverTracks,
                                 searchText: $searchText,
                                 selectedTrack: $selectedTrack
@@ -321,41 +324,36 @@ struct SearchDiscoveryView: View {
     
     // MARK: - Data Loading
     private func loadDiscoverTracks() async {
-        // 1. Prefer what the community is actually logging — a real trending row.
-        if let trendingIds = try? await SupabaseManager.shared.fetchTrendingTrackIds(limit: 12),
-           !trendingIds.isEmpty {
-            let byId = await MusicService.shared.fetchTracks(ids: trendingIds)
-            // Keep the recency order from the query.
-            let ordered = trendingIds.compactMap { byId[$0] }
-            if !ordered.isEmpty {
-                await MainActor.run { discoverTracks = ordered }
-                return
-            }
-        }
+        // Two independent rows, loaded in parallel so a slow chart doesn't hold up the
+        // community list (or the other way round).
+        async let charts = MusicService.shared.fetchTopSongs(limit: 20)
+        async let community = Self.communityTrendingTracks()
 
-        // 2. Fallback for a fresh install with no logs yet: a rotating seed pool so Discover
-        //    isn't the same five tracks every launch.
-        let seedPool = [
-            "Kendrick Lamar", "Tame Impala", "The Weeknd", "Arctic Monkeys", "Lorde",
-            "Frank Ocean", "Radiohead", "Billie Eilish", "Tyler, The Creator", "SZA",
-            "Daft Punk", "Fleetwood Mac", "Travis Scott", "Beyoncé", "Mac Miller"
-        ]
-        let seeds = Array(seedPool.shuffled().prefix(6))
+        let (chartResult, communityResult) = await (charts, community)
 
-        await withTaskGroup(of: Track?.self) { group in
-            for artist in seeds {
-                group.addTask {
-                    (try? await MusicService.shared.search(query: artist))?.first
-                }
-            }
-            var tracks: [Track] = []
-            for await track in group {
-                if let track { tracks.append(track) }
-            }
-            await MainActor.run { discoverTracks = tracks }
+        await MainActor.run {
+            chartTracks = chartResult
+            // Fall back to the chart rather than to a hardcoded seed list: before this, a
+            // fresh install showed the same six artists to everybody, forever.
+            discoverTracks = communityResult.isEmpty
+                ? Array(chartResult.prefix(10))
+                : communityResult
         }
     }
-    
+
+    /// Recently logged tracks, resolved back into catalog entries. Empty when nobody has
+    /// logged anything yet, or when the lookup fails.
+    private static func communityTrendingTracks() async -> [Track] {
+        guard
+            let trendingIds = try? await SupabaseManager.shared.fetchTrendingTrackIds(limit: 12),
+            !trendingIds.isEmpty
+        else { return [] }
+
+        let byId = await MusicService.shared.fetchTracks(ids: trendingIds)
+        // Keep the recency order from the query.
+        return trendingIds.compactMap { byId[$0] }
+    }
+
     private func performSearch(query: String) async {
         guard !query.isEmpty else {
             await MainActor.run {
@@ -425,7 +423,7 @@ struct SearchDiscoveryView: View {
         do {
             return try await SupabaseManager.shared.searchUsers(query: query)
         } catch {
-            print("User search failed for '\(query)':", error)
+            debugLog("User search failed for '\(query)':", error)
             return []
         }
     }
@@ -448,6 +446,9 @@ struct TrendingVibe: Identifiable {
 
 struct DiscoveryContentView: View {
     let trendingVibes: [TrendingVibe]
+    /// Apple Music's most-played chart.
+    let chartTracks: [Track]
+    /// What Spectrum's own users logged recently.
     let discoverTracks: [Track]
     @Binding var searchText: String
     @Binding var selectedTrack: Track?
@@ -474,22 +475,36 @@ struct DiscoveryContentView: View {
                 }
             }
 
-            // Quick Add Section
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("Quick Add")
+            // Top Charts — Apple Music's own most-played songs. Horizontal so it reads as
+            // a chart rather than competing with the list below it.
+            if !chartTracks.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Top Charts")
                         .font(.headline)
                         .foregroundStyle(.white)
+                        .padding(.horizontal)
 
-                    Spacer()
-
-                    Button("See All") {
-                        // TODO: Navigate to full list
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(alignment: .top, spacing: 14) {
+                            ForEach(Array(chartTracks.enumerated()), id: \.element.id) { index, track in
+                                ChartTrackCard(rank: index + 1, track: track)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(Color(hex: "#FF00FF"))
                 }
-                .padding(.horizontal)
+            }
+
+            // Quick Add Section.
+            //
+            // The "See All" button here did nothing — it carried a `TODO: Navigate to full
+            // list` and no destination. This list is already the whole list, so the control
+            // is gone rather than left as a dead tap target.
+            VStack(alignment: .leading, spacing: 16) {
+                Text(discoverTracks.isEmpty ? "Quick Add" : "Logged Recently")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal)
 
                 // Track list
                 LazyVStack(spacing: 12) {
@@ -548,6 +563,67 @@ struct TrendingVibeCard: View {
 }
 
 // MARK: - Quick Add Track Row
+
+/// One entry in the Apple Music chart row: ranked artwork, title, artist.
+///
+/// A `NavigationLink(value:)` rather than a sheet — tapping a chart entry should open the
+/// track's page (community score, preview, log button), and value-based links are what lets
+/// "tap Discover again" pop back out of it.
+struct ChartTrackCard: View {
+    let rank: Int
+    let track: Track
+
+    var body: some View {
+        NavigationLink(value: AppRoute.track(track)) {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .bottomLeading) {
+                    AsyncImage(url: track.artworkUrl600) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        case .failure:
+                            Color.white.opacity(0.08)
+                        default:
+                            Color.white.opacity(0.08)
+                        }
+                    }
+                    .frame(width: 140, height: 140)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(.white.opacity(0.12), lineWidth: 1)
+                    )
+
+                    Text("\(rank)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .padding(8)
+                }
+
+                Text(track.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Text(track.artist)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+            }
+            .frame(width: 140, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // One label for the whole card: VoiceOver otherwise reads the rank, title and artist
+        // as three separate unlabelled elements.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Number \(rank), \(track.title) by \(track.artist)")
+        .accessibilityAddTraits(.isButton)
+    }
+}
 
 struct QuickAddTrackRow: View {
     let track: Track
@@ -848,19 +924,17 @@ struct UserProfileView: View {
     @State private var userAlbums: [Int64: Album] = [:]
     @State private var userArtistBriefs: [String: ArtistBrief] = [:]
     @State private var selectedUserCategory: ProfileCategory = .songs
+    /// Lifetime totals. The three lists are paged, so their counts mean "loaded so far".
+    @State private var totals: (songs: Int, albums: Int, artists: Int) = (0, 0, 0)
+    @State private var isLoadingMore = false
 
-    // Best-rated first, most recent breaking ties. `sorted(by:)` isn't a stable sort, so
-    // comparing on rating alone let equally-rated logs swap places between two loads of the
-    // same profile.
-    private var sortedUserReviews: [Review] {
-        userReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
-    }
-    private var sortedUserAlbumReviews: [AlbumReview] {
-        userAlbumReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
-    }
-    private var sortedUserArtistReviews: [ArtistReview] {
-        userArtistReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
-    }
+    // Best-rated first, most recent breaking ties — now applied by the server (rating,
+    // created_at, id) rather than here. Re-sorting client-side worked for a single unbounded
+    // fetch but breaks under paging: it only sees the rows loaded so far, so a five-star log
+    // from page two would jump above a three-star one already on screen.
+    private var sortedUserReviews: [Review] { userReviews }
+    private var sortedUserAlbumReviews: [AlbumReview] { userAlbumReviews }
+    private var sortedUserArtistReviews: [ArtistReview] { userArtistReviews }
     
     var body: some View {
         ZStack {
@@ -884,25 +958,30 @@ struct UserProfileView: View {
                             onFollowTapped: { Task { await toggleFollow() } }
                         )
                         
+                        // RLS returns only public lists here; on your own profile it also
+                        // returns the private ones. The view draws whatever it is given.
+                        ProfileListsSection(userId: userId, isOwner: isCurrentUser)
+                            .padding(.horizontal)
+
                         VStack(alignment: .leading, spacing: 16) {
                             HStack(spacing: 0) {
                                 ProfileCategoryButton(
                                     title: "Songs",
-                                    count: userReviews.count,
+                                    count: totals.songs,
                                     isSelected: selectedUserCategory == .songs
                                 ) {
                                     withAnimation(.spring()) { selectedUserCategory = .songs }
                                 }
                                 ProfileCategoryButton(
                                     title: "Albums",
-                                    count: userAlbumReviews.count,
+                                    count: totals.albums,
                                     isSelected: selectedUserCategory == .albums
                                 ) {
                                     withAnimation(.spring()) { selectedUserCategory = .albums }
                                 }
                                 ProfileCategoryButton(
                                     title: "Artists",
-                                    count: userArtistReviews.count,
+                                    count: totals.artists,
                                     isSelected: selectedUserCategory == .artists
                                 ) {
                                     withAnimation(.spring()) { selectedUserCategory = .artists }
@@ -982,6 +1061,15 @@ struct UserProfileView: View {
                                         }
                                     }
                                 }
+                            }
+
+                            if hasMoreInCategory {
+                                // Scrolling it into view starts the next page.
+                                ProgressView()
+                                    .tint(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 24)
+                                    .task(id: pagingToken) { await loadMoreInCategory() }
                             }
                         }
                         .padding(.horizontal)
@@ -1094,22 +1182,26 @@ struct UserProfileView: View {
             async let artistReviewsLoad = (try? await SupabaseManager.shared.getUserArtistReviews(userId: userId)) ?? []
             async let followersLoad = (try? await SupabaseManager.shared.getFollowers(userId: userId)) ?? []
             async let followingLoad = (try? await SupabaseManager.shared.getFollowing(userId: userId)) ?? []
+            // The header's log count and average describe the whole profile; the lists below
+            // are only the first page, so neither can be derived from them any more.
+            async let totalsLoad = SupabaseManager.shared.countUserLogs(userId: userId)
+            async let summaryLoad = SupabaseManager.shared.fetchUserLogSummary(userId: userId)
 
             let reviews = await reviewsLoad
             let albumReviews = await albumReviewsLoad
             let artistReviews = await artistReviewsLoad
             let followers = await followersLoad
             let followingList = await followingLoad
-
-            let logsCount = reviews.count
-            let avg: Double = reviews.isEmpty ? 0 : Double(reviews.reduce(0) { $0 + $1.rating }) / Double(reviews.count) / 2.0
+            let totals = await totalsLoad
+            let summary = await summaryLoad
 
             await MainActor.run {
                 self.profile = profileData
                 self.isCurrentUser = isSelf
                 self.isFollowing = following
-                self.totalLogs = logsCount
-                self.averageRating = avg
+                self.totals = totals
+                self.totalLogs = totals.songs
+                self.averageRating = summary.averageRating
                 self.followersCount = followers.count
                 self.followingCount = followingList.count
                 self.userReviews = reviews
@@ -1134,10 +1226,72 @@ struct UserProfileView: View {
             }
         } catch {
             await MainActor.run { self.isLoading = false }
-            print("Failed to load user profile: \(error)")
+            debugLog("Failed to load user profile: \(error)")
         }
     }
     
+    // MARK: - Paging
+
+    private var loadedCount: Int {
+        switch selectedUserCategory {
+        case .songs: userReviews.count
+        case .albums: userAlbumReviews.count
+        case .artists: userArtistReviews.count
+        }
+    }
+
+    private var totalCount: Int {
+        switch selectedUserCategory {
+        case .songs: totals.songs
+        case .albums: totals.albums
+        case .artists: totals.artists
+        }
+    }
+
+    private var hasMoreInCategory: Bool { loadedCount < totalCount }
+
+    private var pagingToken: String { "\(selectedUserCategory)-\(loadedCount)" }
+
+    /// Appends the next page of whichever tab is open.
+    private func loadMoreInCategory() async {
+        guard hasMoreInCategory, !isLoadingMore else { return }
+        await MainActor.run { self.isLoadingMore = true }
+        defer { Task { @MainActor in self.isLoadingMore = false } }
+
+        let offset = loadedCount
+
+        switch selectedUserCategory {
+        case .songs:
+            let page = (try? await SupabaseManager.shared.getUserReviews(userId: userId, offset: offset)) ?? []
+            let tracks = await MusicService.shared.fetchTracks(ids: Array(Set(page.map(\.itunesTrackId))))
+            await MainActor.run {
+                // De-duplicated by id: a log saved while the reader was scrolling shifts
+                // every later row down by one and the boundary row would arrive twice.
+                let known = Set(self.userReviews.map(\.id))
+                self.userReviews.append(contentsOf: page.filter { !known.contains($0.id) })
+                for (id, track) in tracks { self.userTracks[id] = track }
+            }
+
+        case .albums:
+            let page = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: userId, offset: offset)) ?? []
+            let albums = await MusicService.shared.fetchAlbums(ids: Array(Set(page.map(\.itunesCollectionId))))
+            await MainActor.run {
+                let known = Set(self.userAlbumReviews.map(\.id))
+                self.userAlbumReviews.append(contentsOf: page.filter { !known.contains($0.id) })
+                for (id, album) in albums { self.userAlbums[id] = album }
+            }
+
+        case .artists:
+            let page = (try? await SupabaseManager.shared.getUserArtistReviews(userId: userId, offset: offset)) ?? []
+            let briefs = await MusicService.shared.fetchArtistBriefs(names: page.map(\.artistName))
+            await MainActor.run {
+                let known = Set(self.userArtistReviews.map(\.id))
+                self.userArtistReviews.append(contentsOf: page.filter { !known.contains($0.id) })
+                for (name, brief) in briefs { self.userArtistBriefs[name] = brief }
+            }
+        }
+    }
+
     private func toggleFollow() async {
         guard !isCurrentUser, !isFollowLoading else { return }
         await MainActor.run { isFollowLoading = true }
@@ -1157,7 +1311,7 @@ struct UserProfileView: View {
                 }
             }
         } catch {
-            print("Follow error: \(error)")
+            debugLog("Follow error: \(error)")
         }
         
         // Re-verify from server to be sure

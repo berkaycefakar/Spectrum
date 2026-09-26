@@ -23,50 +23,53 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showLogoutAlert = false
     @State private var selectedCategory: ProfileCategory = .songs
+    /// Lifetime totals for the tab labels and the header chart. The lists below are paged,
+    /// so `reviews.count` now means "loaded so far" and can't be shown to the user.
+    @State private var totals: (songs: Int, albums: Int, artists: Int) = (0, 0, 0)
+    @State private var summary: SupabaseManager.UserLogSummary = .empty
+    /// Per-category paging cursor. Each tab loads independently — opening Albums shouldn't
+    /// pay for the pages Songs has already scrolled through.
+    @State private var loadedMore: Set<ProfileCategory> = []
+    @State private var isLoadingMore = false
+    @State private var showStats = false
     @StateObject private var reselection = TabReselectionState.shared
     /// Value-based navigation so tapping Profile while already on it returns to the top.
     @State private var path = NavigationPath()
     
-    // Computed Stats
+    // Computed Stats — over the user's whole history, not the loaded page.
     var vibeStats: [(color: String, percentage: CGFloat, label: String)] {
-        guard !reviews.isEmpty else { return [] }
-        
-        let total = CGFloat(reviews.count)
+        guard !summary.vibeColors.isEmpty else { return [] }
+
+        let total = CGFloat(summary.vibeColors.count)
         var counts: [String: Int] = [:]
-        
-        for review in reviews {
-            counts[review.vibeColor, default: 0] += 1
+
+        for hex in summary.vibeColors {
+            counts[hex, default: 0] += 1
         }
-        
-        // Sort by count and take top 5
-        let sorted = counts.sorted { $0.value > $1.value }.prefix(5)
-        
+
+        // Top five, with the hex breaking ties so the bars don't reshuffle between loads.
+        let sorted = counts
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .prefix(5)
+
         return sorted.map { (color, count) in
             (color: color, percentage: CGFloat(count) / total, label: "")
         }
     }
-    
-    // Average rating across all reviews (songs only for now)
-    var averageRating: Double {
-        guard !reviews.isEmpty else { return 0 }
-        let total = reviews.reduce(0) { $0 + $1.rating }
-        return Double(total) / Double(reviews.count) / 2.0 // Convert 0-10 to 0-5
-    }
+
+    // Average rating across all song logs.
+    var averageRating: Double { summary.averageRating }
     
     // Best-rated first — the profile grid is a "favourites" wall, not a diary — with the most
     // recent log breaking ties. The tie-break matters: `sorted(by:)` is not a stable sort, so
     // ranking on rating alone let equally-rated logs swap positions on every reload.
-    var sortedReviews: [Review] {
-        reviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
-    }
-
-    var sortedAlbumReviews: [AlbumReview] {
-        albumReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
-    }
-
-    var sortedArtistReviews: [ArtistReview] {
-        artistReviews.sorted { $0.rating == $1.rating ? $0.createdAt > $1.createdAt : $0.rating > $1.rating }
-    }
+    // The three lists arrive already ordered — rating first, then recency, then id. They used
+    // to be re-sorted here, which was fine for a single unbounded fetch but breaks under
+    // paging: re-sorting only the rows loaded so far lets a five-star log from page two jump
+    // above a three-star one the user is already looking at.
+    var sortedReviews: [Review] { reviews }
+    var sortedAlbumReviews: [AlbumReview] { albumReviews }
+    var sortedArtistReviews: [ArtistReview] { artistReviews }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -110,23 +113,48 @@ struct ProfileView: View {
                         
                         // 2. Spectrum Visualization
                         if !vibeStats.isEmpty {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Your Spectrum")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                
-                                SpectrumBarChart(stats: vibeStats)
+                            Button {
+                                showStats = true
+                            } label: {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        Text("Your Spectrum")
+                                            .font(.headline)
+                                            .foregroundStyle(.white)
+                                        Spacer()
+                                        // The bar chart alone gave no hint there was more
+                                        // behind it; people tapped it and nothing happened.
+                                        HStack(spacing: 3) {
+                                            Text("See all")
+                                                .font(.caption.weight(.semibold))
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 10, weight: .bold))
+                                        }
+                                        .foregroundStyle(Color(hex: "#FF00FF"))
+                                    }
+
+                                    SpectrumBarChart(stats: vibeStats)
+                                }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Your Spectrum, see full statistics")
                             .padding(.horizontal)
                         }
                         
-                        // 3. Category Tabs & Logs
+                        // 3. Lists
+                        if let profileId = profile?.id {
+                            ProfileListsSection(userId: profileId, isOwner: true)
+                                .padding(.horizontal)
+                        }
+
+                        // 4. Category Tabs & Logs
                         VStack(alignment: .leading, spacing: 16) {
                             // Category Selector
                             HStack(spacing: 0) {
                                 ProfileCategoryButton(
                                     title: "Songs",
-                                    count: reviews.count,
+                                    count: totals.songs,
                                     isSelected: selectedCategory == .songs
                                 ) {
                                     withAnimation(.spring()) {
@@ -136,7 +164,7 @@ struct ProfileView: View {
                                 
                                 ProfileCategoryButton(
                                     title: "Albums",
-                                    count: albumReviews.count,
+                                    count: totals.albums,
                                     isSelected: selectedCategory == .albums
                                 ) {
                                     withAnimation(.spring()) {
@@ -146,7 +174,7 @@ struct ProfileView: View {
                                 
                                 ProfileCategoryButton(
                                     title: "Artists",
-                                    count: artistReviews.count,
+                                    count: totals.artists,
                                     isSelected: selectedCategory == .artists
                                 ) {
                                     withAnimation(.spring()) {
@@ -163,11 +191,20 @@ struct ProfileView: View {
                                     .padding(.vertical, 40)
                             } else {
                                 categoryContent
+
+                                if hasMoreInCategory {
+                                    // Scrolling it into view is what starts the next page.
+                                    ProgressView()
+                                        .tint(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 24)
+                                        .task(id: pagingToken) { await loadMoreInCategory() }
+                                }
                             }
                         }
                         .padding(.horizontal)
                         
-                        // 4. Account Actions Section
+                        // 5. Account Actions Section
                         AccountActionsSection(
                             onEditProfile: {
                                 showEditProfile = true
@@ -191,6 +228,13 @@ struct ProfileView: View {
             .navigationBarHidden(true)
             .task {
                 await loadProfileData()
+            }
+            .sheet(isPresented: $showStats) {
+                ListeningStatsView(
+                    summary: summary,
+                    albumCount: totals.albums,
+                    artistCount: totals.artists
+                )
             }
             .sheet(isPresented: $showEditProfile) {
                 if let profile = profile {
@@ -240,6 +284,72 @@ struct ProfileView: View {
         }
     }
     
+    // MARK: - Paging
+
+    private var loadedCount: Int {
+        switch selectedCategory {
+        case .songs: reviews.count
+        case .albums: albumReviews.count
+        case .artists: artistReviews.count
+        }
+    }
+
+    private var totalCount: Int {
+        switch selectedCategory {
+        case .songs: totals.songs
+        case .albums: totals.albums
+        case .artists: totals.artists
+        }
+    }
+
+    private var hasMoreInCategory: Bool { loadedCount < totalCount }
+
+    /// Identity for the spinner's `.task`. Changing tab or growing the list re-arms it;
+    /// anything else (a redraw, a scroll) leaves it alone.
+    private var pagingToken: String { "\(selectedCategory)-\(loadedCount)" }
+
+    /// Appends the next page of whichever tab is open.
+    private func loadMoreInCategory() async {
+        guard hasMoreInCategory, !isLoadingMore else { return }
+        guard let userId = try? await SupabaseManager.shared.getCurrentUser()?.id else { return }
+
+        await MainActor.run { self.isLoadingMore = true }
+        defer { Task { @MainActor in self.isLoadingMore = false } }
+
+        let offset = loadedCount
+
+        switch selectedCategory {
+        case .songs:
+            let page = (try? await SupabaseManager.shared.getUserReviews(userId: userId, offset: offset)) ?? []
+            let tracksById = await MusicService.shared.fetchTracks(ids: Array(Set(page.map(\.itunesTrackId))))
+            await MainActor.run {
+                // De-duplicated by id: a log saved while the user was scrolling shifts every
+                // later row down by one, and the boundary row would otherwise arrive twice.
+                let known = Set(self.reviews.map(\.id))
+                self.reviews.append(contentsOf: page.filter { !known.contains($0.id) })
+                for (id, track) in tracksById { self.tracks[id] = track }
+            }
+
+        case .albums:
+            let page = (try? await SupabaseManager.shared.getUserAlbumReviews(userId: userId, offset: offset)) ?? []
+            let albumsById = await MusicService.shared.fetchAlbums(ids: Array(Set(page.map(\.itunesCollectionId))))
+            await MainActor.run {
+                let known = Set(self.albumReviews.map(\.id))
+                self.albumReviews.append(contentsOf: page.filter { !known.contains($0.id) })
+                for (id, album) in albumsById { self.albums[id] = album }
+            }
+
+        case .artists:
+            let page = (try? await SupabaseManager.shared.getUserArtistReviews(userId: userId, offset: offset)) ?? []
+            let briefs = await MusicService.shared.fetchArtistBriefs(names: page.map(\.artistName))
+            await MainActor.run {
+                let known = Set(self.artistReviews.map(\.id))
+                self.artistReviews.append(contentsOf: page.filter { !known.contains($0.id) })
+                for (name, brief) in briefs { self.artistBriefs[name] = brief }
+            }
+        }
+    }
+
     // MARK: - Category Content
     
     @ViewBuilder
@@ -336,11 +446,17 @@ struct ProfileView: View {
             async let artistReviewsLoad = (try? await SupabaseManager.shared.getUserArtistReviews(userId: currentUser.id)) ?? []
             async let followersLoad = (try? await SupabaseManager.shared.getFollowers(userId: currentUser.id)) ?? []
             async let followingLoad = (try? await SupabaseManager.shared.getFollowing(userId: currentUser.id)) ?? []
+            // Lifetime totals and the vibe/rating summary: the lists are paged now, so the
+            // tab counts and the header chart can no longer be derived from them.
+            async let totalsLoad = SupabaseManager.shared.countUserLogs(userId: currentUser.id)
+            async let summaryLoad = SupabaseManager.shared.fetchUserLogSummary(userId: currentUser.id)
 
             let albumReviews = await albumReviewsLoad
             let artistReviews = await artistReviewsLoad
             let followers = await followersLoad
             let following = await followingLoad
+            let totals = await totalsLoad
+            let summary = await summaryLoad
 
             await MainActor.run {
                 self.profile = profileData
@@ -349,6 +465,8 @@ struct ProfileView: View {
                 self.artistReviews = artistReviews
                 self.followers = followers
                 self.following = following
+                self.totals = totals
+                self.summary = summary
             }
             
             // 5. Fetch track + album details in two batched requests (was one-by-one),
@@ -370,7 +488,7 @@ struct ProfileView: View {
             }
             
         } catch {
-            print("Error loading profile: \(error)")
+            debugLog("Error loading profile: \(error)")
         }
     }
 }

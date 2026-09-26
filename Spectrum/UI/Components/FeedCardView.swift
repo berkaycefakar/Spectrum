@@ -6,6 +6,10 @@ struct FeedCardView: View {
     var vibeColor: Color? = nil
     var rating: Double? = nil
     var reviewText: String? = nil
+    /// Like state and toggle, supplied by the screen. Nil hides the control entirely — used
+    /// for previews and for surfaces that aren't a feed of other people's logs.
+    var likeState: LikeState? = nil
+    var onToggleLike: (() -> Void)? = nil
     
     @ObservedObject private var audioManager = AudioManager.shared
 
@@ -101,7 +105,8 @@ struct FeedCardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             
-            // Bottom Section: Play Button
+            // Bottom Section: Play Button, with the like beside it.
+            HStack(spacing: 10) {
             Button(action: toggleAudio) {
                 HStack {
                     if audioManager.isTrackBuffering(track.id) {
@@ -131,6 +136,11 @@ struct FeedCardView: View {
                             ), lineWidth: 1)
                     }
                 )
+            }
+
+                if let likeState {
+                    LikeButton(state: likeState, onToggle: onToggleLike)
+                }
             }
         }
         .padding(20)
@@ -197,11 +207,11 @@ struct FeedCardView: View {
                 }
             }
         } catch {
-            print("Failed to load image: \(error)")
+            debugLog("Failed to load image: \(error)")
         }
     }
     
     private func toggleAudio() {
-        audioManager.toggle(trackId: track.id, previewUrl: track.previewUrl)
+        audioManager.toggle(track: track)
     }
 }
