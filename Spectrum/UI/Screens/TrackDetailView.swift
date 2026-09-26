@@ -5,6 +5,7 @@ struct TrackDetailView: View {
 
     @ObservedObject private var audioManager = AudioManager.shared
     @State private var showAddLog = false
+    @State private var showAddToList = false
     @State private var artworkColor: ArtworkColor = .placeholder
 
     private var dominantColor: Color { artworkColor.accent }
@@ -63,6 +64,9 @@ struct TrackDetailView: View {
             .ignoresSafeArea(edges: .top)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAddToList) {
+            AddToListView(kind: .song, contentRef: String(track.id), displayTitle: track.title)
+        }
         .sheet(isPresented: $showAddLog) {
             AddLogView(track: track, isPresented: $showAddLog)
                 .presentationDetents([.large])
@@ -77,11 +81,10 @@ struct TrackDetailView: View {
             async let albumLoad: Void = loadAlbum()
             _ = await (colorLoad, reviewsLoad, albumLoad)
         }
-        .onDisappear {
-            if audioManager.isTrackPlaying(track.id) {
-                audioManager.stop()
-            }
-        }
+        // Deliberately does *not* stop playback on disappear any more. Killing the preview
+        // when this screen went away was the right call while this was the only place with a
+        // pause button; now the mini-player follows the sound across every tab, and stopping
+        // here would make backing out of the page the one action that silences it.
     }
     
     // MARK: - Hero Section
@@ -154,6 +157,25 @@ struct TrackDetailView: View {
                     // Each credited artist is independently tappable — collaborations link to
                     // every performer's page, not just the primary one.
                     artistLinks
+
+                    CatalogBadgeRow(
+                        isExplicit: track.isExplicit,
+                        tint: artworkColor.isNeutral ? .white : dominantColor
+                    )
+
+                    // Composer. Music's answer to Letterboxd's director credit, and the one
+                    // line that makes a classical or a jazz log mean something. Hidden when
+                    // it merely repeats the performer, which is how pop records are filed.
+                    if let composer = track.composerName,
+                       !composer.isEmpty,
+                       composer.caseInsensitiveCompare(track.artist) != .orderedSame {
+                        Text("Written by \(composer)")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .padding(.horizontal, 24)
+                    }
                 }
             }
             .padding(.bottom, 30)
@@ -254,11 +276,17 @@ struct TrackDetailView: View {
                 .shadow(color: dominantColor.opacity(0.35), radius: 8)
                 .animation(.easeInOut(duration: 0.45), value: dominantColor)
             }
-            .accessibilityLabel(isPlaying ? "Pause preview" : "Play preview")
+            .accessibilityLabel(isPlaying ? "Pause Preview" : "Play Preview")
 
-            // Share — circle button
+            // Share — circle button.
+            //
+            // `ShareLink` rather than presenting a UIActivityViewController by hand: the old
+            // code reached for `connectedScenes.first`, which is not necessarily the active
+            // scene, and presented on the root controller — so the sheet silently failed to
+            // appear whenever this screen was itself inside a presented sheet.
+            // Add to list — circle button
             Button {
-                shareTrack()
+                showAddToList = true
             } label: {
                 ZStack {
                     Circle()
@@ -267,13 +295,36 @@ struct TrackDetailView: View {
                             Circle()
                                 .stroke(.white.opacity(0.15), lineWidth: 1)
                         )
-                    Image(systemName: "square.and.arrow.up")
+                    Image(systemName: "text.badge.plus")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.8))
                 }
                 .frame(width: 48, height: 48)
             }
-            .accessibilityLabel("Share")
+            .buttonStyle(.plain)
+            .accessibilityLabel("Add to List")
+
+            if let shareURL = track.appleMusicLink {
+                ShareLink(
+                    item: shareURL,
+                    subject: Text(track.title),
+                    message: Text("\(track.title) — \(track.artist)")
+                ) {
+                    ZStack {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                Circle()
+                                    .stroke(.white.opacity(0.15), lineWidth: 1)
+                            )
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .frame(width: 48, height: 48)
+                }
+                .accessibilityLabel("Share")
+            }
         }
     }
 
@@ -375,7 +426,7 @@ struct TrackDetailView: View {
                 self.isLoadingReviews = false
             }
         } catch {
-            print("Failed to load track reviews: \(error)")
+            debugLog("Failed to load track reviews: \(error)")
             await MainActor.run { self.isLoadingReviews = false }
         }
     }
@@ -390,21 +441,9 @@ struct TrackDetailView: View {
 
     // MARK: - Audio
     private func toggleAudio() {
-        audioManager.toggle(trackId: track.id, previewUrl: track.previewUrl)
+        audioManager.toggle(track: track)
     }
     
-    private func shareTrack() {
-        let text = "\(track.title) by \(track.artist)"
-        var items: [Any] = [text]
-        if let spotifyLink = track.spotifyDeepLink {
-            items.append(spotifyLink)
-        }
-        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
-    }
 }
 
 // MARK: - Track Review Card

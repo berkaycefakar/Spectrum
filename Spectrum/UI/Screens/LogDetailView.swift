@@ -15,6 +15,14 @@ struct LogDetailView: View {
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
     @State private var isDeleting = false
+    /// Nil until the count comes back, so the heart doesn't flash "0" before it knows.
+    @State private var likeState: LikeState?
+    /// Scales with the reader's text size; a bare `.system(size: 28)` would not.
+    @ScaledMetric(relativeTo: .title) private var titleSize: CGFloat = 28
+    /// The rendered share card. Nil until it has been built — rendering downloads the
+    /// artwork, so it can't happen inline in the toolbar action.
+    @State private var shareImage: ShareCardImage?
+    @State private var isRenderingShare = false
 
     var vibeColor: Color {
         Color(hex: review.vibeColor)
@@ -56,7 +64,7 @@ struct LogDetailView: View {
                     // Title & Artist
                     VStack(spacing: 8) {
                         Text(track.title)
-                            .font(.system(size: 28, weight: .bold))
+                            .font(.system(size: titleSize, weight: .bold))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                         
@@ -102,6 +110,14 @@ struct LogDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.4))
                             .padding(.top, 10)
+
+                        if let likeState {
+                            LikeButton(
+                                state: likeState,
+                                // Hidden on your own log, same as in the feed.
+                                onToggle: isOwner ? nil : { toggleLike() }
+                            )
+                        }
                     }
                     .padding(30)
                     .background(.ultraThinMaterial)
@@ -124,6 +140,7 @@ struct LogDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .task { await loadLikeState() }
         .toolbar {
             // Someone else's log: this screen shows their review full-width, so it carries the
             // app's visible Report / Block control. The feed and activity cards keep the
@@ -142,6 +159,21 @@ struct LogDetailView: View {
                         onBlocked: { dismiss() }
                     )
                 }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await buildShareCard() }
+                } label: {
+                    if isRenderingShare {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.white)
+                    }
+                }
+                .disabled(isRenderingShare)
+                .accessibilityLabel("Share this log")
             }
 
             if isOwner {
@@ -164,6 +196,12 @@ struct LogDetailView: View {
                     .accessibilityLabel("Log options")
                 }
             }
+        }
+        .sheet(item: $shareImage) { card in
+            // The link rides along with the image: the picture is what gets seen, the link
+            // is what turns a viewer into a listener.
+            ShareSheet(items: [card.image, track.appleMusicLink as Any].compactMap { $0 })
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showEditSheet) {
             AddLogView(track: track, isPresented: $showEditSheet, editing: review, onSaved: {
@@ -195,8 +233,63 @@ struct LogDetailView: View {
                 }
             } catch {
                 await MainActor.run { isDeleting = false }
-                print("Failed to delete log: \(error)")
+                debugLog("Failed to delete log: \(error)")
             }
         }
+    }
+
+    private func loadLikeState() async {
+        let states = await SupabaseManager.shared.likeStates(
+            contentType: .songReview,
+            contentIds: [review.id]
+        )
+        await MainActor.run { self.likeState = states[review.id] ?? .unknown }
+    }
+
+    /// Optimistic, reverting only if the write fails — same contract as the feed.
+    private func toggleLike() {
+        let previous = likeState ?? .unknown
+        let next = previous.toggled()
+        likeState = next
+
+        Task {
+            do {
+                if next.likedByMe {
+                    try await SupabaseManager.shared.like(contentType: .songReview, contentId: review.id)
+                } else {
+                    try await SupabaseManager.shared.unlike(contentType: .songReview, contentId: review.id)
+                }
+            } catch {
+                debugLog("Like toggle failed: \(error)")
+                await MainActor.run { self.likeState = previous }
+            }
+        }
+    }
+
+    /// Builds the card, then presents the system share sheet with it.
+    ///
+    /// Rendering is a download plus an `ImageRenderer` pass, so the button shows a spinner
+    /// rather than appearing to do nothing for a second on a slow connection.
+    private func buildShareCard() async {
+        guard !isRenderingShare else { return }
+        isRenderingShare = true
+        defer { isRenderingShare = false }
+
+        let username = try? await SupabaseManager.shared
+            .getProfile(userId: review.userId)
+            .username
+
+        guard let image = await ShareCardRenderer.render(
+            track: track,
+            rating: review.rating,
+            vibeHex: review.vibeColor,
+            reviewText: review.reviewText,
+            username: username ?? nil
+        ) else {
+            debugLog("Share card: renderer returned nothing")
+            return
+        }
+
+        shareImage = ShareCardImage(image: image)
     }
 }

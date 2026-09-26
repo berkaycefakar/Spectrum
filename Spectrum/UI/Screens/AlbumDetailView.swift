@@ -16,6 +16,7 @@ struct AlbumDetailView: View {
     @State private var communityReviews: [AlbumReview] = []
     @State private var showLogSheet = false
     @State private var artworkColor: ArtworkColor = .placeholder
+    @State private var showAddToList = false
     /// Album logs used to hard-code gold, which made "what vibe did people give this?"
     /// unanswerable. Users pick it from the prism now, same as songs.
     @State private var selectedVibeHex: String = "#FFCC00"
@@ -44,6 +45,20 @@ struct AlbumDetailView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showAddToList = true
+                } label: {
+                    Image(systemName: "text.badge.plus")
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel("Add to List")
+            }
+        }
+        .sheet(isPresented: $showAddToList) {
+            AddToListView(kind: .album, contentRef: String(album.id), displayTitle: album.title)
+        }
         .task {
             // Four independent loads (artwork colour, track list, community ratings, the
             // user's own rating). Run in parallel — sequentially the page took as long as
@@ -108,11 +123,42 @@ struct AlbumDetailView: View {
                     }
                 }
                 .buttonStyle(.plain)
+
+                CatalogBadgeRow(
+                    isExplicit: album.isExplicit,
+                    audioBadges: album.audioBadges,
+                    tint: artworkColor.isNeutral ? .white : artworkColor.accent
+                )
+                .padding(.top, 2)
+
+                // Label and year, the way a sleeve credits itself. Only drawn when MusicKit
+                // actually returned them — a lone bullet with nothing on either side is worse
+                // than no line at all.
+                if let footnote = releaseFootnote {
+                    Text(footnote)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 2)
+                }
             }
         }
         .padding(.top, 24)
     }
-    
+
+    /// "Columbia · 2024 · 14 songs", minus whatever is missing.
+    private var releaseFootnote: String? {
+        var parts: [String] = []
+        if let label = album.recordLabel, !label.isEmpty { parts.append(label) }
+        if let date = album.releaseDate {
+            parts.append(date.formatted(.dateTime.year()))
+        }
+        if let count = album.trackCount, count > 0 {
+            parts.append(count == 1 ? "1 song" : "\(count) songs")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     // MARK: - Topluluk puanları (community)
     private var communitySection: some View {
         CommunityStatsCard(stats: communityStats)
@@ -356,7 +402,7 @@ struct AlbumDetailView: View {
             }
         } catch {
             await MainActor.run { self.tracksLoading = false }
-            print("Failed to load album tracks: \(error)")
+            debugLog("Failed to load album tracks: \(error)")
         }
     }
     
@@ -377,7 +423,7 @@ struct AlbumDetailView: View {
                 self.hasPickedVibe = true
             }
         } catch {
-            print("Failed to load user album review: \(error)")
+            debugLog("Failed to load user album review: \(error)")
         }
     }
     
@@ -413,7 +459,7 @@ struct AlbumDetailView: View {
                     self.isSaving = false
                     self.errorMessage = "Couldn't save: \(error.localizedDescription)"
                 }
-                print("Failed to save album rating: \(error)")
+                debugLog("Failed to save album rating: \(error)")
             }
         }
     }

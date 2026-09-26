@@ -22,6 +22,13 @@ struct ArtistDetailView: View {
     /// start its own save, and the `isSaving` guard silently dropped the later ones — so the
     /// rating that landed in the database was the first step of the drag, not the last.
     @State private var ratingSaveTask: Task<Void, Never>?
+    /// Set when both the id lookup and the name search come back empty. Without it the page
+    /// just rendered the hero and nothing else — no explanation, no way to try again.
+    @State private var loadFailed = false
+    @State private var showAddToList = false
+    /// The hero name. Scales with the reader's text size — `minimumScaleFactor` below still
+    /// catches a long name, so growing the base size can't push it off the screen.
+    @ScaledMetric(relativeTo: .largeTitle) private var heroNameSize: CGFloat = 40
 
     private var communityStats: CommunityStats {
         CommunityStats(
@@ -52,7 +59,13 @@ struct ArtistDetailView: View {
                             ProgressView()
                                 .tint(.white)
                                 .padding(.top, 20)
+                        } else if loadFailed {
+                            artistUnavailableSection
                         } else if let artist = artist {
+                            if let latest = artist.latestRelease {
+                                latestReleaseSection(album: latest)
+                            }
+
                             if !artist.genres.isEmpty {
                                 genresSection(genres: artist.genres)
                             }
@@ -84,6 +97,21 @@ struct ArtistDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showAddToList = true
+                } label: {
+                    Image(systemName: "text.badge.plus")
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel("Add to List")
+            }
+        }
+        .sheet(isPresented: $showAddToList) {
+            // Artists are keyed by name throughout this schema, so that is the reference.
+            AddToListView(kind: .artist, contentRef: artistName, displayTitle: artistName)
+        }
         .task {
             // The three loads are independent — the artist's catalogue comes from MusicKit,
             // the ratings from Supabase. Running them sequentially made the page's slowest
@@ -140,14 +168,17 @@ struct ArtistDetailView: View {
             .frame(width: width, height: height)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("ARTIST")
+                Text("Artist")
+                    // Uppercased by the renderer, not typed: Turkish maps i→İ, which a
+                    // hardcoded ASCII "ARTIST" gets wrong.
+                    .textCase(.uppercase)
                     .font(.caption2)
                     .fontWeight(.bold)
                     .tracking(1.5)
                     .foregroundStyle(.white.opacity(0.65))
 
                 Text(artistName)
-                    .font(.system(size: 40, weight: .heavy))
+                    .font(.system(size: heroNameSize, weight: .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
@@ -186,6 +217,63 @@ struct ArtistDetailView: View {
     }
 
     // MARK: - Genres
+
+    /// "New release" card. Rides along on the same request as `similarArtists`, so showing
+    /// it costs nothing — and it answers the first question anyone opening an artist page has.
+    private func latestReleaseSection(album: Album) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Latest Release")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+
+            NavigationLink(destination: AlbumDetailView(album: album)) {
+                HStack(spacing: 14) {
+                    AsyncImage(url: album.artworkUrl600) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        default:
+                            Color.white.opacity(0.08)
+                        }
+                    }
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(album.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+
+                        if let date = album.releaseDate {
+                            Text(date.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+
+                        CatalogBadgeRow(
+                            isExplicit: album.isExplicit,
+                            audioBadges: album.audioBadges,
+                            tint: artworkColor.isNeutral ? .white : artworkColor.accent
+                        )
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.35))
+                }
+                .padding(12)
+                .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+                .contentShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 24)
+        }
+    }
 
     private func genresSection(genres: [String]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -472,12 +560,52 @@ struct ArtistDetailView: View {
 
     // MARK: - Data Loading
 
+    /// Shown when the catalog has nothing for this name. Reachable offline, after an Apple
+    /// Music outage, or for an artist credited on a log whose page has since been pulled.
+    private var artistUnavailableSection: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .font(.system(size: 40))
+                .foregroundStyle(.white.opacity(0.35))
+            Text("Couldn't load this artist")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Apple Music didn't return a page for \(artistName). Check your connection and try again.")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button {
+                Task {
+                    await MainActor.run {
+                        loadFailed = false
+                        isLoadingArtist = true
+                    }
+                    await loadArtistData()
+                }
+            } label: {
+                // Inside the label so the whole pill is tappable, not just the two words.
+                Text("Try Again")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .contentShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+    }
+
     private func loadArtistData() async {
         // Try to fetch by ID first, then by name search
         if let id = artistId {
             if let fetched = try? await MusicService.shared.fetchArtist(id: id) {
                 await MainActor.run {
                     self.artist = fetched
+                    self.loadFailed = false
                     self.isLoadingArtist = false
                 }
                 return
@@ -491,18 +619,23 @@ struct ArtistDetailView: View {
             if let detailed = try? await MusicService.shared.fetchArtist(id: match.id) {
                 await MainActor.run {
                     self.artist = detailed
+                    self.loadFailed = false
                     self.isLoadingArtist = false
                 }
                 return
             }
             await MainActor.run {
                 self.artist = match
+                self.loadFailed = false
                 self.isLoadingArtist = false
             }
             return
         }
 
-        await MainActor.run { self.isLoadingArtist = false }
+        await MainActor.run {
+            self.loadFailed = true
+            self.isLoadingArtist = false
+        }
     }
 
     private func loadArtworkColor() async {
@@ -527,7 +660,7 @@ struct ArtistDetailView: View {
                 persistedRating = artistRating
             }
         } catch {
-            print("Failed to load artist review: \(error)")
+            debugLog("Failed to load artist review: \(error)")
         }
     }
 
@@ -560,7 +693,7 @@ struct ArtistDetailView: View {
             await loadUserArtistReview()
             await loadCommunityReviews()
         } catch {
-            print("Failed to save artist rating: \(error)")
+            debugLog("Failed to save artist rating: \(error)")
         }
 
         await MainActor.run { isSaving = false }
