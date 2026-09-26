@@ -93,7 +93,8 @@ struct EditProfileView: View {
                 VStack(spacing: 20) {
                     // Username Field
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("USERNAME")
+                        Text("Username")
+                            .textCase(.uppercase)
                             .font(.caption)
                             .foregroundStyle(.gray)
 

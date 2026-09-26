@@ -38,32 +38,45 @@ struct LandingView: View {
             // Deep swirling liquid gradient background
             liquidBackground
             
-            VStack(spacing: 0) {
-                Spacer()
-                
-                // Glowing Logo
-                logoSection
-                    .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 20)
-                
-                Spacer()
-                
-                // Demo Card with 3D effect
-                TrackCardView(
-                    track: demoTrack,
-                    vibeColor: Color(hex: "#FF0055")
-                )
-                .scaleEffect(0.85)
-                .rotation3DEffect(.degrees(8), axis: (x: 1, y: 0, z: 0))
-                .opacity(showContent ? 1 : 0)
-                .offset(y: showContent ? 0 : 30)
-                
-                Spacer()
-                
-                // Frosted Glass Panel with CTA
-                ctaPanel
-                    .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 50)
+            // Scrolls only when it has to.
+            //
+            // This was a bare `VStack` with `Spacer()`s, which cannot overflow — it just
+            // clips. At accessibility text sizes the tagline wraps to three lines, the column
+            // grows past the screen and the wordmark was pushed up underneath the status bar
+            // and the Dynamic Island (verified in the simulator at AccessibilityXXXL). The
+            // `minHeight` keeps the Spacers doing their centring job at ordinary sizes.
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+
+                        // Glowing Logo
+                        logoSection
+                            .opacity(showContent ? 1 : 0)
+                            .offset(y: showContent ? 0 : 20)
+
+                        Spacer(minLength: 24)
+
+                        // Demo Card with 3D effect
+                        TrackCardView(
+                            track: demoTrack,
+                            vibeColor: Color(hex: "#FF0055")
+                        )
+                        .scaleEffect(0.85)
+                        .rotation3DEffect(.degrees(8), axis: (x: 1, y: 0, z: 0))
+                        .opacity(showContent ? 1 : 0)
+                        .offset(y: showContent ? 0 : 30)
+
+                        Spacer(minLength: 24)
+
+                        // Frosted Glass Panel with CTA
+                        ctaPanel
+                            .opacity(showContent ? 1 : 0)
+                            .offset(y: showContent ? 0 : 50)
+                    }
+                    .frame(minHeight: proxy.size.height)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
         .onAppear {
@@ -118,7 +131,7 @@ struct LandingView: View {
                 }
             }
         } catch {
-            print("Landing: couldn't refresh the demo track artwork:", error)
+            debugLog("Landing: couldn't refresh the demo track artwork:", error)
         }
     }
     
@@ -207,8 +220,13 @@ struct LandingView: View {
                 .foregroundStyle(.white.opacity(0.6))
                 .tracking(3)
                 .textCase(.uppercase)
+                .multilineTextAlignment(.center)
+                // Uppercase with 3pt of tracking is wide to begin with; past xxLarge it eats
+                // the screen three words at a time. The wordmark above it says the same thing.
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         }
         .padding(.top, 60)
+        .padding(.horizontal, 24)
     }
     
     // MARK: - CTA Panel
