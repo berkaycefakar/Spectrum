@@ -1,4 +1,6 @@
 import SwiftUI
+// `User.id` lives in the Auth module, which `Supabase` re-exports.
+import Supabase
 
 struct TrackDetailView: View {
     let track: Track
@@ -18,6 +20,11 @@ struct TrackDetailView: View {
         audioManager.isTrackPlaying(track.id)
     }
     
+    /// Whose log is whose — the owner gets edit and delete on the detail screen, everyone
+    /// else gets it read-only.
+    @ObservedObject private var sessionStore = SessionStore.shared
+    private var currentUserId: UUID? { sessionStore.currentUser?.id }
+
     @State private var trackReviews: [Review] = []
     @State private var reviewProfiles: [UUID: Profile] = [:]
     @State private var isLoadingReviews = true
@@ -392,10 +399,24 @@ struct TrackDetailView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(trackReviews) { review in
-                        TrackReviewCard(
-                            review: review,
-                            profile: reviewProfiles[review.userId]
-                        )
+                        // The card used to be inert: you could read someone's review of the
+                        // song and had no way to open it, which made every other log in the
+                        // app a dead end from here.
+                        NavigationLink(
+                            destination: LogDetailView(
+                                track: track,
+                                review: review,
+                                isOwner: review.userId == currentUserId,
+                                authorUsername: reviewProfiles[review.userId]?.username,
+                                onChanged: { Task { await loadTrackReviews() } }
+                            )
+                        ) {
+                            TrackReviewCard(
+                                review: review,
+                                profile: reviewProfiles[review.userId]
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -519,12 +540,20 @@ struct TrackReviewCard: View {
             }
         }
         .padding(16)
+        // The whole card is a link now, so it has to look like one.
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.25))
+                .padding(12)
+        }
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(.white.opacity(0.1), lineWidth: 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 16))
         // Long press to report or block — the community list is where an offensive review is
         // most likely to be seen, so the action has to be reachable from here too.
         .moderationActions(

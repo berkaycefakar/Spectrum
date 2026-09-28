@@ -41,7 +41,10 @@ struct AlbumDetailView: View {
                     trackListSection
                     rateButton
                 }
-                .padding(.bottom, 40)
+                // The tab bar — and the mini-player above it when something is playing — float
+                // over this scroll view, and 40pt left the rate button underneath them at the
+                // bottom of the page. 120 is what the other detail screens clear them with.
+                .padding(.bottom, 120)
             }
         }
         .navigationTitle("")
@@ -225,6 +228,10 @@ struct AlbumDetailView: View {
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
+                                // The card background sits on the LazyVStack, outside the
+                                // link, so without this the row's empty middle was not
+                                // hit-testable — only the text and the chevron were.
+                                .contentShape(Rectangle())
 
                                 if index < tracks.count - 1 {
                                     Divider()

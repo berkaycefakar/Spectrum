@@ -663,6 +663,9 @@ struct QuickAddTrackRow: View {
                     
                     Spacer()
                 }
+                // The card background is on the outer HStack, outside this link, so the gap
+                // between the title and the add button was not tappable without this.
+                .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             

@@ -221,6 +221,10 @@ private struct AccountRow: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 13)
+                // Without this only the icon, the label and the chevron were hit-testable:
+                // a Button's tap area is its rendered content, and the `Spacer` between them
+                // renders nothing. Tapping the middle of the row did nothing at all.
+                .contentShape(Rectangle())
 
                 if showDivider {
                     Divider()

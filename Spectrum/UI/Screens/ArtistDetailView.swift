@@ -372,6 +372,9 @@ struct ArtistDetailView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
+                            // Same as the album track list: the card background is outside
+                            // the link, so the row's empty middle needs its own tap shape.
+                            .contentShape(Rectangle())
 
                             if index < min(songs.count, 5) - 1 {
                                 Divider()
