@@ -248,7 +248,7 @@ struct ArtistDetailView: View {
                             .multilineTextAlignment(.leading)
 
                         if let date = album.releaseDate {
-                            Text(date.formatted(date: .abbreviated, time: .omitted))
+                            Text(date.displayString())
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.5))
                         }

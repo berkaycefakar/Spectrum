@@ -27,7 +27,7 @@ struct AddLogView: View {
     }
 
     // Form State
-    /// Rating 0...5 (0.5 adımlı). Veritabanına 0...10 tam sayı olarak gönderiyoruz.
+    /// Rating 0...5 in half-steps. Stored in the database as a 0...10 integer.
     @State private var rating: Double = 0
     @State private var reviewText: String = ""
     /// A vertical TextField turns Return into a newline, so without an explicit Done button

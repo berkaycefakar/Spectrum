@@ -106,7 +106,7 @@ struct LogDetailView: View {
                         }
                         
                         // Date
-                        Text("Logged on \(review.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                        Text("Logged on \(review.createdAt.displayString(date: .abbreviated, time: .shortened))")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.4))
                             .padding(.top, 10)

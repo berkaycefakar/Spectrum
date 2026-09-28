@@ -1,7 +1,8 @@
 import SwiftUI
 import Supabase
 
-/// Album sayfası: önce bilgi + topluluk puanları + parça listesi; puanlama/yorum ayrı sheet'te (Log).
+/// The album page: details, then community ratings, then the track list. Rating and review
+/// happen in a separate Log sheet.
 struct AlbumDetailView: View {
     let album: Album
     
@@ -84,7 +85,7 @@ struct AlbumDetailView: View {
         }
     }
     
-    // MARK: - Hero (albüm bilgisi)
+    // MARK: - Hero (album details)
     private var heroSection: some View {
         VStack(spacing: 16) {
             if let url = album.artworkUrl600 {
@@ -151,7 +152,7 @@ struct AlbumDetailView: View {
         var parts: [String] = []
         if let label = album.recordLabel, !label.isEmpty { parts.append(label) }
         if let date = album.releaseDate {
-            parts.append(date.formatted(.dateTime.year()))
+            parts.append(date.formatted(.dateTime.year().locale(AppLocale.display)))
         }
         if let count = album.trackCount, count > 0 {
             parts.append(count == 1 ? "1 song" : "\(count) songs")
@@ -159,13 +160,13 @@ struct AlbumDetailView: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    // MARK: - Topluluk puanları (community)
+    // MARK: - Community ratings
     private var communitySection: some View {
         CommunityStatsCard(stats: communityStats)
             .padding(.horizontal)
     }
     
-    // MARK: - Parça listesi
+    // MARK: - Track list
     private var trackListSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tracks")
@@ -246,7 +247,7 @@ struct AlbumDetailView: View {
         }
     }
     
-    // MARK: - Rate / Log butonu (sheet açar)
+    // MARK: - Rate / Log button (opens the sheet)
     private var rateButton: some View {
         Button {
             showLogSheet = true
@@ -273,7 +274,7 @@ struct AlbumDetailView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Sheet: puan + yorum (Log)
+    // MARK: - Sheet: rating + review (Log)
     private var albumLogSheet: some View {
         NavigationStack {
             ZStack {
@@ -389,7 +390,7 @@ struct AlbumDetailView: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear {
-            // Sheet açıldığında mevcut değerler zaten yüklü (loadUserAlbumReview)
+            // Nothing to do: `loadUserAlbumReview` has already filled in the saved values.
         }
     }
     

@@ -204,15 +204,7 @@ struct ActivityView: View {
         }
     }
 }
-// MARK: - Date Extension for Time Ago
-
-extension Date {
-    func timeAgoDisplay() -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: self, relativeTo: Date())
-    }
-}
+// `timeAgoDisplay()` now lives in Core/Utils/AppLocale.swift, pinned to English.
 
 // MARK: - Preview
 

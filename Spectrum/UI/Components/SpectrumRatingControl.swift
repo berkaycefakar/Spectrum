@@ -2,8 +2,8 @@ import SwiftUI
 import UIKit
 
 /// Custom on-brand rating control using vertical glowing bars.
-/// - Supports 0.5 adımlarla (örn. 3.5) puanlama.
-/// - Görsel olarak soldan sağa doğru her bar biraz daha büyür; 5. bar en büyük.
+/// - Rates in half-steps (3.5, say).
+/// - Each bar is taller than the one before it, left to right; the fifth is the tallest.
 struct SpectrumRatingControl: View {
     /// Rating value in the range 0...5 (0.5 steps).
     @Binding var rating: Double
@@ -12,12 +12,12 @@ struct SpectrumRatingControl: View {
     var maxRating: Int = 5
     
     // Heights for the bars - progressively increasing left to right.
-    // 1. bar en kısa, 5. bar en uzun.
+    // The first bar is the shortest, the fifth the tallest.
     private let barHeights: [CGFloat] = [22, 28, 34, 40, 46]
     
     // Haptic feedback generator - sadece bir kez initialize et
     @State private var hapticGenerator = UIImpactFeedbackGenerator(style: .soft)
-    @State private var lastHapticRating: Double = -1 // Son titreşim verdiğimiz rating değeri
+    @State private var lastHapticRating: Double = -1 // The rating we last buzzed on
     
     var body: some View {
         GeometryReader { geometry in
@@ -45,10 +45,10 @@ struct SpectrumRatingControl: View {
                         let totalWidth = geometry.size.width
                         let x = max(0, min(value.location.x, totalWidth))
                         let raw = Double(x / totalWidth) * Double(maxRating) // 0...5
-                        let stepped = (raw * 2).rounded() / 2              // 0.5 adım
+                        let stepped = (raw * 2).rounded() / 2              // half-steps
                         let clamped = max(0, min(Double(maxRating), stepped))
                         if clamped != rating {
-                            // Haptic feedback: Sadece 0.5 adım geçildiğinde titreşim ver
+                            // Haptics only when the drag crosses a half-step
                             let currentStep = Int(clamped * 2)
                             let lastStep = Int(lastHapticRating * 2)
                             if currentStep != lastStep {
@@ -62,7 +62,7 @@ struct SpectrumRatingControl: View {
                         }
                     }
                     .onEnded { _ in
-                        // Drag bittiğinde son bir titreşim
+                        // One last buzz when the drag ends
                         hapticGenerator.impactOccurred(intensity: 0.6)
                     }
             )
@@ -75,22 +75,22 @@ struct SpectrumRatingControl: View {
     }
     
     /// Her bar için fill percentage hesapla (0.0...1.0)
-    /// Örn: rating 2.5 ise -> bar 1: 1.0, bar 2: 1.0, bar 3: 0.5, bar 4: 0.0, bar 5: 0.0
+    /// A rating of 2.5 gives bar 1: 1.0, bar 2: 1.0, bar 3: 0.5, bar 4: 0.0, bar 5: 0.0
     private func calculateFillPercentage(for index: Int) -> Double {
         let barStart = Double(index - 1)
         let barEnd = Double(index)
         if rating >= barEnd {
             return 1.0 // Tam dolu
         } else if rating > barStart {
-            return rating - barStart // Yarım dolu (örn. 2.5 - 2.0 = 0.5)
+            return rating - barStart // Partly filled (2.5 - 2.0 = 0.5)
         } else {
-            return 0.0 // Boş
+            return 0.0 // Empty
         }
     }
 }
 
 /// Individual bar in the rating control
-/// fillPercentage: 0.0 (boş) ... 1.0 (tam dolu), 0.5 (yarı dolu)
+/// fillPercentage: 0.0 (empty) ... 1.0 (full), 0.5 (half)
 struct SpectrumBar: View {
     let fillPercentage: Double // 0.0...1.0
     let height: CGFloat
@@ -98,7 +98,7 @@ struct SpectrumBar: View {
     
     var body: some View {
         ZStack(alignment: .leading) {
-            // Arka plan (boş kısım) - her zaman tam genişlikte
+            // Background (the empty part) — always full width
             RoundedRectangle(cornerRadius: 8)
                 .fill(
                     LinearGradient(
@@ -109,7 +109,7 @@ struct SpectrumBar: View {
                 )
                 .frame(width: 16, height: height)
             
-            // Dolu kısım (soldan sağa doğru dolar)
+            // The filled part, growing left to right
             if fillPercentage > 0 {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -161,4 +161,5 @@ struct RatingLabel: View {
     }
 }
 
-// Preview kaldırıldı; ifade karmaşıklığını azaltmak için üretim kodu sade tutuldu.
+// No #Preview here on purpose: it pushed the type-checker's expression complexity over the
+// edge, and the production code is kept plain because of it.

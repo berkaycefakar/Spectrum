@@ -27,8 +27,8 @@ struct ListeningStats {
 
         var id: Date { date }
 
-        var label: String { date.formatted(.dateTime.month(.wide).year()) }
-        var shortLabel: String { date.formatted(.dateTime.month(.narrow)) }
+        var label: String { date.formatted(.dateTime.month(.wide).year().locale(AppLocale.display)) }
+        var shortLabel: String { date.formatted(.dateTime.month(.narrow).locale(AppLocale.display)) }
     }
 
     let vibeShares: [VibeShare]

@@ -27,6 +27,11 @@ struct SpectrumApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // The UI is written in English and has no localisation to switch to, but the
+                // *system* still formats dates and labels its own buttons in the device
+                // language — which is how "2 sa. önce" and "İptal" ended up between English
+                // headings. Pinning the environment locale keeps one screen in one language.
+                .environment(\.locale, AppLocale.display)
                 .onOpenURL { url in
                     // Check what the link is for *before* handing it over: the PKCE flow
                     // exchanges the callback and reports a plain `.signedIn`, so a recovery
