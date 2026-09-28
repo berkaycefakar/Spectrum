@@ -7,15 +7,15 @@
 
 ---
 
-## 🟢 DURUM — 29 Eylül 2026
+## 🟢 DURUM — 29 Eylül 2026 (UX geçişi sonrası)
 
 **Her şey commit'li ve GitHub'da. Çalışma dizini temiz.**
 
 | | |
 |---|---|
-| Aktif dal | `feature/backlog-pass` (push'lu, `main`'in 12 commit önünde) |
+| Aktif dal | `feature/backlog-pass` (push'lu, `main`'in 16 commit önünde) |
 | `main` | `f8830d3` — **bilerek el değmemiş**, geri dönüş noktası |
-| Build | Temiz, **sıfır uyarı** |
+| Build | Temiz. **Uyarı var:** `SupabaseManager.swift`'te 8 tane Swift 6 concurrency uyarısı (`pageSize`, `MineRow`, `newest(_:)`). **Benim dokunmadığım kodda, önceden var.** Bu dosyanın eski "sıfır uyarı" notu artık doğru değil. |
 | Test | **95 geçiyor**, 0 hata (`SpectrumTests`) |
 | Backend | Tüm migration'lar uygulandı ve denetlendi |
 | App Store | 1.0 (1) build'i yüklü ve VALID; **submit bilerek beklemede** |
@@ -34,6 +34,51 @@ xcodebuild test -project Spectrum.xcodeproj -scheme Spectrum \
 > Ara commit'lerin hepsi tek başına derlenmiyor (UI commit'i servis commit'inden önce
 > gelebiliyor); bisect için uygun değil, geri alma için sorun değil.
 
+### Bu oturumda yapılanlar (4 commit, hepsi push'lu — cihazda DENENMEDİ)
+
+Hepsi kullanıcının 29 Eylül'deki listesinden. Sırayla:
+
+1. **`e722022` — Arayüz tamamen İngilizce'ye sabitlendi.**
+   Uygulamanın kendi metinleri İngilizce ama *sistem* bunu bilmiyordu:
+   `RelativeDateTimeFormatter` ve `Date.formatted()` cihaz diline uyduğu için Türkçe
+   telefonda profilde "2 sa. önce", albümde "12 Eyl 2026" çıkıyordu — yarısı İngilizce
+   yarısı Türkçe bir ekran. Sistemin kendi düğmeleri de (Cancel/Done/arama/sil) aynı
+   sebepten Türkçe geliyordu.
+   Çözüm üç parça: `Core/Utils/AppLocale.swift` (tek biçimlendirme locale'i +
+   `timeAgoDisplay()` buraya taşındı), kök view'da `.environment(\.locale, ...)`, ve
+   `SpectrumInfo.plist`'te `CFBundleDevelopmentRegion`/`CFBundleLocalizations` = `en`
+   (+ pbxproj'dan `tr` bölgesi çıkarıldı). **Not:** `.formatted()` ortam locale'ini
+   dinlemiyor, her çağrıya `AppLocale.display` elle veriliyor. Koddaki Türkçe yorumlar
+   da İngilizce'ye çevrildi.
+2. **`a172075` — Dokunma alanları + şarkı sayfasındaki yorumlar.**
+   Kök sebep: `Button`/`NavigationLink` yalnızca label'ın *çizdiği* yerde tıklanabilir,
+   `Spacer()` hiçbir şey çizmez. Kart arka planı link'in DIŞINDA olan her satırda ortası
+   ölüydü (profil Hesap satırları — Settings'e sadece yazıya/oka basarak giriliyordu —,
+   albüm ve sanatçı parça listeleri, arama sonucu satırı). Dördüne de label içine
+   `.contentShape(Rectangle())`.
+   Şarkı sayfasındaki topluluk yorumları hiç link değildi; artık her kart
+   `LogDetailView` açıyor (kendi logun düzenlenebilir, başkasınınki salt okunur) ve
+   chevron taşıyor. Albüm sayfasının alt boşluğu 40 → 120 ("Rate this album" tab bar'ın
+   altında kalıyordu).
+3. **`c264539` — Önizlemeye gerçek bir oynatıcı.**
+   Oynatma, dört özdeş dairenin biriydi. Artık kendi kartı var: 64pt oynat düğmesi,
+   sürüklenebilir ilerleme çubuğu, geçen/kalan süre; klip yoksa bunu söylüyor.
+   `AudioManager`'a `currentTime`/`duration`/`progress`/`seek(toFraction:)` ve 0.25 sn'lik
+   periodic observer eklendi. **İki davranış değişti:** (a) biten önizleme artık kendini
+   yok etmiyor, sonunda park ediyor — mini-player kaybolmuyor, `toggle` başa sarıyor;
+   (b) time observer `stop()`'ta ait olduğu player ile birlikte kaldırılıyor (başka
+   player'a verilirse crash). Mini-player da aynı saatten ince bir ilerleme çizgisi aldı.
+   Çubuk `Slider` değil elle yazıldı: `Slider` sadece topuzundan tutuluyor.
+4. **`fddfc74` — Listeyi kendi içinden doldurma.**
+   Liste sadece ters yönden doldurulabiliyordu (şarkıya gir → "Add to List"), yani yeni
+   açılan liste boş görünüp seni başka yere yolluyordu. Yeni `AddRecordsToListView`:
+   Song/Album/Artist seçici + 350ms debounce'lu katalog araması + doğrudan bu listeye
+   ekleyen satır (zaten ekliyse tik). Liste toolbar'ındaki "+" ve boş ekrandaki düğmeden
+   açılıyor.
+   **Yan bulgu:** satırdaki `swipeActions` hiç çalışmamış — `swipeActions` yalnızca `List`
+   içinde geçerli, bu ekran `ScrollView` + `LazyVStack`. Yani listeden öğe silmek hiç
+   mümkün değildi. `contextMenu`'ye çevrildi (uzun bas → "Remove from list").
+
 ### 🔴 Sende kalan iki iş
 1. **Spotify client secret'ı iptal et.** `SpotifyCredentials.txt` silindi ama
    **anahtar hâlâ geçerli.** Spotify Developer panelinden iptal edilmeli. Kod Spotify'a
@@ -41,6 +86,10 @@ xcodebuild test -project Spectrum.xcodeproj -scheme Spectrum \
 2. **Cihazda kalan yeni özellikleri dene.** Beğeni **çalıştığı doğrulandı (kullanıcı,
    29 Eylül)**. Henüz gerçek donanımda denenmemiş olanlar: listeler, mini-player,
    istatistik ekranı, paylaşım kartı, Activity rozeti, Top Charts satırı.
+   **Bu oturumun dördü de buna dahil** — simülatörde MusicKit boş döndüğü için şarkı/albüm
+   sayfası ve katalog araması orada doğrulanamıyor. Özellikle bak: önizleme çubuğunu
+   sürükleyince ses gerçekten atlıyor mu, biten önizlemeye tekrar basınca başa sarıyor mu,
+   Türkçe telefonda profildeki zaman damgaları artık İngilizce mi.
 
 ### Bir sonraki mantıklı adımlar (öneri, yapılmadı)
 - **Crash reporting** — kullanıcı 1.0 sonrasına erteledi. Sentry hesabı + DSN gerekiyor;
