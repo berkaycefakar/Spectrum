@@ -1,36 +1,56 @@
-# Spectrum — Proje Durumu & PC Devir Notu
+# Spectrum — Proje Durumu & Devir Notu
 
-> **Bu dosya, PC değişikliği için yazıldı (25 Temmuz 2026).** Son birkaç sohbette yapılan her
-> şeyin özeti, neyin bittiği, neyin kaldığı ve yeni bilgisayarda ne yapman gerektiği.
->
 > Diğer dokümanlar: `HANDOFF.md` (teknik günce), `APP_STORE_READINESS.md` (mağaza),
 > `AUTH_SETUP.md` (Apple/Google giriş kurulumu), `SPECTRUM_NOTES.md` (strateji).
+>
+> Bu dosyanın alt kısmı tarih sırasıyla giden bir günce. **En güncel durum burası, en üstte.**
 
 ---
 
-## 🔴 ÖNCE BUNU OKU — İŞİN GİTMESİN
+## 🟢 DURUM — 29 Eylül 2026
 
-**Son 4-5 sohbetin TÜM işi şu an sadece bu bilgisayarda ve GitHub'a gönderilmedi.**
-- 26 değişen dosya + 14 yeni dosya + 1 silinen dosya, hepsi commit edilmemiş.
-- Son commit `f677fed` — o günden sonrası (community stats, giriş ekranı, hesap silme,
-  Apple/Google, şifre sıfırlama, tüm bug'lar) **commit'te YOK.**
+**Her şey commit'li ve GitHub'da. Çalışma dizini temiz.**
 
-### PC değiştirmeden önce MUTLAKA yap:
+| | |
+|---|---|
+| Aktif dal | `feature/backlog-pass` (push'lu, `main`'in 12 commit önünde) |
+| `main` | `f8830d3` — **bilerek el değmemiş**, geri dönüş noktası |
+| Build | Temiz, **sıfır uyarı** |
+| Test | **95 geçiyor**, 0 hata (`SpectrumTests`) |
+| Backend | Tüm migration'lar uygulandı ve denetlendi |
+| App Store | 1.0 (1) build'i yüklü ve VALID; **submit bilerek beklemede** |
+
+### Yeni sohbete başlarken
 ```bash
 cd ~/Desktop/Spectrum
-git add -A
-git commit -m "Community stats, auth overhaul, account deletion, App Store prep"
-git push origin main
+git branch --show-current          # feature/backlog-pass olmalı
+xcodebuild test -project Spectrum.xcodeproj -scheme Spectrum \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:SpectrumTests CODE_SIGNING_ALLOWED=NO
 ```
-> Ben senin adına commit/push YAPMADIM (istemedin). Bunu sen yapmalısın. Yapmazsan yeni
-> bilgisayarda `git clone` ile SADECE `f677fed`'i alırsın, gerisi kaybolur.
 
-### Yeni bilgisayarda kurulum:
-1. `git clone https://github.com/berkaycefakar/Spectrum.git`
-2. Xcode ile `Spectrum.xcodeproj`'u aç
-3. İlk açılışta SPM paketleri (Supabase vb.) otomatik çözülür — internet gerekir, biraz sürer
-4. **Gerçek cihaz gerekir** — MusicKit ve Apple ile giriş simülatörde çalışmaz
-5. Signing: Team `8ZCY68284F` seçili olmalı (Automatic signing)
+> **Çalışma tarzı:** commit'ler özelliğe göre bölünüyor ve iş ilerledikçe push'lanıyor —
+> kullanıcı bir parçayı beğenmezse tek başına geri alabilsin diye. Sonda tek dev commit atma.
+> Ara commit'lerin hepsi tek başına derlenmiyor (UI commit'i servis commit'inden önce
+> gelebiliyor); bisect için uygun değil, geri alma için sorun değil.
+
+### 🔴 Sende kalan iki iş
+1. **Spotify client secret'ı iptal et.** `SpotifyCredentials.txt` silindi ama
+   **anahtar hâlâ geçerli.** Spotify Developer panelinden iptal edilmeli. Kod Spotify'a
+   hiç dokunmuyor, dosya tamamen artıktı.
+2. **Cihazda kalan yeni özellikleri dene.** Beğeni **çalıştığı doğrulandı (kullanıcı,
+   29 Eylül)**. Henüz gerçek donanımda denenmemiş olanlar: listeler, mini-player,
+   istatistik ekranı, paylaşım kartı, Activity rozeti, Top Charts satırı.
+
+### Bir sonraki mantıklı adımlar (öneri, yapılmadı)
+- **Crash reporting** — kullanıcı 1.0 sonrasına erteledi. Sentry hesabı + DSN gerekiyor;
+  eklenince `PrivacyInfo.xcprivacy` ve App Privacy anketi de güncellenmeli.
+- **Gerçek push bildirimi** — şu an sadece uygulama öne gelince rozet var. APNs anahtarı +
+  DB yazmalarına tepki veren bir Edge Function gerekiyor.
+- **Submit** — ekran görüntüleri (cihazdan, simülatörde MusicKit boş döner), App Privacy
+  anketi (panelden elle), demo hesabı. Ayrıca `APP_STORE_CONNECT.md` "Content Rights: No"
+  derken bu dosya "USES_THIRD_PARTY_CONTENT set edildi" diyor — **panelde hangisi girili,
+  doğrula.**
 
 ---
 
@@ -42,7 +62,9 @@ git push origin main
 - **Müzik verisi:** Apple MusicKit (`MusicService.swift`). Simülatörde ÇALIŞMAZ, cihaz şart.
   Abonelik gerekmez (arama/kapak/preview ücretsiz).
 - **Backend:** Supabase (`SupabaseManager.swift`). Tablolar: `profiles`, `reviews`,
-  `album_reviews`, `artist_reviews`, `follows`. Güvenlik tamamen RLS'e bağlı.
+  `album_reviews`, `artist_reviews`, `follows`, `content_reports`, `user_blocks`,
+  `review_likes`, `lists`, `list_items`. **Güvenlik tamamen RLS'e bağlı** — anon anahtarı
+  IPA'dan çıkarılabiliyor, istemci tarafı filtreleme bir öneridir.
 - **Gerçek konum: `~/Desktop/Spectrum`** (`~/projects/Spectrum` DEĞİL — o ölü iTunes denemesi).
 - **Build:** `xcodebuild -project Spectrum.xcodeproj -scheme Spectrum -destination
   'generic/platform=iOS' -configuration Debug build CODE_SIGNING_ALLOWED=NO`
@@ -146,7 +168,11 @@ git push origin main
 
 ## KALAN İŞLER (öncelik sırasıyla)
 
-### 🔴 Yayın öncesi ZORUNLU (Supabase panelinde / senin yapman gereken)
+### ~~🔴 Yayın öncesi ZORUNLU~~ — ⚠️ AŞILDI, GEÇMİŞ KAYIT
+
+> **Bu listedeki her madde kapandı.** 31 Temmuz backend denetimi 2–7'yi, 26 Eylül
+> migration'ları da kalanları kapattı. Güncel açık işler için **dosyanın en üstüne** bak.
+> Buradaki hiçbir maddeyi yapılacak iş olarak alma.
 > **30 Temmuz 2026 güncellemesi (2).** UGC migration'ı (`content_reports` + `user_blocks` +
 > trigger) Supabase'de **çalıştırıldı** — rapor ve engelleme artık canlı. Kalanlar:
 > `Supabase_migration_artist_reviews.sql`, RLS denetimi, `avatars` bucket + storage policy'leri,
@@ -229,7 +255,7 @@ UI test ile swipe/tap attırıp ekran görüntüsüyle doğrulandı.
 ### 3. Hesap silme sunucu adımı
 - `supabase/functions/delete-user/index.ts` yazıldı (çağıranı kendi token'ından doğrulayıp
   sonra service-role'e yükseliyor). `deleteAccount()` önce bunu deniyor, yoksa eski istemci
-  yoluna düşüyor. **Deploy edilmedi.**
+  yoluna düşüyor. ~~**Deploy edilmedi.**~~ → 31 Temmuz'da deploy edildi ve doğrulandı.
 
 ### 4. Navigasyon: sekmeye tekrar basınca köke dönme
 - `Core/Navigation/AppRoute.swift` — dört sekmenin ilk seviye linkleri değer tabanlı
