@@ -72,6 +72,20 @@ struct MiniPlayer: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            // A hairline of progress along the bottom of the capsule. The bar now survives the
+            // end of a preview so it can be replayed, which makes "how far through is this?"
+            // a question it has to be able to answer.
+            .overlay(alignment: .bottom) {
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(.white.opacity(0.55))
+                        .frame(width: geo.size.width * audioManager.progress, height: 2)
+                }
+                .frame(height: 2)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 3)
+                .allowsHitTesting(false)
+            }
             // Two single lines beside a fixed 38pt thumbnail: bounded for the same reason
             // the tab bar is. The track's own page shows the full title at any size.
             .dynamicTypeSize(...DynamicTypeSize.xxLarge)

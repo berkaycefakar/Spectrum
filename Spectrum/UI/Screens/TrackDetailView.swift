@@ -49,6 +49,8 @@ struct TrackDetailView: View {
                     VStack(spacing: 24) {
                         actionBar
 
+                        previewPlayer
+
                         if let album = album {
                             albumLink(album: album)
                         }
@@ -250,40 +252,9 @@ struct TrackDetailView: View {
                 .animation(.easeInOut(duration: 0.45), value: dominantColor)
             }
 
-            // Preview — circle button
-            Button {
-                toggleAudio()
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            Circle()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [dominantColor.opacity(0.7), .white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                    // A spinner while the preview downloads. The icon used to flip to "pause"
-                    // instantly and then play nothing for seconds, which read as a dead button.
-                    if audioManager.isTrackBuffering(track.id) {
-                        ProgressView()
-                            .tint(dominantColor)
-                    } else {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(dominantColor)
-                    }
-                }
-                .frame(width: 48, height: 48)
-                .shadow(color: dominantColor.opacity(0.35), radius: 8)
-                .animation(.easeInOut(duration: 0.45), value: dominantColor)
-            }
-            .accessibilityLabel(isPlaying ? "Pause Preview" : "Play Preview")
+            // Playback used to be one more 48pt circle in this row, indistinguishable from
+            // Share and Add to List — the main thing you come to a song's page to do, drawn
+            // at the size of a secondary action. It has its own card below now.
 
             // Share — circle button.
             //
@@ -333,6 +304,116 @@ struct TrackDetailView: View {
                 .accessibilityLabel("Share")
             }
         }
+    }
+
+    // MARK: - Preview Player
+
+    /// The preview, given the room it deserves.
+    ///
+    /// A 30-second clip with no sense of where you are in it is a worse experience than it
+    /// needs to be — this draws a scrubbable progress bar, an elapsed/remaining readout and a
+    /// 64pt play button, so the page has an obvious centre of gravity.
+    private var previewPlayer: some View {
+        let hasPreview = track.previewUrl != nil
+        let isLoaded = audioManager.isTrackLoaded(track.id)
+        let isBuffering = audioManager.isTrackBuffering(track.id)
+        // Only trust the manager's clock while *this* track is the one loaded in it. Another
+        // song's progress would otherwise bleed into this page's bar.
+        let progress = isLoaded ? audioManager.progress : 0
+        let elapsed = isLoaded ? audioManager.currentTime : 0
+        let total = isLoaded && audioManager.duration > 0 ? audioManager.duration : previewLength
+
+        return VStack(spacing: 14) {
+            HStack(spacing: 16) {
+                Button {
+                    toggleAudio()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [dominantColor, dominantColor.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+
+                        if isBuffering {
+                            ProgressView()
+                                .tint(logTextColor)
+                        } else {
+                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 26, weight: .bold))
+                                .foregroundStyle(logTextColor)
+                                // `play.fill` is visually left-heavy; nudging it back centres
+                                // it in the circle the way the pause bars already are.
+                                .offset(x: isPlaying ? 0 : 2)
+                        }
+                    }
+                    .frame(width: 64, height: 64)
+                    .shadow(color: dominantColor.opacity(0.45), radius: 14, y: 4)
+                    .animation(.easeInOut(duration: 0.45), value: dominantColor)
+                    .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!hasPreview)
+                .opacity(hasPreview ? 1 : 0.35)
+                .accessibilityLabel(isPlaying ? "Pause preview" : "Play preview")
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(hasPreview ? "PREVIEW" : "NO PREVIEW")
+                        .font(.caption2.weight(.semibold))
+                        .tracking(1.2)
+                        .foregroundStyle(.white.opacity(0.45))
+
+                    if hasPreview {
+                        PreviewScrubBar(
+                            progress: progress,
+                            accent: dominantColor,
+                            isEnabled: isLoaded,
+                            onScrub: { audioManager.seek(toFraction: $0) }
+                        )
+
+                        HStack {
+                            Text(Self.timecode(elapsed))
+                            Spacer()
+                            Text("-" + Self.timecode(max(total - elapsed, 0)))
+                        }
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.4))
+                    } else {
+                        Text("Apple Music doesn't offer a clip for this track.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.4))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [dominantColor.opacity(0.35), .white.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+    }
+
+    /// What the bar shows before the asset's real length is known. Apple's catalog previews
+    /// are 30 seconds; this is only the placeholder, the player uses the measured value.
+    private let previewLength: Double = 30
+
+    private static func timecode(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds >= 0 else { return "0:00" }
+        let whole = Int(seconds.rounded(.down))
+        return String(format: "%d:%02d", whole / 60, whole % 60)
     }
 
     // MARK: - Album Link
@@ -465,6 +546,78 @@ struct TrackDetailView: View {
         audioManager.toggle(track: track)
     }
     
+}
+
+// MARK: - Scrub Bar
+
+/// A draggable progress bar for the preview.
+///
+/// Deliberately not a `Slider`: a Slider only moves from its knob, and on a 3pt-tall track
+/// that is a 30-second clip's worth of precision in a target you can't hit. This takes a drag
+/// anywhere along the bar and reports the fraction.
+private struct PreviewScrubBar: View {
+    let progress: Double
+    let accent: Color
+    /// False before the track has ever been played, when there is nothing to seek within.
+    let isEnabled: Bool
+    let onScrub: (Double) -> Void
+
+    /// Local override while a drag is in flight, so the bar follows the finger rather than the
+    /// player's clock.
+    @State private var dragProgress: Double?
+
+    private var shown: Double { dragProgress ?? progress }
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.white.opacity(0.14))
+
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [accent, accent.opacity(0.65)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(width * shown, 0))
+
+                Circle()
+                    .fill(.white)
+                    .frame(width: 11, height: 11)
+                    .shadow(color: .black.opacity(0.35), radius: 3)
+                    .offset(x: max(width * shown - 5.5, -5.5))
+                    .opacity(isEnabled ? 1 : 0)
+            }
+            .frame(height: 5)
+            .frame(maxHeight: .infinity)
+            // A 5pt bar is far below the 44pt minimum, so the gesture takes the whole row's
+            // height instead of the bar's.
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard isEnabled, width > 0 else { return }
+                        dragProgress = min(max(value.location.x / width, 0), 1)
+                    }
+                    .onEnded { value in
+                        guard isEnabled, width > 0 else { return }
+                        let fraction = min(max(value.location.x / width, 0), 1)
+                        onScrub(fraction)
+                        dragProgress = nil
+                    }
+            )
+        }
+        .frame(height: 18)
+        .animation(.linear(duration: 0.2), value: progress)
+        .accessibilityElement()
+        .accessibilityLabel("Preview position")
+        .accessibilityValue("\(Int(shown * 100)) percent")
+    }
 }
 
 // MARK: - Track Review Card
