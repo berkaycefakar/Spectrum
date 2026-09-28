@@ -21,6 +21,7 @@ struct ListDetailView: View {
     @State private var showEdit = false
     @State private var showDeleteAlert = false
     @State private var isEditingOrder = false
+    @State private var showAddRecords = false
     @State private var currentList: MusicList
 
     init(list: MusicList, isOwner: Bool, onChanged: (() -> Void)? = nil) {
@@ -56,6 +57,16 @@ struct ListDetailView: View {
                 onChanged?()
             }
         }
+        .sheet(isPresented: $showAddRecords) {
+            AddRecordsToListView(
+                list: currentList,
+                existing: Set(items.map(\.contentRef)),
+                onAdded: {
+                    Task { await load() }
+                    onChanged?()
+                }
+            )
+        }
         .alert("Delete List", isPresented: $showDeleteAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -71,6 +82,18 @@ struct ListDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if isOwner {
+            // Filling a list was only possible from the other end — open a song, tap "Add to
+            // List" — so a list you had just made opened empty with no way forward from it.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showAddRecords = true
+                } label: {
+                    Image(systemName: "plus")
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel("Add records to this list")
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
@@ -162,12 +185,15 @@ struct ListDetailView: View {
                 card
             }
         }
-        .swipeActions(edge: .trailing) {
+        // `swipeActions` was the original gesture here and never fired once: it only applies
+        // to rows inside a `List`, and this is a LazyVStack in a ScrollView. Removing an item
+        // was therefore impossible. A context menu works in both containers.
+        .contextMenu {
             if isOwner {
                 Button(role: .destructive) {
                     Task { await remove(item) }
                 } label: {
-                    Label("Remove", systemImage: "trash")
+                    Label("Remove from list", systemImage: "trash")
                 }
             }
         }
@@ -217,11 +243,29 @@ struct ListDetailView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
             if isOwner {
-                Text("Open a song, album or artist and use “Add to List”.")
+                Text("Search for songs, albums or artists to put in it.")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
+
+                Button {
+                    showAddRecords = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Add records")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color(hex: "#FF00FF"), in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
             }
         }
     }
