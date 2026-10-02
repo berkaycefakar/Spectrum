@@ -92,7 +92,7 @@ struct ActivityItemCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 // Username (bold) + action (muted), on one flowing line.
                 (
-                    Text(activity.actorUsername ?? "Someone").fontWeight(.semibold).foregroundColor(.white)
+                    Text(activity.actorUsername ?? String(localized: "Someone")).fontWeight(.semibold).foregroundColor(.white)
                     + Text(" \(actionPhrase)").foregroundColor(.white.opacity(0.55))
                 )
                 .font(.subheadline)
@@ -178,9 +178,9 @@ struct ActivityItemCard: View {
     /// Verb-only phrase; the username is rendered separately in bold.
     private var actionPhrase: String {
         switch activity.type {
-        case .trackReview: return "logged a track"
-        case .albumReview: return "reviewed an album"
-        case .newFollower: return "started following you"
+        case .trackReview: return String(localized: "logged a track")
+        case .albumReview: return String(localized: "reviewed an album")
+        case .newFollower: return String(localized: "started following you")
         }
     }
 
@@ -306,14 +306,14 @@ struct ActivityItemCard: View {
     }
 
     private var primaryText: String {
-        let username = activity.actorUsername ?? "Someone"
+        let username = activity.actorUsername ?? String(localized: "Someone")
         switch activity.type {
         case .trackReview:
-            return "\(username) logged a track"
+            return String(localized: "\(username) logged a track")
         case .albumReview:
-            return "\(username) reviewed an album"
+            return String(localized: "\(username) reviewed an album")
         case .newFollower:
-            return "\(username) started following you"
+            return String(localized: "\(username) started following you")
         }
     }
 }

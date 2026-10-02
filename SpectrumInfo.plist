@@ -12,21 +12,6 @@
 	  links open a browser error instead of the app — the redirect was configured in code and
 	  in the Supabase dashboard, but never claimed by the bundle.
 	-->
-	<!--
-	  The UI is unlocalised English. Without these keys iOS considers the bundle localised for
-	  whatever the device is set to, and every system-supplied string inside the app (Cancel,
-	  Done, the search field, swipe-to-delete) came back in that language while the app's own
-	  text stayed English. Declaring English as the only localisation keeps them consistent.
-	-->
-	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>en</string>
-	</array>
-	<key>CFBundleAllowMixedLocalizations</key>
-	<false/>
-
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

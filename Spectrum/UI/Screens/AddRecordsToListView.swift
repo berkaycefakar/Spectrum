@@ -114,9 +114,9 @@ struct AddRecordsToListView: View {
 
     private var placeholder: String {
         switch kind {
-        case .song: "Search songs"
-        case .album: "Search albums"
-        case .artist: "Search artists"
+        case .song: String(localized: "Search songs")
+        case .album: String(localized: "Search albums")
+        case .artist: String(localized: "Search artists")
         }
     }
 
@@ -256,7 +256,9 @@ struct AddRecordsToListView: View {
         }
         .buttonStyle(.plain)
         .disabled(isIn || isBusy)
-        .accessibilityLabel(isIn ? "\(title), already in this list" : "Add \(title)")
+        .accessibilityLabel(isIn
+                            ? String(localized: "\(title), already in this list")
+                            : String(localized: "Add \(title)"))
     }
 
     // MARK: - Search

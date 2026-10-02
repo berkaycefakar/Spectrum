@@ -169,10 +169,10 @@ struct SpectrumTabBar: View {
     @State private var haptics = UIImpactFeedbackGenerator(style: .soft)
 
     private let items: [SpectrumTabItem] = [
-        SpectrumTabItem(id: 0, title: "Home", icon: "house.fill"),
-        SpectrumTabItem(id: 1, title: "Discover", icon: "magnifyingglass"),
-        SpectrumTabItem(id: 2, title: "Activity", icon: "bell.fill"),
-        SpectrumTabItem(id: 3, title: "Profile", icon: "person.fill")
+        SpectrumTabItem(id: 0, title: String(localized: "Home"), icon: "house.fill"),
+        SpectrumTabItem(id: 1, title: String(localized: "Discover"), icon: "magnifyingglass"),
+        SpectrumTabItem(id: 2, title: String(localized: "Activity"), icon: "bell.fill"),
+        SpectrumTabItem(id: 3, title: String(localized: "Profile"), icon: "person.fill")
     ]
 
     private var isCollapsed: Bool { scrollState.isCollapsed }

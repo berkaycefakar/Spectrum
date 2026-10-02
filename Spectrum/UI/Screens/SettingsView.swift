@@ -42,23 +42,23 @@ struct SettingsView: View {
                 .padding(.top, 20)
 
                 // Account section
-                settingsCard(title: "Account") {
-                    infoRow(label: "Email", value: email ?? "—")
+                settingsCard(title: String(localized: "Account")) {
+                    infoRow(label: String(localized: "Email"), value: email ?? "—")
                 }
 
                 // About section
-                settingsCard(title: "About") {
-                    infoRow(label: "Version", value: appVersion)
+                settingsCard(title: String(localized: "About")) {
+                    infoRow(label: String(localized: "Version"), value: appVersion)
                     Divider().background(.white.opacity(0.08))
-                    infoRow(label: "Music data", value: "Apple Music (MusicKit)")
+                    infoRow(label: String(localized: "Music data"), value: "Apple Music (MusicKit)")
                     Divider().background(.white.opacity(0.08))
                     // Reachable after sign-up too, not only on the landing screen: a user who
                     // wants to re-read what they agreed to shouldn't have to log out.
-                    linkRow(label: "Terms of Service", url: LegalLinks.terms)
+                    linkRow(label: String(localized: "Terms of Service"), url: LegalLinks.terms)
                     Divider().background(.white.opacity(0.08))
-                    linkRow(label: "Privacy Policy", url: LegalLinks.privacy)
+                    linkRow(label: String(localized: "Privacy Policy"), url: LegalLinks.privacy)
                     Divider().background(.white.opacity(0.08))
-                    linkRow(label: "Contact Support", url: LegalLinks.support)
+                    linkRow(label: String(localized: "Contact Support"), url: LegalLinks.support)
                 }
 
                 // Safety. Blocking has to be undoable from inside the app for Guideline 1.2,
@@ -224,7 +224,7 @@ struct SettingsView: View {
             } catch {
                 await MainActor.run {
                     isDeleting = false
-                    deleteError = "Couldn't delete your account: \(error.localizedDescription)"
+                    deleteError = String(localized: "Couldn't delete your account: \(error.localizedDescription)")
                 }
             }
         }

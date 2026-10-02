@@ -53,7 +53,7 @@ struct ProfileHeader: View {
             
             // Username & Bio
             VStack(spacing: 8) {
-                Text(profile.username ?? "Anonymous")
+                Text(profile.username ?? String(localized: "Anonymous"))
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
@@ -69,16 +69,16 @@ struct ProfileHeader: View {
             
             // Stats Row
             HStack(spacing: 40) {
-                ProfileStatItem(value: "\(totalLogs)", label: "Logs")
-                ProfileStatItem(value: String(format: "%.1f", averageRating), label: "Avg Rating")
+                ProfileStatItem(value: "\(totalLogs)", label: String(localized: "Logs"))
+                ProfileStatItem(value: String(format: "%.1f", averageRating), label: String(localized: "Avg Rating"))
                 
                 Button(action: onFollowersTapped) {
-                    ProfileStatItem(value: "\(followersCount)", label: "Followers")
+                    ProfileStatItem(value: "\(followersCount)", label: String(localized: "Followers"))
                 }
                 .buttonStyle(.plain)
                 
                 Button(action: onFollowingTapped) {
-                    ProfileStatItem(value: "\(followingCount)", label: "Following")
+                    ProfileStatItem(value: "\(followingCount)", label: String(localized: "Following"))
                 }
                 .buttonStyle(.plain)
             }

@@ -45,18 +45,18 @@ struct SearchDiscoveryView: View {
 
     /// Full pool of mood shortcuts to sample from.
     private static let vibePool: [TrendingVibe] = [
-        TrendingVibe(name: "Late Night Drive", gradient: [Color(hex: "#1a1a2e"), Color(hex: "#16213e")], icon: "car.fill", query: "synthwave"),
-        TrendingVibe(name: "Gym Hype", gradient: [Color(hex: "#ff416c"), Color(hex: "#ff4b2b")], icon: "bolt.fill", query: "workout hype"),
-        TrendingVibe(name: "Heartbreak", gradient: [Color(hex: "#667eea"), Color(hex: "#764ba2")], icon: "heart.slash.fill", query: "sad breakup songs"),
-        TrendingVibe(name: "Chill Vibes", gradient: [Color(hex: "#11998e"), Color(hex: "#38ef7d")], icon: "leaf.fill", query: "lofi chill"),
-        TrendingVibe(name: "Party Mode", gradient: [Color(hex: "#f12711"), Color(hex: "#f5af19")], icon: "sparkles", query: "party hits"),
-        TrendingVibe(name: "Focus Flow", gradient: [Color(hex: "#4776E6"), Color(hex: "#8E54E9")], icon: "brain.head.profile", query: "lofi study"),
-        TrendingVibe(name: "Rainy Day", gradient: [Color(hex: "#3a6073"), Color(hex: "#16222a")], icon: "cloud.rain.fill", query: "acoustic mellow"),
-        TrendingVibe(name: "Summer Heat", gradient: [Color(hex: "#f7971e"), Color(hex: "#ffd200")], icon: "sun.max.fill", query: "summer hits"),
-        TrendingVibe(name: "Throwback", gradient: [Color(hex: "#8E2DE2"), Color(hex: "#4A00E0")], icon: "backward.fill", query: "2000s throwback"),
-        TrendingVibe(name: "Deep Focus", gradient: [Color(hex: "#000428"), Color(hex: "#004e92")], icon: "headphones", query: "ambient focus"),
-        TrendingVibe(name: "Feel Good", gradient: [Color(hex: "#f857a6"), Color(hex: "#ff5858")], icon: "face.smiling.fill", query: "feel good hits"),
-        TrendingVibe(name: "Midnight Mood", gradient: [Color(hex: "#232526"), Color(hex: "#414345")], icon: "moon.stars.fill", query: "midnight r&b")
+        TrendingVibe(name: String(localized: "Late Night Drive"), gradient: [Color(hex: "#1a1a2e"), Color(hex: "#16213e")], icon: "car.fill", query: "synthwave"),
+        TrendingVibe(name: String(localized: "Gym Hype"), gradient: [Color(hex: "#ff416c"), Color(hex: "#ff4b2b")], icon: "bolt.fill", query: "workout hype"),
+        TrendingVibe(name: String(localized: "Heartbreak"), gradient: [Color(hex: "#667eea"), Color(hex: "#764ba2")], icon: "heart.slash.fill", query: "sad breakup songs"),
+        TrendingVibe(name: String(localized: "Chill Vibes"), gradient: [Color(hex: "#11998e"), Color(hex: "#38ef7d")], icon: "leaf.fill", query: "lofi chill"),
+        TrendingVibe(name: String(localized: "Party Mode"), gradient: [Color(hex: "#f12711"), Color(hex: "#f5af19")], icon: "sparkles", query: "party hits"),
+        TrendingVibe(name: String(localized: "Focus Flow"), gradient: [Color(hex: "#4776E6"), Color(hex: "#8E54E9")], icon: "brain.head.profile", query: "lofi study"),
+        TrendingVibe(name: String(localized: "Rainy Day"), gradient: [Color(hex: "#3a6073"), Color(hex: "#16222a")], icon: "cloud.rain.fill", query: "acoustic mellow"),
+        TrendingVibe(name: String(localized: "Summer Heat"), gradient: [Color(hex: "#f7971e"), Color(hex: "#ffd200")], icon: "sun.max.fill", query: "summer hits"),
+        TrendingVibe(name: String(localized: "Throwback"), gradient: [Color(hex: "#8E2DE2"), Color(hex: "#4A00E0")], icon: "backward.fill", query: "2000s throwback"),
+        TrendingVibe(name: String(localized: "Deep Focus"), gradient: [Color(hex: "#000428"), Color(hex: "#004e92")], icon: "headphones", query: "ambient focus"),
+        TrendingVibe(name: String(localized: "Feel Good"), gradient: [Color(hex: "#f857a6"), Color(hex: "#ff5858")], icon: "face.smiling.fill", query: "feel good hits"),
+        TrendingVibe(name: String(localized: "Midnight Mood"), gradient: [Color(hex: "#232526"), Color(hex: "#414345")], icon: "moon.stars.fill", query: "midnight r&b")
     ]
     
     /// What this app's own users have logged recently. Empty until the community is active.
@@ -802,7 +802,7 @@ struct ArtistRow: View {
                             .foregroundStyle(.white.opacity(0.6))
                             .lineLimit(1)
                     } else {
-                        Text("Artist")
+                        Text(String(localized: "Artist"))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.4))
                     }
@@ -868,7 +868,7 @@ struct UserRow: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(profile.username ?? "Anonymous")
+                    Text(profile.username ?? String(localized: "Anonymous"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
@@ -1132,7 +1132,7 @@ struct UserProfileView: View {
                 onBlockRequested: { Task { await blockThisUser() } }
             )
         }
-        .alert("Block \(profile?.username.map { "@\($0)" } ?? "this user")?", isPresented: $showBlockConfirm) {
+        .alert("Block \(profile?.username.map { "@\($0)" } ?? String(localized: "this user"))?", isPresented: $showBlockConfirm) {
             Button("Cancel", role: .cancel) { }
             Button("Block", role: .destructive) { Task { await blockThisUser() } }
         } message: {
@@ -1374,7 +1374,7 @@ struct UserProfileHeader: View {
             }
             
             VStack(spacing: 8) {
-                Text(profile.username ?? "Anonymous")
+                Text(profile.username ?? String(localized: "Anonymous"))
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
@@ -1389,10 +1389,10 @@ struct UserProfileHeader: View {
             }
             
             HStack(spacing: 32) {
-                UserProfileStatItem(value: "\(totalLogs)", label: "Logs")
-                UserProfileStatItem(value: String(format: "%.1f", averageRating), label: "Avg")
-                UserProfileStatItem(value: "\(followersCount)", label: "Followers")
-                UserProfileStatItem(value: "\(followingCount)", label: "Following")
+                UserProfileStatItem(value: "\(totalLogs)", label: String(localized: "Logs"))
+                UserProfileStatItem(value: String(format: "%.1f", averageRating), label: String(localized: "Avg"))
+                UserProfileStatItem(value: "\(followersCount)", label: String(localized: "Followers"))
+                UserProfileStatItem(value: "\(followingCount)", label: String(localized: "Following"))
             }
             .padding(.top, 8)
             

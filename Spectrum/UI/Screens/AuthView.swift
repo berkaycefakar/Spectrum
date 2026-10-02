@@ -95,7 +95,7 @@ struct AuthView: View {
             }
 
             if !isLoginMode {
-                GlassTextField(icon: "person", placeholder: "Username", text: $username)
+                GlassTextField(icon: "person", placeholder: String(localized: "Username"), text: $username)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .focused($focusedField, equals: .username)
@@ -104,7 +104,7 @@ struct AuthView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            GlassTextField(icon: "envelope", placeholder: "Email", text: $email)
+            GlassTextField(icon: "envelope", placeholder: String(localized: "Email"), text: $email)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.emailAddress)
@@ -113,7 +113,7 @@ struct AuthView: View {
                 .submitLabel(.next)
                 .onSubmit { focusedField = .password }
 
-            GlassTextField(icon: "lock", placeholder: "Password", text: $password, isSecure: true)
+            GlassTextField(icon: "lock", placeholder: String(localized: "Password"), text: $password, isSecure: true)
                 .textContentType(isLoginMode ? .password : .newPassword)
                 .focused($focusedField, equals: .password)
                 .submitLabel(.go)
@@ -297,7 +297,7 @@ struct AuthView: View {
                             isLoginMode = true
                             password = ""
                             withAnimation {
-                                infoMessage = "Account created. Confirm your email, then log in."
+                                infoMessage = String(localized: "Account created. Confirm your email, then log in.")
                             }
                         }
                     }
@@ -324,7 +324,7 @@ struct AuthView: View {
                 let idToken = credential.identityTokenString,
                 let nonce = currentNonce
             else {
-                withAnimation { errorMessage = "Apple didn't return a usable sign-in token. Try again." }
+                withAnimation { errorMessage = String(localized: "Apple didn't return a usable sign-in token. Try again.") }
                 return
             }
 
@@ -405,7 +405,7 @@ struct PasswordResetView: View {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.6))
 
-                GlassTextField(icon: "envelope", placeholder: "Email", text: $email)
+                GlassTextField(icon: "envelope", placeholder: String(localized: "Email"), text: $email)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.emailAddress)
@@ -446,7 +446,7 @@ struct PasswordResetView: View {
         let trimmed = email.trimmingCharacters(in: .whitespaces)
         guard AuthErrorMessage.isPlausibleEmail(trimmed) else {
             didSend = false
-            message = "That email address doesn't look right."
+            message = String(localized: "That email address doesn't look right.")
             return
         }
 
@@ -460,7 +460,7 @@ struct PasswordResetView: View {
                     isSending = false
                     didSend = true
                     // Worded so it reveals nothing about whether the address has an account.
-                    message = "If that address has an account, the link is on its way."
+                    message = String(localized: "If that address has an account, the link is on its way.")
                 }
             } catch {
                 await MainActor.run {

@@ -23,15 +23,15 @@ enum VibePalette {
 
     static func label(for hex: String) -> String {
         switch snap(hex) {
-        case "#FF3B30": return "Energetic"
-        case "#FF9500": return "Warm"
-        case "#FFCC00": return "Sunny"
-        case "#4CD964": return "Fresh"
-        case "#5AC8FA": return "Chill"
-        case "#007AFF": return "Deep"
-        case "#5856D6": return "Dreamy"
-        case "#FF2D55": return "Passionate"
-        default: return "Vibe"
+        case "#FF3B30": return String(localized: "Energetic")
+        case "#FF9500": return String(localized: "Warm")
+        case "#FFCC00": return String(localized: "Sunny")
+        case "#4CD964": return String(localized: "Fresh")
+        case "#5AC8FA": return String(localized: "Chill")
+        case "#007AFF": return String(localized: "Deep")
+        case "#5856D6": return String(localized: "Dreamy")
+        case "#FF2D55": return String(localized: "Passionate")
+        default: return String(localized: "Vibe")
         }
     }
 
@@ -124,9 +124,9 @@ struct CommunityStats {
 struct CommunityStatsCard: View {
     let stats: CommunityStats
     /// Plural noun for the count column: "logs" on tracks, "ratings" elsewhere.
-    var countLabel: String = "ratings"
-    var title: String? = "Community"
-    var emptyMessage: String = "No ratings yet — be the first!"
+    var countLabel: String = String(localized: "ratings")
+    var title: String? = String(localized: "Community")
+    var emptyMessage: String = String(localized: "No ratings yet — be the first!")
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

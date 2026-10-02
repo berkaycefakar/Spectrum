@@ -38,11 +38,11 @@ struct MusicAccessView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     reassurance(
                         icon: "checkmark.seal.fill",
-                        text: "No subscription required — search, artwork and 30-second previews are free."
+                        text: String(localized: "No subscription required — search, artwork and 30-second previews are free.")
                     )
                     reassurance(
                         icon: "music.note.list",
-                        text: "Spectrum never plays full songs and never touches your library."
+                        text: String(localized: "Spectrum never plays full songs and never touches your library.")
                     )
                 }
                 .padding(20)

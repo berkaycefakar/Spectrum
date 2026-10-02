@@ -234,7 +234,7 @@ struct EditProfileView: View {
     private func saveProfile() {
         let name = trimmedUsername
         guard !name.isEmpty else {
-            errorMessage = "Username can't be empty."
+            errorMessage = String(localized: "Username can't be empty.")
             return
         }
 
@@ -249,7 +249,7 @@ struct EditProfileView: View {
                 guard let user = try await SupabaseManager.shared.getCurrentUser() else {
                     await MainActor.run {
                         isLoading = false
-                        errorMessage = "Your session has expired. Please log in again."
+                        errorMessage = String(localized: "Your session has expired. Please log in again.")
                     }
                     return
                 }
@@ -277,11 +277,11 @@ struct EditProfileView: View {
                     isLoading = false
                     let message = error.localizedDescription
                     if message.contains("profiles_username_key") || message.contains("duplicate key value") {
-                        errorMessage = "That username is already taken. Try another one."
+                        errorMessage = String(localized: "That username is already taken. Try another one.")
                     } else if message.lowercased().contains("bucket") || message.contains("avatars") {
-                        errorMessage = "Couldn't upload your photo. Please try again."
+                        errorMessage = String(localized: "Couldn't upload your photo. Please try again.")
                     } else {
-                        errorMessage = "Couldn't update your profile: \(message)"
+                        errorMessage = String(localized: "Couldn't update your profile: \(message)")
                     }
                 }
             }

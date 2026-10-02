@@ -84,9 +84,19 @@ struct ActivityView: View {
 
     // MARK: - Time grouping
     private enum TimeBucket: String, CaseIterable {
-        case today = "Today"
-        case week = "This Week"
-        case earlier = "Earlier"
+        case today
+        case week
+        case earlier
+
+        /// Separate from the raw value so the section header is translated; the raw value is
+        /// only an identity for grouping.
+        var title: String {
+            switch self {
+            case .today: String(localized: "Today")
+            case .week: String(localized: "This Week")
+            case .earlier: String(localized: "Earlier")
+            }
+        }
     }
 
     private func bucket(for date: Date) -> TimeBucket {
@@ -132,7 +142,7 @@ struct ActivityView: View {
 
                 ForEach(groupedActivities, id: \.bucket) { group in
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(group.bucket.rawValue)
+                        Text(group.bucket.title)
                             .font(.caption)
                             .fontWeight(.semibold)
                             .textCase(.uppercase)
@@ -204,7 +214,7 @@ struct ActivityView: View {
         }
     }
 }
-// `timeAgoDisplay()` now lives in Core/Utils/AppLocale.swift, pinned to English.
+// `timeAgoDisplay()` lives in Core/Extensions/Date+Display.swift.
 
 // MARK: - Preview
 

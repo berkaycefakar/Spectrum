@@ -258,13 +258,13 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showFollowersSheet) {
                 FollowersFollowingListView(
-                    title: "Followers",
+                    title: String(localized: "Followers"),
                     profiles: followers
                 )
             }
             .sheet(isPresented: $showFollowingSheet) {
                 FollowersFollowingListView(
-                    title: "Following",
+                    title: String(localized: "Following"),
                     profiles: following
                 )
             }

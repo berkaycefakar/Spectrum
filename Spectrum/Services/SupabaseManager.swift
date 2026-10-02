@@ -231,7 +231,7 @@ final class SupabaseManager {
             throw NSError(
                 domain: "Spectrum",
                 code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "User not logged in"]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")]
             )
         }
         let userId = user.id
@@ -316,7 +316,7 @@ final class SupabaseManager {
     private static func rejectProfanity(
         username: String,
         bio: String,
-        context: String = "your profile"
+        context: String = String(localized: "your profile")
     ) throws {
         let offending = ProfanityFilter.firstMatch(in: username)
             ?? ProfanityFilter.firstMatch(in: bio)
@@ -325,7 +325,7 @@ final class SupabaseManager {
             domain: "Spectrum",
             code: 422,
             userInfo: [NSLocalizedDescriptionKey:
-                "Please take out “\(offending)” — \(context) can't contain offensive language."]
+                String(localized: "Please take out “\(offending)” — \(context) can't contain offensive language.")]
         )
     }
 
@@ -448,7 +448,7 @@ final class SupabaseManager {
 
     func saveReview(trackId: Int, rating: Int, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
 
         let newReview = NewReview(
@@ -584,7 +584,7 @@ final class SupabaseManager {
                 domain: "Spectrum",
                 code: 422,
                 userInfo: [NSLocalizedDescriptionKey:
-                    "Please take out “\(offending)” — reviews can't contain offensive language."]
+                    String(localized: "Please take out “\(offending)” — reviews can't contain offensive language.")]
             )
         }
 
@@ -614,7 +614,7 @@ final class SupabaseManager {
     /// Deletes the current user's log for a track.
     func deleteReview(trackId: Int64) async throws {
         guard let user = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
         try await client
             .from("reviews")
@@ -671,7 +671,7 @@ final class SupabaseManager {
     
     func saveAlbumReview(collectionId: Int64, rating: Int, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
         
         let newReview = NewAlbumReview(
@@ -746,7 +746,7 @@ final class SupabaseManager {
     
     func saveArtistReview(artistName: String, rating: Int, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
         
         let newReview = NewArtistReview(
@@ -844,7 +844,7 @@ final class SupabaseManager {
     
     func followUser(userId: UUID) async throws {
         guard let currentUser = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
         
         // Check first to avoid duplicate insert
@@ -866,7 +866,7 @@ final class SupabaseManager {
     
     func unfollowUser(userId: UUID) async throws {
         guard let currentUser = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
         
         try await client
@@ -1018,7 +1018,7 @@ final class SupabaseManager {
     /// - new followers (people who started following them)
     func fetchActivityFeed(limitPerType: Int = 30) async throws -> [ActivityItem] {
         guard let currentUser = try await getCurrentUser() else {
-            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])
+            throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in")])
         }
         
         struct FollowRelation: Codable {
@@ -1284,7 +1284,7 @@ final class SupabaseManager {
             throw NSError(
                 domain: "Spectrum",
                 code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to make a list."]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "You need to be signed in to make a list.")]
             )
         }
 
@@ -1296,7 +1296,7 @@ final class SupabaseManager {
         try Self.rejectProfanity(
             username: cleanTitle,
             bio: cleanDescription ?? "",
-            context: "a list"
+            context: String(localized: "a list")
         )
 
         let created: MusicList = try await client
@@ -1325,7 +1325,7 @@ final class SupabaseManager {
         try Self.rejectProfanity(
             username: cleanTitle,
             bio: cleanDescription ?? "",
-            context: "a list"
+            context: String(localized: "a list")
         )
 
         try await client
@@ -1357,7 +1357,7 @@ final class SupabaseManager {
     ) async throws {
         let cleanNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let cleanNote, !cleanNote.isEmpty {
-            try Self.rejectProfanity(username: "", bio: cleanNote, context: "a list note")
+            try Self.rejectProfanity(username: "", bio: cleanNote, context: String(localized: "a list note"))
         }
 
         // Append rather than insert at the top: a list is read in the order it was built.
@@ -1410,7 +1410,7 @@ final class SupabaseManager {
             throw NSError(
                 domain: "Spectrum",
                 code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to like a log."]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "You need to be signed in to like a log.")]
             )
         }
 
@@ -1537,7 +1537,7 @@ final class SupabaseManager {
             throw NSError(
                 domain: "Spectrum",
                 code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to report content."]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "You need to be signed in to report content.")]
             )
         }
 
@@ -1574,14 +1574,14 @@ final class SupabaseManager {
             throw NSError(
                 domain: "Spectrum",
                 code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "You need to be signed in to block someone."]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "You need to be signed in to block someone.")]
             )
         }
         guard user.id != userId else {
             throw NSError(
                 domain: "Spectrum",
                 code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "You can't block yourself."]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "You can't block yourself.")]
             )
         }
 

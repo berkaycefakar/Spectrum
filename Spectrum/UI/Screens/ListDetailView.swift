@@ -354,7 +354,7 @@ private struct ListItemRow: View {
     }
 
     private var subtitle: String? {
-        track?.artist ?? album?.artist ?? (item.kind == .artist ? "Artist" : nil)
+        track?.artist ?? album?.artist ?? (item.kind == .artist ? String(localized: "Artist") : nil)
     }
 
     private var artworkUrl: URL? {
@@ -397,7 +397,7 @@ private struct ListItemRow: View {
             .clipShape(RoundedRectangle(cornerRadius: item.kind == .artist ? 26 : 10))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(isUnresolved ? "Loading…" : title)
+                Text(isUnresolved ? String(localized: "Loading…") : title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(isUnresolved ? .white.opacity(0.4) : .white)
                     .lineLimit(1)

@@ -13,36 +13,36 @@ enum AuthErrorMessage {
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
             case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
-                return "You appear to be offline. Check your connection and try again."
+                return String(localized: "You appear to be offline. Check your connection and try again.")
             case NSURLErrorTimedOut:
-                return "The server took too long to respond. Try again in a moment."
+                return String(localized: "The server took too long to respond. Try again in a moment.")
             default:
-                return "Couldn't reach Spectrum. Check your connection and try again."
+                return String(localized: "Couldn't reach Spectrum. Check your connection and try again.")
             }
         }
 
         let raw = error.localizedDescription.lowercased()
 
         if raw.contains("invalid login credentials") || raw.contains("invalid_credentials") {
-            return "Wrong email or password."
+            return String(localized: "Wrong email or password.")
         }
         if raw.contains("email not confirmed") || raw.contains("email_not_confirmed") {
-            return "Confirm your email first — check your inbox for the link we sent."
+            return String(localized: "Confirm your email first — check your inbox for the link we sent.")
         }
         if raw.contains("already registered") || raw.contains("user_already_exists") {
-            return "An account with this email already exists. Try logging in instead."
+            return String(localized: "An account with this email already exists. Try logging in instead.")
         }
         if raw.contains("duplicate key") || raw.contains("profiles_username_key") {
-            return "That username is taken. Pick another one."
+            return String(localized: "That username is taken. Pick another one.")
         }
         if raw.contains("password should be at least") || raw.contains("weak_password") {
-            return "Your password is too short — use at least 6 characters."
+            return String(localized: "Your password is too short — use at least 6 characters.")
         }
         if raw.contains("unable to validate email") || raw.contains("invalid format") || raw.contains("email_address_invalid") {
-            return "That email address doesn't look right."
+            return String(localized: "That email address doesn't look right.")
         }
         if raw.contains("rate limit") || raw.contains("too many requests") || raw.contains("over_email_send_rate_limit") {
-            return "Too many attempts. Wait a minute and try again."
+            return String(localized: "Too many attempts. Wait a minute and try again.")
         }
         if raw.contains("cancel") {
             // ASWebAuthenticationSession / Sign in with Apple when the user backs out.
@@ -62,15 +62,15 @@ enum AuthErrorMessage {
     static func validate(email: String, password: String, username: String?) -> String? {
         let email = email.trimmingCharacters(in: .whitespaces)
 
-        if email.isEmpty { return "Enter your email address." }
-        if !isPlausibleEmail(email) { return "That email address doesn't look right." }
-        if password.isEmpty { return "Enter your password." }
+        if email.isEmpty { return String(localized: "Enter your email address.") }
+        if !isPlausibleEmail(email) { return String(localized: "That email address doesn't look right.") }
+        if password.isEmpty { return String(localized: "Enter your password.") }
 
         if let username {
             let trimmed = username.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { return "Pick a username." }
-            if trimmed.count < 3 { return "Your username needs at least 3 characters." }
-            if password.count < 6 { return "Use a password of at least 6 characters." }
+            if trimmed.isEmpty { return String(localized: "Pick a username.") }
+            if trimmed.count < 3 { return String(localized: "Your username needs at least 3 characters.") }
+            if password.count < 6 { return String(localized: "Use a password of at least 6 characters.") }
         }
 
         return nil

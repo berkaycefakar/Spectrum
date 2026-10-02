@@ -197,7 +197,7 @@ struct ArtistDetailView: View {
     private var communitySection: some View {
         CommunityStatsCard(
             stats: communityStats,
-            emptyMessage: "No one has rated \(artistName) yet"
+            emptyMessage: String(localized: "No one has rated \(artistName) yet")
         )
         .padding(.horizontal, 24)
     }

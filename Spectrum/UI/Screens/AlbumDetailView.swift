@@ -155,10 +155,10 @@ struct AlbumDetailView: View {
         var parts: [String] = []
         if let label = album.recordLabel, !label.isEmpty { parts.append(label) }
         if let date = album.releaseDate {
-            parts.append(date.formatted(.dateTime.year().locale(AppLocale.display)))
+            parts.append(date.formatted(.dateTime.year()))
         }
         if let count = album.trackCount, count > 0 {
-            parts.append(count == 1 ? "1 song" : "\(count) songs")
+            parts.append(count == 1 ? String(localized: "1 song") : String(localized: "\(count) songs"))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
@@ -440,7 +440,7 @@ struct AlbumDetailView: View {
 
         // Picking only a vibe used to hit the `albumRating > 0` guard and return silently.
         guard albumRating > 0 else {
-            errorMessage = "Add a rating before saving."
+            errorMessage = String(localized: "Add a rating before saving.")
             return
         }
 
@@ -465,7 +465,7 @@ struct AlbumDetailView: View {
             } catch {
                 await MainActor.run {
                     self.isSaving = false
-                    self.errorMessage = "Couldn't save: \(error.localizedDescription)"
+                    self.errorMessage = String(localized: "Couldn't save: \(error.localizedDescription)")
                 }
                 debugLog("Failed to save album rating: \(error)")
             }

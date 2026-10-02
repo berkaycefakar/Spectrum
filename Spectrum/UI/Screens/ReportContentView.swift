@@ -143,9 +143,9 @@ struct ReportContentView: View {
     private var headline: String {
         switch contentType {
         case .profile:
-            return "Tell us what's wrong with \(reportedUsername.map { "@\($0)" } ?? "this profile")."
+            return String(localized: "Tell us what's wrong with \(reportedUsername.map { "@\($0)" } ?? String(localized: "this profile")).")
         default:
-            return "Tell us what's wrong with this review."
+            return String(localized: "Tell us what's wrong with this review.")
         }
     }
 
@@ -173,7 +173,7 @@ struct ReportContentView: View {
                     onBlockRequested()
                     dismiss()
                 } label: {
-                    Text("Also block \(reportedUsername.map { "@\($0)" } ?? "this user")")
+                    Text("Also block \(reportedUsername.map { "@\($0)" } ?? String(localized: "this user"))")
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)

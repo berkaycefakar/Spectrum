@@ -87,7 +87,7 @@ struct BlockedUsersView: View {
                         .foregroundStyle(.white)
                 }
 
-            Text(entry.profile.username ?? "Unknown")
+            Text(entry.profile.username ?? String(localized: "Unknown"))
                 .font(.subheadline)
                 .foregroundStyle(.white)
 
@@ -113,7 +113,7 @@ struct BlockedUsersView: View {
                 .contentShape(Capsule())
             }
             .disabled(unblocking.contains(entry.id))
-            .accessibilityLabel("Unblock \(entry.profile.username ?? "user")")
+            .accessibilityLabel(String(localized: "Unblock \(entry.profile.username ?? String(localized: "user"))"))
         }
         .padding(12)
         .background(.white.opacity(0.05))

@@ -298,7 +298,7 @@ struct AddLogView: View {
     
     func saveLog() {
         guard rating > 0 else {
-            errorMessage = "Please add a rating!"
+            errorMessage = String(localized: "Please add a rating!")
             return
         }
         
@@ -323,7 +323,7 @@ struct AddLogView: View {
             } catch {
                 await MainActor.run {
                     isSaving = false
-                    errorMessage = "Failed to save: \(error.localizedDescription)"
+                    errorMessage = String(localized: "Failed to save: \(error.localizedDescription)")
                 }
             }
         }
