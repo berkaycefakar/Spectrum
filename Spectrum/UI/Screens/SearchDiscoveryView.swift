@@ -64,9 +64,6 @@ struct SearchDiscoveryView: View {
     /// Apple Music's most-played chart — the half of Discover that is full on day one.
     @State private var chartTracks: [Track] = []
     
-    // NOTE: the Artists tab is disabled for now — we never search the catalog's artist
-    // entity directly, so there is nothing to put in it.
-    
     var body: some View {
         NavigationStack(path: $path) {
             ZStack {

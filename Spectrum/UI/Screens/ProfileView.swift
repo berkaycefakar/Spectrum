@@ -7,8 +7,6 @@ struct ProfileView: View {
     @State private var profile: Profile?
     @State private var reviews: [Review] = []
     @State private var albumReviews: [AlbumReview] = []
-    // NOTE: Artist rating feature is disabled for now.
-    // @State private var artistReviews: [ArtistReview] = []
     @State private var artistReviews: [ArtistReview] = []
     @State private var tracks: [Int64: Track] = [:] // Cache for tracks
     @State private var albums: [Int64: Album] = [:] // Cache for albums

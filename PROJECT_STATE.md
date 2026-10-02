@@ -7,16 +7,17 @@
 
 ---
 
-## 🟢 DURUM — 29 Eylül 2026 (UX geçişi sonrası)
+## 🟢 DURUM — 2 Ekim 2026 (yerelleştirme geçişi sonrası)
 
 **Her şey commit'li ve GitHub'da. Çalışma dizini temiz.**
 
 | | |
 |---|---|
-| Aktif dal | `feature/backlog-pass` (push'lu, `main`'in 16 commit önünde) |
+| Aktif dal | `feature/backlog-pass` (push'lu, `main`'in 18 commit önünde) |
 | `main` | `f8830d3` — **bilerek el değmemiş**, geri dönüş noktası |
 | Build | Temiz. **Uyarı var:** `SupabaseManager.swift`'te 8 tane Swift 6 concurrency uyarısı (`pageSize`, `MineRow`, `newest(_:)`). **Benim dokunmadığım kodda, önceden var.** Bu dosyanın eski "sıfır uyarı" notu artık doğru değil. |
-| Test | **95 geçiyor**, 0 hata (`SpectrumTests`) |
+| Test | **95 geçiyor**, 0 hata (`SpectrumTests`) + `SpectrumUITests/LanguageConsistencyUITests` |
+| Dil | **EN + TR, 349 anahtarın 349'u çevrili.** Katalog ile kodun çıkardığı anahtar kümesi birebir eşit. |
 | Backend | Tüm migration'lar uygulandı ve denetlendi |
 | App Store | 1.0 (1) build'i yüklü ve VALID; **submit bilerek beklemede** |
 
@@ -38,18 +39,12 @@ xcodebuild test -project Spectrum.xcodeproj -scheme Spectrum \
 
 Hepsi kullanıcının 29 Eylül'deki listesinden. Sırayla:
 
-1. **`e722022` — Arayüz tamamen İngilizce'ye sabitlendi.**
-   Uygulamanın kendi metinleri İngilizce ama *sistem* bunu bilmiyordu:
-   `RelativeDateTimeFormatter` ve `Date.formatted()` cihaz diline uyduğu için Türkçe
-   telefonda profilde "2 sa. önce", albümde "12 Eyl 2026" çıkıyordu — yarısı İngilizce
-   yarısı Türkçe bir ekran. Sistemin kendi düğmeleri de (Cancel/Done/arama/sil) aynı
-   sebepten Türkçe geliyordu.
-   Çözüm üç parça: `Core/Utils/AppLocale.swift` (tek biçimlendirme locale'i +
-   `timeAgoDisplay()` buraya taşındı), kök view'da `.environment(\.locale, ...)`, ve
-   `SpectrumInfo.plist`'te `CFBundleDevelopmentRegion`/`CFBundleLocalizations` = `en`
-   (+ pbxproj'dan `tr` bölgesi çıkarıldı). **Not:** `.formatted()` ortam locale'ini
-   dinlemiyor, her çağrıya `AppLocale.display` elle veriliyor. Koddaki Türkçe yorumlar
-   da İngilizce'ye çevrildi.
+1. ~~**`e722022` — Arayüz İngilizce'ye sabitlendi.**~~ **BU YANLIŞTI, `38e3019` ile geri alındı.**
+   Uygulamanın `Localizable.xcstrings` içinde zaten bir Türkçe çevirisi varmış (223 anahtarın
+   195'i çevrili) — ben onu görmeden "sistem sızdırıyor" diye teşhis koyup bundle'ı
+   İngilizce'ye kilitledim. Senin "eksikleri ekle" dediğin şey tam tersiydi. Ayrıntı için
+   aşağıdaki 5. maddeye bak.
+
 2. **`a172075` — Dokunma alanları + şarkı sayfasındaki yorumlar.**
    Kök sebep: `Button`/`NavigationLink` yalnızca label'ın *çizdiği* yerde tıklanabilir,
    `Spacer()` hiçbir şey çizmez. Kart arka planı link'in DIŞINDA olan her satırda ortası
@@ -78,6 +73,32 @@ Hepsi kullanıcının 29 Eylül'deki listesinden. Sırayla:
    **Yan bulgu:** satırdaki `swipeActions` hiç çalışmamış — `swipeActions` yalnızca `List`
    içinde geçerli, bu ekran `ScrollView` + `LazyVStack`. Yani listeden öğe silmek hiç
    mümkün değildi. `contextMenu`'ye çevrildi (uzun bas → "Remove from list").
+
+5. **`38e3019` — Türkçe çeviri tamamlandı (1. maddenin doğrusu).**
+   `e722022`'nin yaptığı her şey geri alındı: zorlanan `\.locale`, `CFBundleLocalizations`/
+   `CFBundleDevelopmentRegion` anahtarları, pbxproj'dan silinen `tr` bölgesi ve sabitlenen
+   tarih biçimlendiricileri. Tarihler yine cihazı takip ediyor — Türkçe başlıkların altında
+   Türkçe tarih **doğru** olan.
+   **Karışıklığın gerçek sebebi:** bir metin ancak SwiftUI'a `LocalizedStringKey` olarak
+   ulaşırsa katalog'a çıkarılıyor. Düz `String` olarak üretilen her şey — computed property,
+   enum'un `title`'ı, `switch`'ten dönen etiket, `String` tipli parametre,
+   `NSLocalizedDescriptionKey` — çıkarıcıya görünmüyordu, dolayısıyla hiç çevrilemiyordu.
+   Kullanıcının okuduğu metinlerin büyük kısmı buradaydı: tüm `AuthErrorMessage` mesajları
+   (giriş hataları hep İngilizce'ydi), tab bar'ın dört başlığı, vibe isimleri, rapor
+   sebepleri, Activity tarih grupları, Ayarlar satırları, profil istatistik etiketleri,
+   doğrulama mesajları ve `SupabaseManager`'ın fırlattığı "giriş yapmalısın" hataları.
+   Hepsi `String(localized:)`'e çevrildi. Katalog 223 → **349 anahtar; 349'u da çevrili**,
+   her biri kodda referanslı, yetim kayıt yok, her çevirinin format argümanları anahtarıyla
+   aynı. Noktalama/format-only 12 anahtar `shouldTranslate: false`.
+   **Koruma:** `LanguageConsistencyUITests` Türkçe simülatörde landing + auth ekranını
+   geziyor, görünür tek bir İngilizce metin kalırsa düşüyor; İngilizce cihazda kendini
+   atlıyor. Simülatörü Türkçe'ye almak için:
+   ```bash
+   xcrun simctl spawn <udid> defaults write "Apple Global Domain" AppleLanguages -array tr en
+   xcrun simctl shutdown <udid> && xcrun simctl boot <udid>
+   ```
+   Ayrıca: `SearchDiscoveryView` ve `ProfileView`'daki "bu özellik şimdilik kapalı" notları
+   bayattı — Artists sekmesi de sanatçı puanlaması da çalışıyor; notlar silindi.
 
 ### 🔴 Sende kalan iki iş
 1. **Spotify client secret'ı iptal et.** `SpotifyCredentials.txt` silindi ama
