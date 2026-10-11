@@ -23,7 +23,7 @@
 
 ### Yeni sohbete başlarken
 ```bash
-cd ~/Desktop/Spectrum
+cd ~/projects/Spectrum
 git branch --show-current          # feature/backlog-pass olmalı
 xcodebuild test -project Spectrum.xcodeproj -scheme Spectrum \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
@@ -135,7 +135,10 @@ Hepsi kullanıcının 29 Eylül'deki listesinden. Sırayla:
   `album_reviews`, `artist_reviews`, `follows`, `content_reports`, `user_blocks`,
   `review_likes`, `lists`, `list_items`. **Güvenlik tamamen RLS'e bağlı** — anon anahtarı
   IPA'dan çıkarılabiliyor, istemci tarafı filtreleme bir öneridir.
-- **Gerçek konum: `~/Desktop/Spectrum`** (`~/projects/Spectrum` DEĞİL — o ölü iTunes denemesi).
+- **Gerçek konum: `~/projects/Spectrum`** — 11 Ekim 2026'da taşındı. Eskiden burada duran ölü
+  iTunes denemesi silindi, masaüstündeki yol artık yok. Taşımanın sebebi erişim: macOS
+  `~/Desktop`'ı korumalı klasör sayıyor ve terminale izin verilmediğinde araçlar klasörü
+  hiç okuyamıyor (`Operation not permitted`); `~/projects` o korumanın dışında.
 - **Build:** `xcodebuild -project Spectrum.xcodeproj -scheme Spectrum -destination
   'generic/platform=iOS' -configuration Debug build CODE_SIGNING_ALLOWED=NO`
 - Editördeki "No such module 'Supabase'/'UIKit'" uyarıları SourceKit'in yanlış alarmı;

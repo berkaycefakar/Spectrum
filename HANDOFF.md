@@ -6,8 +6,9 @@
 ## Proje nedir
 - **Spectrum** = "müzik için Letterboxd". Kullanıcılar şarkı/albüm/sanatçı loglar, puanlar,
   yorum yazar, bir "vibe" rengi seçer; başkalarını takip edip feed'de görür.
-- **Gerçek proje konumu: `~/Desktop/Spectrum`** (`~/projects/Spectrum` DEĞİL — orası eski/ölü
-  iTunes denemesi).
+- **Gerçek proje konumu: `~/projects/Spectrum`.** 11 Ekim 2026'da `~/Desktop/Spectrum`'dan
+  buraya taşındı; aynı isimdeki eski/ölü iTunes denemesi önce silindi, yani burada ondan
+  artık yok. Masaüstündeki eski yol **artık mevcut değil**.
 - Platform: **iOS 17+**, SwiftUI. Bundle id `berkay.Spectrum`, team `8ZCY68284F`.
 - Xcode projesi **synchronized file groups** (objectVersion 77) kullanıyor — yeni .swift
   dosyaları otomatik derlemeye girer, pbxproj'a elle ekleme gerekmez.
