@@ -151,7 +151,7 @@ struct ProfileView: View {
                             // Category Selector
                             HStack(spacing: 0) {
                                 ProfileCategoryButton(
-                                    title: "Songs",
+                                    title: String(localized: "Songs", bundle: appStringsBundle),
                                     count: totals.songs,
                                     isSelected: selectedCategory == .songs
                                 ) {
@@ -161,7 +161,7 @@ struct ProfileView: View {
                                 }
                                 
                                 ProfileCategoryButton(
-                                    title: "Albums",
+                                    title: String(localized: "Albums", bundle: appStringsBundle),
                                     count: totals.albums,
                                     isSelected: selectedCategory == .albums
                                 ) {
@@ -171,7 +171,7 @@ struct ProfileView: View {
                                 }
                                 
                                 ProfileCategoryButton(
-                                    title: "Artists",
+                                    title: String(localized: "Artists", bundle: appStringsBundle),
                                     count: totals.artists,
                                     isSelected: selectedCategory == .artists
                                 ) {
@@ -256,13 +256,13 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showFollowersSheet) {
                 FollowersFollowingListView(
-                    title: String(localized: "Followers"),
+                    title: String(localized: "Followers", bundle: appStringsBundle),
                     profiles: followers
                 )
             }
             .sheet(isPresented: $showFollowingSheet) {
                 FollowersFollowingListView(
-                    title: String(localized: "Following"),
+                    title: String(localized: "Following", bundle: appStringsBundle),
                     profiles: following
                 )
             }
@@ -355,7 +355,7 @@ struct ProfileView: View {
         switch selectedCategory {
         case .songs:
             if sortedReviews.isEmpty {
-                emptyStateView(message: "No songs logged yet")
+                emptyStateView(message: String(localized: "No songs logged yet", bundle: appStringsBundle))
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(sortedReviews) { review in
@@ -375,7 +375,7 @@ struct ProfileView: View {
             
         case .albums:
             if sortedAlbumReviews.isEmpty {
-                emptyStateView(message: "No albums rated yet")
+                emptyStateView(message: String(localized: "No albums rated yet", bundle: appStringsBundle))
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(sortedAlbumReviews) { review in
@@ -401,7 +401,7 @@ struct ProfileView: View {
             
         case .artists:
             if sortedArtistReviews.isEmpty {
-                emptyStateView(message: "No artists rated yet")
+                emptyStateView(message: String(localized: "No artists rated yet", bundle: appStringsBundle))
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(sortedArtistReviews) { review in

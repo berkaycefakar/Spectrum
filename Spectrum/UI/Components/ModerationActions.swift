@@ -19,7 +19,7 @@ struct ModerationTarget {
         return authorId != SessionStore.shared.currentUser?.id
     }
 
-    var blockTitle: String { String(localized: "Block \(authorUsername.map { "@\($0)" } ?? String(localized: "user"))") }
+    var blockTitle: String { String(localized: "Block \(authorUsername.map { "@\($0)" } ?? String(localized: "user", bundle: appStringsBundle))") }
 
     func block() async throws {
         guard let authorId else { return }
@@ -118,7 +118,7 @@ private struct ModerationDialogs: ViewModifier {
                     onBlockRequested: { Task { await block() } }
                 )
             }
-            .alert("Block \(target.authorUsername.map { "@\($0)" } ?? String(localized: "this user"))?", isPresented: $showBlockConfirm) {
+            .alert("Block \(target.authorUsername.map { "@\($0)" } ?? String(localized: "this user", bundle: appStringsBundle))?", isPresented: $showBlockConfirm) {
                 Button("Cancel", role: .cancel) { }
                 Button("Block", role: .destructive) { Task { await block() } }
             } message: {

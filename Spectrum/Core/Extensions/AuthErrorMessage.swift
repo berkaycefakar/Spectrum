@@ -13,36 +13,36 @@ enum AuthErrorMessage {
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
             case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
-                return String(localized: "You appear to be offline. Check your connection and try again.")
+                return String(localized: "You appear to be offline. Check your connection and try again.", bundle: appStringsBundle)
             case NSURLErrorTimedOut:
-                return String(localized: "The server took too long to respond. Try again in a moment.")
+                return String(localized: "The server took too long to respond. Try again in a moment.", bundle: appStringsBundle)
             default:
-                return String(localized: "Couldn't reach Spectrum. Check your connection and try again.")
+                return String(localized: "Couldn't reach Spectrum. Check your connection and try again.", bundle: appStringsBundle)
             }
         }
 
         let raw = error.localizedDescription.lowercased()
 
         if raw.contains("invalid login credentials") || raw.contains("invalid_credentials") {
-            return String(localized: "Wrong email or password.")
+            return String(localized: "Wrong email or password.", bundle: appStringsBundle)
         }
         if raw.contains("email not confirmed") || raw.contains("email_not_confirmed") {
-            return String(localized: "Confirm your email first — check your inbox for the link we sent.")
+            return String(localized: "Confirm your email first — check your inbox for the link we sent.", bundle: appStringsBundle)
         }
         if raw.contains("already registered") || raw.contains("user_already_exists") {
-            return String(localized: "An account with this email already exists. Try logging in instead.")
+            return String(localized: "An account with this email already exists. Try logging in instead.", bundle: appStringsBundle)
         }
         if raw.contains("duplicate key") || raw.contains("profiles_username_key") {
-            return String(localized: "That username is taken. Pick another one.")
+            return String(localized: "That username is taken. Pick another one.", bundle: appStringsBundle)
         }
         if raw.contains("password should be at least") || raw.contains("weak_password") {
-            return String(localized: "Your password is too short — use at least 6 characters.")
+            return String(localized: "Your password is too short — use at least 6 characters.", bundle: appStringsBundle)
         }
         if raw.contains("unable to validate email") || raw.contains("invalid format") || raw.contains("email_address_invalid") {
-            return String(localized: "That email address doesn't look right.")
+            return String(localized: "That email address doesn't look right.", bundle: appStringsBundle)
         }
         if raw.contains("rate limit") || raw.contains("too many requests") || raw.contains("over_email_send_rate_limit") {
-            return String(localized: "Too many attempts. Wait a minute and try again.")
+            return String(localized: "Too many attempts. Wait a minute and try again.", bundle: appStringsBundle)
         }
         if raw.contains("cancel") {
             // ASWebAuthenticationSession / Sign in with Apple when the user backs out.
@@ -62,15 +62,15 @@ enum AuthErrorMessage {
     static func validate(email: String, password: String, username: String?) -> String? {
         let email = email.trimmingCharacters(in: .whitespaces)
 
-        if email.isEmpty { return String(localized: "Enter your email address.") }
-        if !isPlausibleEmail(email) { return String(localized: "That email address doesn't look right.") }
-        if password.isEmpty { return String(localized: "Enter your password.") }
+        if email.isEmpty { return String(localized: "Enter your email address.", bundle: appStringsBundle) }
+        if !isPlausibleEmail(email) { return String(localized: "That email address doesn't look right.", bundle: appStringsBundle) }
+        if password.isEmpty { return String(localized: "Enter your password.", bundle: appStringsBundle) }
 
         if let username {
             let trimmed = username.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { return String(localized: "Pick a username.") }
-            if trimmed.count < 3 { return String(localized: "Your username needs at least 3 characters.") }
-            if password.count < 6 { return String(localized: "Use a password of at least 6 characters.") }
+            if trimmed.isEmpty { return String(localized: "Pick a username.", bundle: appStringsBundle) }
+            if trimmed.count < 3 { return String(localized: "Your username needs at least 3 characters.", bundle: appStringsBundle) }
+            if password.count < 6 { return String(localized: "Use a password of at least 6 characters.", bundle: appStringsBundle) }
         }
 
         return nil

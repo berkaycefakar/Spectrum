@@ -3,6 +3,7 @@ import Supabase
 
 /// Lightweight settings sheet: account info, MusicKit status, app version, and log out.
 struct SettingsView: View {
+    @StateObject private var language = LanguagePreference.shared
     @Binding var isPresented: Bool
     let onLogout: () -> Void
 
@@ -42,23 +43,29 @@ struct SettingsView: View {
                 .padding(.top, 20)
 
                 // Account section
-                settingsCard(title: String(localized: "Account")) {
-                    infoRow(label: String(localized: "Email"), value: email ?? "—")
+                settingsCard(title: String(localized: "Account", bundle: appStringsBundle)) {
+                    infoRow(label: String(localized: "Email", bundle: appStringsBundle), value: email ?? "—")
+                }
+
+                // Language. Above About rather than buried in it: someone looking for this
+                // is, by definition, reading a language they would rather not be.
+                settingsCard(title: String(localized: "Language", bundle: appStringsBundle)) {
+                    languageRows
                 }
 
                 // About section
-                settingsCard(title: String(localized: "About")) {
-                    infoRow(label: String(localized: "Version"), value: appVersion)
+                settingsCard(title: String(localized: "About", bundle: appStringsBundle)) {
+                    infoRow(label: String(localized: "Version", bundle: appStringsBundle), value: appVersion)
                     Divider().background(.white.opacity(0.08))
-                    infoRow(label: String(localized: "Music data"), value: "Apple Music (MusicKit)")
+                    infoRow(label: String(localized: "Music data", bundle: appStringsBundle), value: "Apple Music (MusicKit)")
                     Divider().background(.white.opacity(0.08))
                     // Reachable after sign-up too, not only on the landing screen: a user who
                     // wants to re-read what they agreed to shouldn't have to log out.
-                    linkRow(label: String(localized: "Terms of Service"), url: LegalLinks.terms)
+                    linkRow(label: String(localized: "Terms of Service", bundle: appStringsBundle), url: LegalLinks.terms)
                     Divider().background(.white.opacity(0.08))
-                    linkRow(label: String(localized: "Privacy Policy"), url: LegalLinks.privacy)
+                    linkRow(label: String(localized: "Privacy Policy", bundle: appStringsBundle), url: LegalLinks.privacy)
                     Divider().background(.white.opacity(0.08))
-                    linkRow(label: String(localized: "Contact Support"), url: LegalLinks.support)
+                    linkRow(label: String(localized: "Contact Support", bundle: appStringsBundle), url: LegalLinks.support)
                 }
 
                 // Safety. Blocking has to be undoable from inside the app for Guideline 1.2,
@@ -224,7 +231,44 @@ struct SettingsView: View {
             } catch {
                 await MainActor.run {
                     isDeleting = false
-                    deleteError = String(localized: "Couldn't delete your account: \(error.localizedDescription)")
+                    deleteError = String(localized: "Couldn't delete your account: \(error.localizedDescription)", bundle: appStringsBundle)
+                }
+            }
+        }
+    }
+
+    // MARK: - Language
+
+    private var languageRows: some View {
+        ForEach(Array(LanguagePreference.Choice.allCases.enumerated()), id: \.element.id) { index, choice in
+            VStack(spacing: 0) {
+                Button {
+                    language.select(choice)
+                } label: {
+                    HStack {
+                        Text(choice.label)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+
+                        Spacer()
+
+                        if language.choice == choice {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color(hex: "#FF00FF"))
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 11)
+                    // Without this the row's empty middle is not hit-testable — a `Spacer`
+                    // draws nothing, and a Button's tap area is only what its label draws.
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(language.choice == choice ? [.isSelected] : [])
+
+                if index < LanguagePreference.Choice.allCases.count - 1 {
+                    Divider().background(.white.opacity(0.08))
                 }
             }
         }

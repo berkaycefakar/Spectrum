@@ -53,7 +53,7 @@ struct ProfileHeader: View {
             
             // Username & Bio
             VStack(spacing: 8) {
-                Text(profile.username ?? String(localized: "Anonymous"))
+                Text(profile.username ?? String(localized: "Anonymous", bundle: appStringsBundle))
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
@@ -69,16 +69,16 @@ struct ProfileHeader: View {
             
             // Stats Row
             HStack(spacing: 40) {
-                ProfileStatItem(value: "\(totalLogs)", label: String(localized: "Logs"))
-                ProfileStatItem(value: String(format: "%.1f", averageRating), label: String(localized: "Avg Rating"))
+                ProfileStatItem(value: "\(totalLogs)", label: String(localized: "Logs", bundle: appStringsBundle))
+                ProfileStatItem(value: String(format: "%.1f", averageRating), label: String(localized: "Avg Rating", bundle: appStringsBundle))
                 
                 Button(action: onFollowersTapped) {
-                    ProfileStatItem(value: "\(followersCount)", label: String(localized: "Followers"))
+                    ProfileStatItem(value: "\(followersCount)", label: String(localized: "Followers", bundle: appStringsBundle))
                 }
                 .buttonStyle(.plain)
                 
                 Button(action: onFollowingTapped) {
-                    ProfileStatItem(value: "\(followingCount)", label: String(localized: "Following"))
+                    ProfileStatItem(value: "\(followingCount)", label: String(localized: "Following", bundle: appStringsBundle))
                 }
                 .buttonStyle(.plain)
             }
@@ -145,7 +145,7 @@ struct AccountActionsSection: View {
             VStack(spacing: 0) {
                 AccountRow(
                     icon: "person.crop.circle",
-                    title: "Edit Profile",
+                    title: String(localized: "Edit Profile", bundle: appStringsBundle),
                     iconGradient: [Color(hex: "#00FFFF"), Color(hex: "#007AFF")],
                     showDivider: true,
                     action: onEditProfile
@@ -153,7 +153,7 @@ struct AccountActionsSection: View {
 
                 AccountRow(
                     icon: "gearshape.fill",
-                    title: "Settings",
+                    title: String(localized: "Settings", bundle: appStringsBundle),
                     iconGradient: [Color(hex: "#A0A0A0"), Color(hex: "#606060")],
                     showDivider: true,
                     action: onSettings
@@ -161,7 +161,7 @@ struct AccountActionsSection: View {
 
                 AccountRow(
                     icon: "rectangle.portrait.and.arrow.right",
-                    title: "Log Out",
+                    title: String(localized: "Log Out", bundle: appStringsBundle),
                     iconGradient: [Color(hex: "#FF3B30"), Color(hex: "#FF6B6B")],
                     isDestructive: true,
                     showDivider: false,

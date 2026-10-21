@@ -945,6 +945,16 @@
         }
       }
     },
+    "Device language": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cihaz dili"
+          }
+        }
+      }
+    },
     "Discover": {
       "extractionState": "manual",
       "localizations": {
@@ -1320,6 +1330,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aramıza Katıl"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dil"
           }
         }
       }
@@ -2875,6 +2895,7 @@
       }
     },
     "Toggle collapse": {
+      "extractionState": "stale",
       "localizations": {
         "tr": {
           "stringUnit": {

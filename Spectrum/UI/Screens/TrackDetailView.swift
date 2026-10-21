@@ -57,8 +57,8 @@ struct TrackDetailView: View {
 
                         CommunityStatsCard(
                             stats: communityStats,
-                            countLabel: String(localized: "logs"),
-                            emptyMessage: String(localized: "No logs yet — be the first!")
+                            countLabel: String(localized: "logs", bundle: appStringsBundle),
+                            emptyMessage: String(localized: "No logs yet — be the first!", bundle: appStringsBundle)
                         )
 
                         reviewsSection
@@ -358,10 +358,10 @@ struct TrackDetailView: View {
                 .buttonStyle(.plain)
                 .disabled(!hasPreview)
                 .opacity(hasPreview ? 1 : 0.35)
-                .accessibilityLabel(isPlaying ? String(localized: "Pause preview") : String(localized: "Play preview"))
+                .accessibilityLabel(isPlaying ? String(localized: "Pause preview", bundle: appStringsBundle) : String(localized: "Play preview", bundle: appStringsBundle))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(hasPreview ? String(localized: "PREVIEW") : String(localized: "NO PREVIEW"))
+                    Text(hasPreview ? String(localized: "PREVIEW", bundle: appStringsBundle) : String(localized: "NO PREVIEW", bundle: appStringsBundle))
                         .font(.caption2.weight(.semibold))
                         .tracking(1.2)
                         .foregroundStyle(.white.opacity(0.45))
@@ -656,7 +656,7 @@ struct TrackReviewCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(profile?.username ?? String(localized: "Anonymous"))
+                    Text(profile?.username ?? String(localized: "Anonymous", bundle: appStringsBundle))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)

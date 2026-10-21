@@ -15,17 +15,17 @@ struct NewPasswordView: View {
 
         var title: String {
             switch self {
-            case .recovery: return String(localized: "Choose a new password")
-            case .change: return String(localized: "Change password")
+            case .recovery: return String(localized: "Choose a new password", bundle: appStringsBundle)
+            case .change: return String(localized: "Change password", bundle: appStringsBundle)
             }
         }
 
         var subtitle: String {
             switch self {
             case .recovery:
-                return String(localized: "You're signed in from the reset link. Set a new password to finish — until you do, your old one still works.")
+                return String(localized: "You're signed in from the reset link. Set a new password to finish — until you do, your old one still works.", bundle: appStringsBundle)
             case .change:
-                return String(localized: "Pick something you haven't used here before.")
+                return String(localized: "Pick something you haven't used here before.", bundle: appStringsBundle)
             }
         }
     }
@@ -68,13 +68,13 @@ struct NewPasswordView: View {
                     }
                     .padding(.top, 12)
 
-                    GlassTextField(icon: "lock", placeholder: String(localized: "New password"), text: $password, isSecure: true)
+                    GlassTextField(icon: "lock", placeholder: String(localized: "New password", bundle: appStringsBundle), text: $password, isSecure: true)
                         .textContentType(.newPassword)
                         .focused($focusedField, equals: .password)
                         .submitLabel(.next)
                         .onSubmit { focusedField = .confirmation }
 
-                    GlassTextField(icon: "lock.rotation", placeholder: String(localized: "Repeat new password"), text: $confirmation, isSecure: true)
+                    GlassTextField(icon: "lock.rotation", placeholder: String(localized: "Repeat new password", bundle: appStringsBundle), text: $confirmation, isSecure: true)
                         .textContentType(.newPassword)
                         .focused($focusedField, equals: .confirmation)
                         .submitLabel(.go)
@@ -132,11 +132,11 @@ struct NewPasswordView: View {
         focusedField = nil
 
         guard password.count >= 6 else {
-            errorMessage = String(localized: "Use a password of at least 6 characters.")
+            errorMessage = String(localized: "Use a password of at least 6 characters.", bundle: appStringsBundle)
             return
         }
         guard password == confirmation else {
-            errorMessage = String(localized: "The two passwords don't match.")
+            errorMessage = String(localized: "The two passwords don't match.", bundle: appStringsBundle)
             return
         }
 

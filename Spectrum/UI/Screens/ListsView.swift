@@ -91,7 +91,7 @@ private struct ListRow: View {
 
     private var subtitle: String {
         let count = summary.itemCount
-        return count == 1 ? "1 record" : "\(count) records"
+        return count == 1 ? String(localized: "1 record", bundle: appStringsBundle) : String(localized: "\(count) records", bundle: appStringsBundle)
     }
 
     var body: some View {
