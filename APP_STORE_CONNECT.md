@@ -30,7 +30,7 @@ GitHub Pages ile yayınlamak için:
 | Alan | Değer |
 | --- | --- |
 | Name | `Spectrum: Rate & Review Music` (29 karakter; düz `Spectrum` alınmış. Ana ekranda yine `Spectrum` yazar) |
-| Subtitle | `Rate every song you hear` |
+| Subtitle | `Your diary for albums & songs` (adla kelime paylaşmasın diye; 2026-10-27 ASC'ye yazıldı) |
 | Bundle ID | `berkay.Spectrum` |
 | Primary Category | **Music** |
 | Secondary Category | **Social Networking** |
@@ -97,11 +97,12 @@ Spectrum needs permission to use Apple Music so it can look music up.
 ## 5. Keywords (100 karakter sınırı, virgülle, boşluksuz)
 
 ```
-log,rate,review,album,artist,tracker,letterboxd,taste,vibe,social,song,listening,scrobble,rym
+log,artist,tracker,taste,vibe,social,listening,scrobble,critic,ranking,journal,friends,charts,lp
 ```
 
-> `music` ve `diary` bilerek çıkarıldı: uygulama adında geçtikleri için Apple onları zaten
-> indeksliyor, keywords'te tekrar etmek 100 karakterin boşa gitmesi olur.
+> Ad (`rate`, `review`, `music`) ve alt başlıkta (`diary`, `albums`, `songs`) geçen kelimeler
+> bilerek yok: Apple onları zaten indeksliyor. `letterboxd` ve `rym` çıkarıldı: başka
+> markaların adını keyword yapmak Guideline 2.3.7 ihlali, ret sebebi. (2026-10-27 ASC'ye yazıldı.)
 
 ---
 
