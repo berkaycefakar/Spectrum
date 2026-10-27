@@ -29,7 +29,7 @@ GitHub Pages ile yayınlamak için:
 
 | Alan | Değer |
 | --- | --- |
-| Name | `Spectrum — Music Diary` (düz `Spectrum` App Store'da alınmış) |
+| Name | `Spectrum: Rate & Review Music` (29 karakter; düz `Spectrum` alınmış. Ana ekranda yine `Spectrum` yazar) |
 | Subtitle | `Rate every song you hear` |
 | Bundle ID | `berkay.Spectrum` |
 | Primary Category | **Music** |
