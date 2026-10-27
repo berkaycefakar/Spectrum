@@ -49,6 +49,18 @@ enum AuthErrorMessage {
             return ""
         }
 
+        // Sign in with Apple's own failures arrive as "The operation couldn't be completed.
+        // (com.apple.AuthenticationServices.AuthorizationError error 1000.)", which tells the
+        // user nothing. 1000 (`unknown`) is what you get with no Apple Account on the device —
+        // or a build missing the Sign in with Apple entitlement.
+        if nsError.domain == "com.apple.AuthenticationServices.AuthorizationError" {
+            if nsError.code == 1001 { return "" } // canceled
+            if nsError.code == 1000 {
+                return String(localized: "Sign in with Apple isn't available. Make sure you're signed in to your Apple Account in Settings, then try again.", bundle: appStringsBundle)
+            }
+            return String(localized: "Sign in with Apple didn't go through. Try again, or use another way to sign in.", bundle: appStringsBundle)
+        }
+
         // Anything unrecognised still reaches the user — a silent failure is worse than an
         // ugly one, and it's the only clue either of us gets.
         return error.localizedDescription

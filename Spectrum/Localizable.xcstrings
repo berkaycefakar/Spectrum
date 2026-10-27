@@ -2577,6 +2577,26 @@
         }
       }
     },
+    "Sign in with Apple didn't go through. Try again, or use another way to sign in.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple ile giriş tamamlanamadı. Tekrar dene ya da başka bir yolla giriş yap."
+          }
+        }
+      }
+    },
+    "Sign in with Apple isn't available. Make sure you're signed in to your Apple Account in Settings, then try again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple ile giriş şu an kullanılamıyor. Ayarlar'da Apple Hesabınla giriş yaptığından emin olup tekrar dene."
+          }
+        }
+      }
+    },
     "Similar Artists": {
       "extractionState": "manual",
       "localizations": {
