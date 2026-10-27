@@ -55,7 +55,7 @@ struct LikeButton: View {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { bumped = false }
             }
         }
-        .accessibilityLabel(state.likedByMe ? String(localized: "Unlike") : String(localized: "Like"))
+        .accessibilityLabel(state.likedByMe ? String(localized: "Unlike", bundle: appStringsBundle) : String(localized: "Like", bundle: appStringsBundle))
         .accessibilityValue(state.count == 1 ? "1 like" : "\(state.count) likes")
     }
 }

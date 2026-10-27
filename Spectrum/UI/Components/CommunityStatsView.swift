@@ -23,15 +23,15 @@ enum VibePalette {
 
     static func label(for hex: String) -> String {
         switch snap(hex) {
-        case "#FF3B30": return String(localized: "Energetic")
-        case "#FF9500": return String(localized: "Warm")
-        case "#FFCC00": return String(localized: "Sunny")
-        case "#4CD964": return String(localized: "Fresh")
-        case "#5AC8FA": return String(localized: "Chill")
-        case "#007AFF": return String(localized: "Deep")
-        case "#5856D6": return String(localized: "Dreamy")
-        case "#FF2D55": return String(localized: "Passionate")
-        default: return String(localized: "Vibe")
+        case "#FF3B30": return String(localized: "Energetic", bundle: appStringsBundle)
+        case "#FF9500": return String(localized: "Warm", bundle: appStringsBundle)
+        case "#FFCC00": return String(localized: "Sunny", bundle: appStringsBundle)
+        case "#4CD964": return String(localized: "Fresh", bundle: appStringsBundle)
+        case "#5AC8FA": return String(localized: "Chill", bundle: appStringsBundle)
+        case "#007AFF": return String(localized: "Deep", bundle: appStringsBundle)
+        case "#5856D6": return String(localized: "Dreamy", bundle: appStringsBundle)
+        case "#FF2D55": return String(localized: "Passionate", bundle: appStringsBundle)
+        default: return String(localized: "Vibe", bundle: appStringsBundle)
         }
     }
 
@@ -124,9 +124,9 @@ struct CommunityStats {
 struct CommunityStatsCard: View {
     let stats: CommunityStats
     /// Plural noun for the count column: "logs" on tracks, "ratings" elsewhere.
-    var countLabel: String = String(localized: "ratings")
-    var title: String? = String(localized: "Community")
-    var emptyMessage: String = String(localized: "No ratings yet — be the first!")
+    var countLabel: String = String(localized: "ratings", bundle: appStringsBundle)
+    var title: String? = String(localized: "Community", bundle: appStringsBundle)
+    var emptyMessage: String = String(localized: "No ratings yet — be the first!", bundle: appStringsBundle)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

@@ -23,10 +23,19 @@ struct SpectrumApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var musicAuth = MusicAuthorizationStore.shared
+    @StateObject private var language = LanguagePreference.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // `.id` forces the whole tree to rebuild when the language changes. The
+                // bundle swap makes new lookups return the other language, but views already
+                // on screen keep the string they resolved at build time — without this, the
+                // switch only took effect on screens you navigated to afterwards.
+                .id(language.choice)
+                // Dates and numbers resolve through `Locale`, not the bundle, so they are
+                // told separately. On `.system` this is `.autoupdatingCurrent`, i.e. no change.
+                .environment(\.locale, language.locale)
                 .onOpenURL { url in
                     // Check what the link is for *before* handing it over: the PKCE flow
                     // exchanges the callback and reports a plain `.signedIn`, so a recovery

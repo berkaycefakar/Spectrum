@@ -92,9 +92,9 @@ struct ActivityView: View {
         /// only an identity for grouping.
         var title: String {
             switch self {
-            case .today: String(localized: "Today")
-            case .week: String(localized: "This Week")
-            case .earlier: String(localized: "Earlier")
+            case .today: String(localized: "Today", bundle: appStringsBundle)
+            case .week: String(localized: "This Week", bundle: appStringsBundle)
+            case .earlier: String(localized: "Earlier", bundle: appStringsBundle)
             }
         }
     }

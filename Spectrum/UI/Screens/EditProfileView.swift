@@ -234,7 +234,7 @@ struct EditProfileView: View {
     private func saveProfile() {
         let name = trimmedUsername
         guard !name.isEmpty else {
-            errorMessage = String(localized: "Username can't be empty.")
+            errorMessage = String(localized: "Username can't be empty.", bundle: appStringsBundle)
             return
         }
 
@@ -249,7 +249,7 @@ struct EditProfileView: View {
                 guard let user = try await SupabaseManager.shared.getCurrentUser() else {
                     await MainActor.run {
                         isLoading = false
-                        errorMessage = String(localized: "Your session has expired. Please log in again.")
+                        errorMessage = String(localized: "Your session has expired. Please log in again.", bundle: appStringsBundle)
                     }
                     return
                 }
@@ -277,11 +277,11 @@ struct EditProfileView: View {
                     isLoading = false
                     let message = error.localizedDescription
                     if message.contains("profiles_username_key") || message.contains("duplicate key value") {
-                        errorMessage = String(localized: "That username is already taken. Try another one.")
+                        errorMessage = String(localized: "That username is already taken. Try another one.", bundle: appStringsBundle)
                     } else if message.lowercased().contains("bucket") || message.contains("avatars") {
-                        errorMessage = String(localized: "Couldn't upload your photo. Please try again.")
+                        errorMessage = String(localized: "Couldn't upload your photo. Please try again.", bundle: appStringsBundle)
                     } else {
-                        errorMessage = String(localized: "Couldn't update your profile: \(message)")
+                        errorMessage = String(localized: "Couldn't update your profile: \(message)", bundle: appStringsBundle)
                     }
                 }
             }

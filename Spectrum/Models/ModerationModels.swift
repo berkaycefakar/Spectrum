@@ -22,12 +22,12 @@ enum ReportReason: String, CaseIterable, Identifiable, Codable {
 
     var title: String {
         switch self {
-        case .offensive: return String(localized: "Offensive language")
-        case .harassment: return String(localized: "Harassment or bullying")
-        case .spam: return String(localized: "Spam or misleading")
-        case .sexual: return String(localized: "Sexual content")
-        case .violence: return String(localized: "Violence or threats")
-        case .other: return String(localized: "Something else")
+        case .offensive: return String(localized: "Offensive language", bundle: appStringsBundle)
+        case .harassment: return String(localized: "Harassment or bullying", bundle: appStringsBundle)
+        case .spam: return String(localized: "Spam or misleading", bundle: appStringsBundle)
+        case .sexual: return String(localized: "Sexual content", bundle: appStringsBundle)
+        case .violence: return String(localized: "Violence or threats", bundle: appStringsBundle)
+        case .other: return String(localized: "Something else", bundle: appStringsBundle)
         }
     }
 

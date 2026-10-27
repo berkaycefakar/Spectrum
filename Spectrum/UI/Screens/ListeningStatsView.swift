@@ -69,12 +69,12 @@ struct ListeningStatsView: View {
     private var headlineRow: some View {
         // Wraps rather than scrolls so nothing is hidden off the right edge at large text.
         FlowLayout(spacing: 10, lineSpacing: 10, alignment: .leading) {
-            StatTile(value: "\(summary.entries.count)", label: String(localized: "songs logged"))
-            StatTile(value: "\(albumCount)", label: String(localized: "albums"))
-            StatTile(value: "\(artistCount)", label: String(localized: "artists"))
-            StatTile(value: String(format: "%.1f", summary.averageRating), label: String(localized: "average"))
+            StatTile(value: "\(summary.entries.count)", label: String(localized: "songs logged", bundle: appStringsBundle))
+            StatTile(value: "\(albumCount)", label: String(localized: "albums", bundle: appStringsBundle))
+            StatTile(value: "\(artistCount)", label: String(localized: "artists", bundle: appStringsBundle))
+            StatTile(value: String(format: "%.1f", summary.averageRating), label: String(localized: "average", bundle: appStringsBundle))
             if let streak = stats.longestStreakDays, streak > 1 {
-                StatTile(value: "\(streak)", label: String(localized: "day streak"))
+                StatTile(value: "\(streak)", label: String(localized: "day streak", bundle: appStringsBundle))
             }
         }
     }
@@ -83,7 +83,7 @@ struct ListeningStatsView: View {
 
     private var vibeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeading(String(localized: "Your colours"))
+            SectionHeading(String(localized: "Your colours", bundle: appStringsBundle))
 
             if let top = stats.topVibe {
                 Text("Mostly **\(VibePalette.label(for: top.hex))**")
@@ -124,7 +124,7 @@ struct ListeningStatsView: View {
 
     private var ratingSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeading(String(localized: "How you rate"))
+            SectionHeading(String(localized: "How you rate", bundle: appStringsBundle))
 
             ForEach(stats.ratingHistogram) { bucket in
                 HStack(spacing: 10) {
@@ -148,7 +148,7 @@ struct ListeningStatsView: View {
                         .frame(width: 34, alignment: .trailing)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(String(localized: "\(bucket.label) stars, \(bucket.count) logs"))
+                .accessibilityLabel(String(localized: "\(bucket.label) stars, \(bucket.count) logs", bundle: appStringsBundle))
             }
         }
     }
@@ -157,7 +157,7 @@ struct ListeningStatsView: View {
 
     private var monthSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeading(String(localized: "Last 12 months"))
+            SectionHeading(String(localized: "Last 12 months", bundle: appStringsBundle))
 
             if let busiest = stats.busiestMonth {
                 Text("Busiest: **\(busiest.label)** — \(busiest.count) logs")

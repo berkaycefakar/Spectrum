@@ -12,9 +12,9 @@ enum ListItemKind: String, Codable, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .song: String(localized: "Song")
-        case .album: String(localized: "Album")
-        case .artist: String(localized: "Artist")
+        case .song: String(localized: "Song", bundle: appStringsBundle)
+        case .album: String(localized: "Album", bundle: appStringsBundle)
+        case .artist: String(localized: "Artist", bundle: appStringsBundle)
         }
     }
 

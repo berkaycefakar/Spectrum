@@ -110,7 +110,7 @@ struct FeedView: View {
                                         NavigationLink(value: AppRoute.track(track)) {
                                             FeedCardView(
                                                 track: track,
-                                                vibeLabel: profile.username ?? String(localized: "User"),
+                                                vibeLabel: profile.username ?? String(localized: "User", bundle: appStringsBundle),
                                                 vibeColor: Color(hex: review.vibeColor),
                                                 rating: Double(review.rating) / 2.0,
                                                 // Masked on read: rows written before the
