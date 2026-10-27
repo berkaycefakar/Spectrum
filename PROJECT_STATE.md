@@ -7,6 +7,30 @@
 
 ---
 
+## 🟢 DURUM — 27 Ekim 2026 (dil seçici + yeni logo + mağaza adı)
+
+**Her şey commit'li ve push'lu** (`feature/backlog-pass`). Birim testleri geçiyor.
+
+Bu oturumda:
+- `2ae3119` — **Uygulama içi dil seçici** (Ayarlar → Language: Sistem / English / Türkçe).
+  11 Ekim'den commit'lenmemiş kalmıştı; derlendi, testler geçti, commit'lendi. Cihazda denenmedi.
+  Kural: her `String(localized:)` çağrısı `bundle: appStringsBundle` almalı, yoksa dil değişince güncellenmez.
+- `dedf4a6` — Mağaza adı **`Spectrum: Rate & Review Music`** (App Store Connect'te elle değiştirilmeli).
+- `91ec827` — **Yeni logo:** siyah zeminde krem konuşma balonu, içinde 5 renkli ses dalgası çubuğu.
+  Eski prizma ikonu Pink Floyd *Dark Side of the Moon* kapağına çok benziyordu (inceleme riski).
+  `SpectrumMark` aynı geometriyi çiziyor (feed başlığı, splash, paylaşım kartı, Apple Music ekranı).
+  Splash ve launch arka planı ikonun düz siyahı `#0E0A14`. Tasarım canvas'ı:
+  https://claude.ai/artifact/2Txu5qq3WzeT6A9yA9z67M (seçilen: 2a).
+
+### Sıradaki işler
+1. **App Store Connect:** adı güncelle; yeni ikonla yeni build (1.0 (2)) yükle.
+2. **Cihazda test:** dil seçici, listeler, mini-player, önizleme çubuğu, istatistik, paylaşım kartı (yeni logolu).
+3. **Spotify client secret'ını iptal et** (hâlâ açık).
+4. **Ekran görüntüleri** — cihazdan, yeni ikonla; sonra submit.
+5. 1.0 sonrası: crash reporting (Sentry), gerçek push bildirimi.
+
+---
+
 ## 🟢 DURUM — 2 Ekim 2026 (yerelleştirme geçişi sonrası)
 
 **Her şey commit'li ve GitHub'da. Çalışma dizini temiz.**
