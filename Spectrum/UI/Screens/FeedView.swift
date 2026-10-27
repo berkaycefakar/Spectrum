@@ -40,7 +40,7 @@ struct FeedView: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Branded header: coloured prism mark + clean white wordmark.
+                        // Branded header: the speech-bubble mark + clean white wordmark.
                         HStack(spacing: 11) {
                             SpectrumMark(size: 32)
                             SpectrumWordmark(size: 30)
