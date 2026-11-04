@@ -19,12 +19,19 @@ Hepsi commit'li ve push'lu (`feature/backlog-pass`).
 - **Akış yavaşlığı:** cihazda ölçüldü — açılış 0,4 sn, ama kart kapakları MusicKit'te 25+ sn takılıyordu.
   Yükleme paralel yapıldı; MusicKit 4 sn'de cevap vermezse iTunes lookup'a düşüyor. **Cihazda tekrar ölçülmedi.**
 
+- **Güvenlik taraması (elle, 4 Kasım):** avatar bucket'ında herkesin herkesin avatarını
+  üzerine yazabildiği iki eski storage policy vardı — silindi, bucket'a 5 MB + resim türü sınırı
+  kondu; review/bio/username'e uzunluk sınırı; tekrarlanan RLS policy'leri temizlendi
+  (`Supabase_migration_security_hardening.sql`, canlıya uygulandı, sahte kullanıcıyla test edildi).
+  Temiz çıkanlar: koddaki anahtar sadece `anon`, git geçmişinde sır yok, tüm tablolarda RLS açık,
+  `delete-user` kimliği token'dan alıyor, SECURITY DEFINER fonksiyonların `search_path`'i sabit.
+- **Build 1.0 (2)** yeni ikonla yüklendi (elle imza: `Spectrum App Store 2026` profili —
+  API anahtarının bulut imzalama yetkisi yok). `main` bu dala fast-forward edildi.
+
 ### Sıradaki işler
-1. Cihazda dene: yeni profil/aktivite/ayarlar, favori seçici, kapak değiştir, akış hızı.
-2. Yeni ikonla 1.0 (2) build'i yükle → ekran görüntüleri → submit.
-3. Spotify client secret'ını iptal et.
-4. `feature/backlog-pass` → `main` birleştir.
-5. 1.0 sonrası: Sentry, push bildirimi.
+1. **Ekran görüntüleri** (cihazdan) → incelemeye gönder.
+2. Spotify client secret'ını iptal et (Spotify panelinden, senin yapman gerek).
+3. 1.0 sonrası: Sentry, push bildirimi.
 
 ---
 
