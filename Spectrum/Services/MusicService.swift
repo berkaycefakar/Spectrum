@@ -209,6 +209,19 @@ class MusicService {
     /// Feeds and profiles were fetching sequentially, which made them slow to populate.
     func fetchTracks(ids: [Int64]) async -> [Int64: Track] {
         guard !ids.isEmpty else { return [:] }
+        // MusicKit can sit on a catalog request for a long time — the first one after launch
+        // waits on a developer token, and with no Apple Music access it may never answer.
+        // Every feed card waits on this for its artwork, so after a few seconds whatever is
+        // still missing is filled from the public iTunes lookup instead.
+        var result = await Self.withDeadline(seconds: 4) { await self.fetchTracksFromCatalog(ids: ids) } ?? [:]
+        let missing = ids.filter { result[$0] == nil }
+        if !missing.isEmpty {
+            for (id, track) in await fetchTracksFromITunes(ids: missing) { result[id] = track }
+        }
+        return result
+    }
+
+    private func fetchTracksFromCatalog(ids: [Int64]) async -> [Int64: Track] {
         do {
             let itemIds = ids.map { MusicItemID(String($0)) }
             var request = MusicCatalogResourceRequest<Song>(matching: \.id, memberOf: itemIds)
@@ -225,6 +238,49 @@ class MusicService {
         } catch {
             logFailure("fetchTracks(ids:)", error)
             return [:]
+        }
+    }
+
+    /// The public lookup endpoint: no token, no authorization, one request for the batch.
+    /// Thinner than a catalog response (no credited-artist list), which is fine for a card.
+    private func fetchTracksFromITunes(ids: [Int64]) async -> [Int64: Track] {
+        var components = URLComponents(string: "https://itunes.apple.com/lookup")
+        components?.queryItems = [
+            URLQueryItem(name: "id", value: ids.map(String.init).joined(separator: ",")),
+            URLQueryItem(name: "entity", value: "song"),
+        ]
+        guard let url = components?.url else { return [:] }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            // The lookup mixes in collection rows; only rows that decode as a track are kept.
+            struct Loose: Decodable { let results: [FailableTrack] }
+            struct FailableTrack: Decodable {
+                let track: Track?
+                init(from decoder: Decoder) throws { track = try? Track(from: decoder) }
+            }
+            let rows = try decoder.decode(Loose.self, from: data).results.compactMap(\.track)
+            return Dictionary(rows.map { (Int64($0.id), $0) }, uniquingKeysWith: { first, _ in first })
+        } catch {
+            debugLog("iTunes lookup failed: \(error)")
+            return [:]
+        }
+    }
+
+    /// Runs `operation` but stops waiting after `seconds`, returning nil. The operation is left
+    /// to finish on its own — a task group would wait for it, which is the hang being avoided.
+    static func withDeadline<T>(seconds: Double, _ operation: @escaping () async -> T) async -> T? {
+        let once = DeadlineOnce()
+        return await withCheckedContinuation { continuation in
+            Task {
+                let value = await operation()
+                if once.claim() { continuation.resume(returning: value) }
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(seconds))
+                if once.claim() { continuation.resume(returning: nil) }
+            }
         }
     }
 
@@ -489,4 +545,18 @@ private actor ArtistBriefCache {
 
     func value(for name: String) -> ArtistBrief? { storage[name] }
     func store(_ brief: ArtistBrief, for name: String) { storage[name] = brief }
+}
+
+/// First-caller-wins flag for `MusicService.withDeadline`.
+private final class DeadlineOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if done { return false }
+        done = true
+        return true
+    }
 }

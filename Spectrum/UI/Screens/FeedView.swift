@@ -262,31 +262,32 @@ struct FeedView: View {
         let trackIds = Set(page.map(\.itunesTrackId)).subtracting(knownTracks)
         let userIds = Set(page.map(\.userId)).subtracting(knownProfiles)
 
-        if !trackIds.isEmpty {
-            let fetched = await MusicService.shared.fetchTracks(ids: Array(trackIds))
-            await MainActor.run {
-                for (id, track) in fetched { self.tracks[id] = track }
-            }
-        }
-
-        if !userIds.isEmpty,
-           let fetched = try? await SupabaseManager.shared.batchGetProfiles(ids: userIds.map(\.uuidString)) {
-            await MainActor.run {
-                for profile in fetched { self.profiles[profile.id] = profile }
-            }
-        }
-
-        let states = await SupabaseManager.shared.likeStates(
+        // Three independent lookups, run side by side. They used to be chained, so a slow
+        // MusicKit answer held back every author name and like count on the page too.
+        async let tracksLoad: [Int64: Track] = trackIds.isEmpty
+            ? [:] : MusicService.shared.fetchTracks(ids: Array(trackIds))
+        async let profilesLoad: [Profile] = userIds.isEmpty
+            ? [] : ((try? await SupabaseManager.shared.batchGetProfiles(ids: userIds.map(\.uuidString))) ?? [])
+        async let statesLoad = SupabaseManager.shared.likeStates(
             contentType: .songReview,
             contentIds: page.map(\.id)
         )
+
+        let fetchedProfiles = await profilesLoad
+        let states = await statesLoad
         await MainActor.run {
+            for profile in fetchedProfiles { self.profiles[profile.id] = profile }
             // Merge rather than replace: an optimistic toggle the user made while this page
             // was in flight must not be overwritten by the older server value.
             for (id, state) in states where self.likes[id] == nil {
                 self.likes[id] = state
             }
         }
+        let fetchedTracks = await tracksLoad
+        await MainActor.run {
+            for (id, track) in fetchedTracks { self.tracks[id] = track }
+        }
+
     }
 
     /// Optimistic like: the heart flips in the same frame as the tap, and only reverts if
