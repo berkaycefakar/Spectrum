@@ -199,7 +199,7 @@ struct FavoriteShelf: View {
                     }
                 }
 
-                HStack(spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
                     ForEach(0..<4, id: \.self) { index in
                         slot(index)
                     }
@@ -213,16 +213,31 @@ struct FavoriteShelf: View {
         if index < albums.count {
             let album = albums[index]
             NavigationLink(value: AppRoute.album(album)) {
-                AsyncImage(url: album.artworkUrl600) { phase in
-                    if let image = phase.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Color.white.opacity(0.06)
+                VStack(alignment: .leading, spacing: 6) {
+                    // Square slot first, image filled into it: an `aspectRatio(.fit)` on the
+                    // image itself let wide artwork shrink its slot out of line with the others.
+                    Color.white.opacity(0.06)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            AsyncImage(url: album.artworkUrl600) { phase in
+                                if let image = phase.image {
+                                    image.resizable().aspectRatio(contentMode: .fill)
+                                }
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(album.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text(album.artist)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.55))
                     }
+                    .lineLimit(1)
                 }
-                .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(album.title), \(album.artist)")
