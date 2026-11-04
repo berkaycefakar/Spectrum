@@ -6,6 +6,7 @@ struct ActivityView: View {
     @State private var activities: [ActivityItem] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var filter: ActivityFilter = .all
     @StateObject private var reselection = TabReselectionState.shared
     /// Value-based navigation so tapping Activity while already on it returns to the list.
     @State private var path = NavigationPath()
@@ -82,6 +83,64 @@ struct ActivityView: View {
         .padding(.top, 8)
     }
 
+    // MARK: - Filter
+    private enum ActivityFilter: CaseIterable {
+        case all, logs, followers
+
+        var title: String {
+            switch self {
+            case .all: String(localized: "All", bundle: appStringsBundle)
+            case .logs: String(localized: "Logs", bundle: appStringsBundle)
+            case .followers: String(localized: "Followers", bundle: appStringsBundle)
+            }
+        }
+
+        func includes(_ item: ActivityItem) -> Bool {
+            switch self {
+            case .all: true
+            case .logs: item.type != .newFollower
+            case .followers: item.type == .newFollower
+            }
+        }
+    }
+
+    private var filteredActivities: [ActivityItem] {
+        activities.filter { filter.includes($0) }
+    }
+
+    private var followerCount: Int {
+        activities.filter { $0.type == .newFollower }.count
+    }
+
+    private var filterChips: some View {
+        HStack(spacing: 8) {
+            ForEach(ActivityFilter.allCases, id: \.self) { option in
+                let selected = filter == option
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) { filter = option }
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(option.title)
+                        if option == .followers, followerCount > 0 {
+                            Text("\(followerCount)")
+                                .foregroundStyle(selected ? Color(hex: "#C800C8") : Color(hex: "#FF4DFF"))
+                        }
+                    }
+                    .font(.subheadline.weight(selected ? .bold : .semibold))
+                    .foregroundStyle(selected ? .black : .white)
+                    .padding(.horizontal, 16)
+                    .frame(height: 36)
+                    .background(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.07)), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(selected ? 0 : 0.16), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+            Spacer()
+        }
+        .padding(.horizontal)
+    }
+
     // MARK: - Time grouping
     private enum TimeBucket: String, CaseIterable {
         case today
@@ -107,7 +166,7 @@ struct ActivityView: View {
     }
 
     private var groupedActivities: [(bucket: TimeBucket, items: [ActivityItem])] {
-        let grouped = Dictionary(grouping: activities) { bucket(for: $0.createdAt) }
+        let grouped = Dictionary(grouping: filteredActivities) { bucket(for: $0.createdAt) }
         return TimeBucket.allCases.compactMap { b in
             guard let items = grouped[b], !items.isEmpty else { return nil }
             return (b, items)
@@ -137,34 +196,33 @@ struct ActivityView: View {
     // MARK: - Activity List
     private var activityList: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 18) {
                 header
+                filterChips
+
+                if groupedActivities.isEmpty {
+                    Text(filter == .followers ? "No new followers yet" : "No logs from people you follow yet")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.5))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                }
 
                 ForEach(groupedActivities, id: \.bucket) { group in
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text(group.bucket.title)
                             .font(.caption)
                             .fontWeight(.semibold)
                             .textCase(.uppercase)
                             .tracking(0.5)
                             .foregroundStyle(.white.opacity(0.4))
-                            .padding(.horizontal, 4)
+                            .padding(.leading, 30)
 
-                        LazyVStack(spacing: 12) {
-                            ForEach(group.items) { item in
-                                // Activity cards render other people's review text, so they
-                                // need the same Report / Block pair the feed has — Apple
-                                // checks every surface that displays user content, not just
-                                // the main one. Follows carry no text, hence the switch.
-                                ActivityItemCard(activity: item)
-                                    .moderationActions(
-                                        contentType: item.reportedContentType,
-                                        contentRef: item.id.uuidString,
-                                        authorId: item.actorId,
-                                        authorUsername: item.actorUsername,
-                                        reportedText: item.reviewText,
-                                        onBlocked: { Task { await loadNotifications() } }
-                                    )
+                        // Rows sit flush so the timeline rail reads as one line through the
+                        // group; each row carries its own bottom gap instead.
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
+                                timelineRow(item, isLast: index == group.items.count - 1)
                             }
                         }
                     }
@@ -175,6 +233,45 @@ struct ActivityView: View {
             .padding(.bottom, 100)
         }
         .tracksTabBarScroll(tab: 2)
+    }
+
+    private func timelineRow(_ item: ActivityItem, isLast: Bool) -> some View {
+        let node = item.type == .newFollower
+            ? Color(hex: "#0A84FF")
+            : Color(hex: item.vibeColor ?? "#FF2D55")
+        return HStack(alignment: .top, spacing: 12) {
+            ZStack(alignment: .top) {
+                Rectangle()
+                    .fill(.white.opacity(0.1))
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
+                    .padding(.top, 20)
+                    // The last row's rail would point at nothing.
+                    .opacity(isLast ? 0 : 1)
+                Circle()
+                    .fill(node)
+                    .frame(width: 12, height: 12)
+                    .overlay(Circle().stroke(.black, lineWidth: 3))
+                    .shadow(color: node.opacity(0.7), radius: 5)
+                    .padding(.top, 18)
+            }
+            .frame(width: 18)
+            .accessibilityHidden(true)
+
+            // Activity cards render other people's review text, so they need the same
+            // Report / Block pair the feed has — Apple checks every surface that displays
+            // user content, not just the main one.
+            ActivityItemCard(activity: item)
+                .moderationActions(
+                    contentType: item.reportedContentType,
+                    contentRef: item.id.uuidString,
+                    authorId: item.actorId,
+                    authorUsername: item.actorUsername,
+                    reportedText: item.reviewText,
+                    onBlocked: { Task { await loadNotifications() } }
+                )
+                .padding(.bottom, 12)
+        }
     }
     
     // MARK: - Error State

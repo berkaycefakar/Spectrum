@@ -73,106 +73,139 @@ struct ActivityItemCard: View {
     }
 
     // MARK: - Card Content
+    @ViewBuilder
     private var cardContent: some View {
-        HStack(spacing: 14) {
-            // Artwork / avatar with a small action-type badge in the corner.
-            artworkThumbnail
-                .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: badgeIcon)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 20, height: 20)
-                        .background(accentColor)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(.black.opacity(0.85), lineWidth: 2))
-                        .offset(x: 5, y: 5)
-                }
+        if activity.type == .newFollower {
+            followerRow
+        } else {
+            logCard
+        }
+    }
 
-            // Content
-            VStack(alignment: .leading, spacing: 4) {
-                // Username (bold) + action (muted), on one flowing line.
+    private var vibe: Color { Color(hex: activity.vibeColor ?? "#FF2D55") }
+
+    /// A log, tinted with the vibe its author picked.
+    private var logCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                avatar(size: 28)
                 (
                     Text(activity.actorUsername ?? String(localized: "Someone", bundle: appStringsBundle)).fontWeight(.semibold).foregroundColor(.white)
-                    + Text(" \(actionPhrase)").foregroundColor(.white.opacity(0.55))
+                    + Text(" \(actionPhrase)").foregroundColor(.white.opacity(0.6))
                 )
                 .font(.subheadline)
                 .lineLimit(1)
-
-                // Target name (track/album title)
-                if let title = targetTitle ?? activity.targetName {
-                    Text(title)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.white.opacity(0.7))
-                        .lineLimit(1)
-                }
-
-                // Review text snippet
-                if let text = activity.reviewText, !text.isEmpty {
-                    Text("\u{201C}\(ProfanityFilter.masked(text))\u{201D}")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.5))
-                        .lineLimit(2)
-                        .italic()
-                }
-
-                // Rating + time
-                HStack(spacing: 10) {
-                    if let rating = activity.rating {
-                        HStack(spacing: 3) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(Color(hex: "#FFCC00"))
-                            Text(String(format: "%.1f", Double(rating) / 2.0))
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white.opacity(0.7))
-                        }
-
-                        if let vibe = activity.vibeColor {
-                            Circle()
-                                .fill(Color(hex: vibe))
-                                .frame(width: 8, height: 8)
-                                .shadow(color: Color(hex: vibe).opacity(0.6), radius: 3)
-                        }
-                    }
-
-                    Text(activity.createdAt.timeAgoDisplay())
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.35))
-                }
-                .padding(.top, 1)
+                Spacer(minLength: 4)
+                Text(activity.createdAt.timeAgoDisplay())
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.45))
             }
 
-            Spacer()
+            HStack(spacing: 14) {
+                artworkThumbnail
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titleParts.title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    if let artist = titleParts.artist {
+                        Text(artist)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.65))
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 8) {
+                        if let hex = activity.vibeColor {
+                            Text(VibePalette.label(for: hex))
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 3)
+                                .background(vibe.opacity(0.22), in: Capsule())
+                                .overlay(Capsule().stroke(vibe, lineWidth: 1))
+                        }
+                        if let rating = activity.rating {
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(Color(hex: "#FFCC00"))
+                                Text(String(format: "%.1f", Double(rating) / 2.0))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+                Spacer(minLength: 0)
+            }
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.2))
+            if let text = activity.reviewText, !text.isEmpty {
+                Text("\u{201C}\(ProfanityFilter.masked(text))\u{201D}")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(14)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(
-                    LinearGradient(
-                        colors: [accentColor.opacity(0.35), .white.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(
+                colors: [vibe.opacity(0.24), .white.opacity(0.04)],
+                startPoint: .topLeading,
+                endPoint: UnitPoint(x: 0.75, y: 0.9)
+            )
         )
-        .shadow(color: accentColor.opacity(0.12), radius: 10, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.1), lineWidth: 1))
     }
 
-    private var badgeIcon: String {
-        switch activity.type {
-        case .trackReview: return "star.fill"
-        case .albumReview: return "opticaldisc.fill"
-        case .newFollower: return "person.fill.badge.plus"
+    /// "Title - Artist" from the catalog lookup, split back into its two lines.
+    private var titleParts: (title: String, artist: String?) {
+        if let full = targetTitle, let range = full.range(of: " - ") {
+            return (String(full[..<range.lowerBound]), String(full[range.upperBound...]))
         }
+        return (targetTitle ?? activity.targetName ?? "", nil)
+    }
+
+    private var followerRow: some View {
+        HStack(spacing: 12) {
+            avatar(size: 40)
+            (
+                Text(activity.actorUsername ?? String(localized: "Someone", bundle: appStringsBundle)).fontWeight(.semibold).foregroundColor(.white)
+                + Text(" \(actionPhrase)").foregroundColor(.white.opacity(0.6))
+                + Text(" · \(activity.createdAt.timeAgoDisplay())").foregroundColor(.white.opacity(0.4))
+            )
+            .font(.subheadline)
+            .lineLimit(2)
+            Spacer(minLength: 4)
+            FollowBackButton(userId: activity.actorId)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.08), lineWidth: 1))
+    }
+
+    private func avatar(size: CGFloat) -> some View {
+        ZStack {
+            Circle().fill(Color(hex: "#3A2A4A"))
+            if let urlString = activity.actorAvatarUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        userInitial
+                    }
+                }
+            } else {
+                userInitial
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .font(.system(size: size * 0.42, weight: .bold))
     }
 
     /// Verb-only phrase; the username is rendered separately in bold.
@@ -205,13 +238,8 @@ struct ActivityItemCard: View {
                     artworkPlaceholder
                 }
             }
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(accentColor.opacity(0.3), lineWidth: 1)
-            )
-            .shadow(color: accentColor.opacity(0.2), radius: 6)
+            .frame(width: 72, height: 72)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
 
         case .newFollower:
             // Show user avatar
@@ -262,8 +290,6 @@ struct ActivityItemCard: View {
 
     private var userInitial: some View {
         Text(String((activity.actorUsername ?? "U").prefix(1)).uppercased())
-            .font(.headline)
-            .fontWeight(.bold)
             .foregroundStyle(.white)
     }
 
@@ -314,6 +340,49 @@ struct ActivityItemCard: View {
             return String(localized: "\(username) reviewed an album", bundle: appStringsBundle)
         case .newFollower:
             return String(localized: "\(username) started following you", bundle: appStringsBundle)
+        }
+    }
+}
+
+// MARK: - Follow Back
+
+/// "Follow" / "Following" toggle on a new-follower row.
+private struct FollowBackButton: View {
+    let userId: UUID
+    @State private var isFollowing: Bool?
+    @State private var isBusy = false
+
+    var body: some View {
+        Button {
+            guard let current = isFollowing, !isBusy else { return }
+            isBusy = true
+            isFollowing = !current
+            Task {
+                do {
+                    if current {
+                        try await SupabaseManager.shared.unfollowUser(userId: userId)
+                    } else {
+                        try await SupabaseManager.shared.followUser(userId: userId)
+                    }
+                } catch {
+                    await MainActor.run { isFollowing = current }
+                }
+                await MainActor.run { isBusy = false }
+            }
+        } label: {
+            let following = isFollowing ?? false
+            Text(following ? "Following" : "Follow")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(following ? .white : .black)
+                .padding(.horizontal, 14)
+                .frame(height: 32)
+                .background(following ? AnyShapeStyle(.clear) : AnyShapeStyle(.white), in: Capsule())
+                .overlay(Capsule().stroke(.white.opacity(following ? 0.25 : 0), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .opacity(isFollowing == nil ? 0 : 1)
+        .task {
+            isFollowing = (try? await SupabaseManager.shared.isFollowing(userId: userId)) ?? false
         }
     }
 }
