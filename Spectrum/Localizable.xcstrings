@@ -271,6 +271,17 @@
         }
       }
     },
+    "Add a favorite album": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favori albüm ekle"
+          }
+        }
+      }
+    },
     "Add a rating before saving.": {
       "localizations": {
         "tr": {
@@ -378,6 +389,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Albümler"
+          }
+        }
+      }
+    },
+    "Albums you've rated": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puanladığın albümler"
+          }
+        }
+      }
+    },
+    "All": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tümü"
+          }
+        }
+      }
+    },
+    "All Time": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm zamanlar"
           }
         }
       }
@@ -625,6 +669,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vazgeç ve çıkış yap"
+          }
+        }
+      }
+    },
+    "Change Cover": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapağı değiştir"
           }
         }
       }
@@ -1008,6 +1063,17 @@
         }
       }
     },
+    "Edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düzenle"
+          }
+        }
+      }
+    },
     "Edit Details": {
       "extractionState": "manual",
       "localizations": {
@@ -1142,6 +1208,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kaydedilemedi: %@"
+          }
+        }
+      }
+    },
+    "Favorite Four": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favori dört"
           }
         }
       }
@@ -1701,12 +1778,34 @@
         }
       }
     },
+    "No logs from people you follow yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takip ettiklerinden henüz kayıt yok"
+          }
+        }
+      }
+    },
     "No logs yet — be the first!": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Henüz log yok — ilk sen ol!"
+          }
+        }
+      }
+    },
+    "No new followers yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz yeni takipçin yok"
           }
         }
       }
@@ -2001,6 +2100,17 @@
         }
       }
     },
+    "Pick Favorite Albums": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favori albümleri seç"
+          }
+        }
+      }
+    },
     "Pick a username.": {
       "localizations": {
         "tr": {
@@ -2194,6 +2304,17 @@
         }
       }
     },
+    "Rating distribution": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puan dağılımı"
+          }
+        }
+      }
+    },
     "Rating saved": {
       "extractionState": "manual",
       "localizations": {
@@ -2205,6 +2326,17 @@
         }
       }
     },
+    "Ratings": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puanlar"
+          }
+        }
+      }
+    },
     "Reactions and new followers": {
       "extractionState": "manual",
       "localizations": {
@@ -2212,6 +2344,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tepkiler ve yeni takipçiler"
+          }
+        }
+      }
+    },
+    "Remove %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kaldır"
           }
         }
       }
@@ -2289,6 +2432,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Şifreni sıfırla"
+          }
+        }
+      }
+    },
+    "Results": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonuçlar"
           }
         }
       }
@@ -2408,6 +2562,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sanatçı ara"
+          }
+        }
+      }
+    },
+    "Search for an album to add it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eklemek için bir albüm ara."
           }
         }
       }
@@ -2604,6 +2769,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Benzer Sanatçılar"
+          }
+        }
+      }
+    },
+    "Since": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlangıç"
           }
         }
       }
@@ -2816,6 +2992,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu kullanıcı adı alınmış. Başka birini seç."
+          }
+        }
+      }
+    },
+    "The cover can be your spectrum or one of your favorite four.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapak, spektrumun ya da favori dördünden biri olabilir."
           }
         }
       }
