@@ -306,6 +306,30 @@ final class SupabaseManager {
             .execute()
     }
 
+    /// The profile showcase: the favourite-four shelf and which album fills the banner.
+    /// Written together because the banner can only show an album that is on the shelf.
+    func updateShowcase(userId: UUID, favoriteAlbumIds: [Int64], coverAlbumId: Int64?) async throws {
+        struct ShowcaseUpdate: Encodable {
+            let favorite_album_ids: [Int64]
+            let cover_album_id: Int64?
+
+            // Explicit so a nil cover is sent as null and actually clears the column.
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(favorite_album_ids, forKey: .favorite_album_ids)
+                try c.encode(cover_album_id, forKey: .cover_album_id)
+            }
+            enum CodingKeys: String, CodingKey { case favorite_album_ids, cover_album_id }
+        }
+        let ids = Array(favoriteAlbumIds.prefix(4))
+        let cover = coverAlbumId.flatMap { ids.contains($0) ? $0 : nil }
+        try await client
+            .from("profiles")
+            .update(ShowcaseUpdate(favorite_album_ids: ids, cover_album_id: cover))
+            .eq("id", value: userId)
+            .execute()
+    }
+
     /// Usernames and bios are user-generated content too: they render on every card in the
     /// feed and in search results, and a bio is what a profile report quotes. Guideline 1.2
     /// makes no distinction between a review and a display name, so both go through the same

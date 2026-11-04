@@ -5,12 +5,28 @@ struct Profile: Codable, Identifiable {
     let username: String?
     let avatarUrl: String?
     let bio: String?
+    /// Up to four Apple collection ids, in shelf order. Optional so a row read before the
+    /// showcase migration ran still decodes.
+    var favoriteAlbumIds: [Int64]? = nil
+    /// Album whose artwork fills the profile banner; nil draws it from the user's vibes.
+    var coverAlbumId: Int64? = nil
     
     enum CodingKeys: String, CodingKey {
         case id
         case username
         case avatarUrl = "avatar_url"
         case bio
+        case favoriteAlbumIds = "favorite_album_ids"
+        case coverAlbumId = "cover_album_id"
+    }
+}
+
+extension Profile {
+    func withShowcase(favorites: [Int64], cover: Int64?) -> Profile {
+        var copy = self
+        copy.favoriteAlbumIds = favorites
+        copy.coverAlbumId = cover
+        return copy
     }
 }
 
