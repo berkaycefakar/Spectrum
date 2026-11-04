@@ -30,6 +30,10 @@ struct ProfileView: View {
     @State private var loadedMore: Set<ProfileCategory> = []
     @State private var isLoadingMore = false
     @State private var showStats = false
+    /// The favourite-four shelf, resolved to albums in shelf order.
+    @State private var favoriteAlbums: [Album] = []
+    @State private var showFavoritesEditor = false
+    @State private var showCoverPicker = false
     @StateObject private var reselection = TabReselectionState.shared
     /// Value-based navigation so tapping Profile while already on it returns to the top.
     @State private var path = NavigationPath()
@@ -87,59 +91,36 @@ struct ProfileView: View {
                 
                 ScrollView {
                     VStack(spacing: 30) {
-                        // 1. Profile Header with Stats
+                        // 1. Cover banner, avatar and counts
                         if let profile = profile {
-                            ProfileHeader(
+                            ProfileCoverHeader(
                                 profile: profile,
-                                totalLogs: reviews.count,
-                                averageRating: averageRating,
+                                coverAlbum: favoriteAlbums.first { $0.id == profile.coverAlbumId },
+                                vibeHexes: vibeStats.map(\.color),
                                 followersCount: followers.count,
                                 followingCount: following.count,
-                                onEditTapped: {
-                                    showEditProfile = true
-                                },
-                                onFollowersTapped: {
-                                    showFollowersSheet = true
-                                },
-                                onFollowingTapped: {
-                                    showFollowingSheet = true
-                                }
+                                onChangeCover: { showCoverPicker = true },
+                                onEdit: { showEditProfile = true },
+                                onSettings: { showSettings = true },
+                                onFollowersTapped: { showFollowersSheet = true },
+                                onFollowingTapped: { showFollowingSheet = true }
                             )
+
+                            // 2. Favourite four and the all-time summary
+                            FavoriteShelf(albums: favoriteAlbums, onEdit: { showFavoritesEditor = true })
+                                .padding(.horizontal)
+
+                            AllTimeSummaryCard(
+                                summary: summary,
+                                totalLogs: totals.songs + totals.albums + totals.artists,
+                                onTap: summary.entries.isEmpty ? nil : { showStats = true }
+                            )
+                            .padding(.horizontal)
                         } else if isLoading {
                             ProgressView().tint(.white)
+                                .padding(.top, 120)
                         }
-                        
-                        // 2. Spectrum Visualization
-                        if !vibeStats.isEmpty {
-                            Button {
-                                showStats = true
-                            } label: {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    HStack {
-                                        Text("Your Spectrum")
-                                            .font(.headline)
-                                            .foregroundStyle(.white)
-                                        Spacer()
-                                        // The bar chart alone gave no hint there was more
-                                        // behind it; people tapped it and nothing happened.
-                                        HStack(spacing: 3) {
-                                            Text("See all")
-                                                .font(.caption.weight(.semibold))
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 10, weight: .bold))
-                                        }
-                                        .foregroundStyle(Color(hex: "#FF00FF"))
-                                    }
 
-                                    SpectrumBarChart(stats: vibeStats)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Your Spectrum, see full statistics")
-                            .padding(.horizontal)
-                        }
-                        
                         // 3. Lists
                         if let profileId = profile?.id {
                             ProfileListsSection(userId: profileId, isOwner: true)
@@ -202,24 +183,11 @@ struct ProfileView: View {
                         }
                         .padding(.horizontal)
                         
-                        // 5. Account Actions Section
-                        AccountActionsSection(
-                            onEditProfile: {
-                                showEditProfile = true
-                            },
-                            onSettings: {
-                                showSettings = true
-                            },
-                            onLogout: {
-                                showLogoutAlert = true
-                            }
-                        )
-                        .padding(.horizontal)
-                        .padding(.top, 10)
                     }
-                    .padding(.top, 20)
                     .padding(.bottom, 100) // Space for TabBar
                 }
+                // The banner runs up under the status bar.
+                .ignoresSafeArea(edges: .top)
                 .tracksTabBarScroll(tab: 3)
             }
             .appRouteDestinations(onLogChanged: { Task { await loadProfileData() } })
@@ -233,6 +201,25 @@ struct ProfileView: View {
                     albumCount: totals.albums,
                     artistCount: totals.artists
                 )
+            }
+            .sheet(isPresented: $showFavoritesEditor) {
+                FavoritesEditorSheet(
+                    ratedAlbums: albumReviews.compactMap { albums[$0.itunesCollectionId] },
+                    initial: favoriteAlbums,
+                    onSave: saveFavorites
+                )
+            }
+            .confirmationDialog("Change Cover", isPresented: $showCoverPicker, titleVisibility: .visible) {
+                Button("Your Spectrum") { Task { await saveCover(nil) } }
+                ForEach(favoriteAlbums) { album in
+                    Button(album.title) { Task { await saveCover(album.id) } }
+                }
+                if favoriteAlbums.isEmpty {
+                    Button("Pick Favorite Albums") { showFavoritesEditor = true }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("The cover can be your spectrum or one of your favorite four.")
             }
             .sheet(isPresented: $showEditProfile) {
                 if let profile = profile {
@@ -282,6 +269,35 @@ struct ProfileView: View {
         }
     }
     
+    // MARK: - Showcase
+
+    private func saveFavorites(_ picked: [Album]) async {
+        guard let profile else { return }
+        let ids = picked.map(\.id)
+        // Keep the cover only if its album survived the edit.
+        let cover = profile.coverAlbumId.flatMap { ids.contains($0) ? $0 : nil }
+        do {
+            try await SupabaseManager.shared.updateShowcase(userId: profile.id, favoriteAlbumIds: ids, coverAlbumId: cover)
+            await MainActor.run {
+                self.favoriteAlbums = picked
+                self.profile = profile.withShowcase(favorites: ids, cover: cover)
+            }
+        } catch {
+            debugLog("Error saving favorites: \(error)")
+        }
+    }
+
+    private func saveCover(_ albumId: Int64?) async {
+        guard let profile else { return }
+        let ids = favoriteAlbums.map(\.id)
+        do {
+            try await SupabaseManager.shared.updateShowcase(userId: profile.id, favoriteAlbumIds: ids, coverAlbumId: albumId)
+            await MainActor.run { self.profile = profile.withShowcase(favorites: ids, cover: albumId) }
+        } catch {
+            debugLog("Error saving cover: \(error)")
+        }
+    }
+
     // MARK: - Paging
 
     private var loadedCount: Int {
@@ -476,10 +492,15 @@ struct ProfileView: View {
             async let albumsLoad = MusicService.shared.fetchAlbums(ids: albumIds)
             async let briefsLoad = MusicService.shared.fetchArtistBriefs(names: artistNames)
 
+            let favoriteIds = profileData.favoriteAlbumIds ?? []
+            async let favoritesLoad = MusicService.shared.fetchAlbums(ids: favoriteIds)
+
             let fetchedTracks = await tracksLoad
             let fetchedAlbums = await albumsLoad
             let fetchedArtists = await briefsLoad
+            let fetchedFavorites = await favoritesLoad
             await MainActor.run {
+                self.favoriteAlbums = favoriteIds.compactMap { fetchedFavorites[$0] }
                 for (id, track) in fetchedTracks { self.tracks[id] = track }
                 for (id, album) in fetchedAlbums { self.albums[id] = album }
                 for (name, brief) in fetchedArtists { self.artistBriefs[name] = brief }
