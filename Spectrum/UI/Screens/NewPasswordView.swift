@@ -131,8 +131,8 @@ struct NewPasswordView: View {
     private func save() {
         focusedField = nil
 
-        guard password.count >= 6 else {
-            errorMessage = String(localized: "Use a password of at least 6 characters.", bundle: appStringsBundle)
+        guard password.count >= 8 else {
+            errorMessage = String(localized: "Use a password of at least 8 characters.", bundle: appStringsBundle)
             return
         }
         guard password == confirmation else {

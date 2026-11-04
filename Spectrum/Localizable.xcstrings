@@ -3264,12 +3264,12 @@
         }
       }
     },
-    "Use a password of at least 6 characters.": {
+    "Use a password of at least 8 characters.": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En az 6 karakterli bir şifre kullan."
+            "value": "En az 8 karakterli bir şifre kullan."
           }
         }
       }
