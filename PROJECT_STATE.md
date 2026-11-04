@@ -7,6 +7,27 @@
 
 ---
 
+## 🟢 DURUM — 4 Kasım 2026 (profil/aktivite/ayarlar yeniden tasarım)
+
+Hepsi commit'li ve push'lu (`feature/backlog-pass`).
+- **Profil:** kapak bandı (vibe renkleri ya da favori albümlerden biri), favori dört rafı
+  (isim + sanatçı), "Tüm zamanlar" kartı (kayıt, ortalama, başlangıç, spektrum, puan dağılımı).
+  Supabase `profiles` tablosuna `favorite_album_ids` + `cover_album_id` eklendi (canlıya uygulandı,
+  `Supabase_migration_profile_showcase.sql`).
+- **Aktivite:** Tümü / Kayıtlar / Takipçiler filtresi, vibe renkli zaman çizgisi, takip et butonu.
+- **Ayarlar:** hesap kartı, ikonlu grup satırları, dil menüsü, kaydırılabilir.
+- **Akış yavaşlığı:** cihazda ölçüldü — açılış 0,4 sn, ama kart kapakları MusicKit'te 25+ sn takılıyordu.
+  Yükleme paralel yapıldı; MusicKit 4 sn'de cevap vermezse iTunes lookup'a düşüyor. **Cihazda tekrar ölçülmedi.**
+
+### Sıradaki işler
+1. Cihazda dene: yeni profil/aktivite/ayarlar, favori seçici, kapak değiştir, akış hızı.
+2. Yeni ikonla 1.0 (2) build'i yükle → ekran görüntüleri → submit.
+3. Spotify client secret'ını iptal et.
+4. `feature/backlog-pass` → `main` birleştir.
+5. 1.0 sonrası: Sentry, push bildirimi.
+
+---
+
 ## 🟢 DURUM — 27 Ekim 2026 (dil seçici + yeni logo + mağaza adı)
 
 **Her şey commit'li ve push'lu** (`feature/backlog-pass`). Birim testleri geçiyor.
