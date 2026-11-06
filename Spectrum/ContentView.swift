@@ -40,7 +40,9 @@ struct ContentView: View {
     
     var body: some View {
         Group {
-            if sessionStore.isLoading {
+            if DemoMode.isOn {
+                mainTabView
+            } else if sessionStore.isLoading {
                 // Branded splash while the session is being restored.
                 SplashView()
             } else if sessionStore.isAuthenticated {

@@ -50,7 +50,8 @@ struct SpectrumApp: App {
                 .task {
                     // Catalog search requires this — without `.authorized` every MusicKit
                     // request throws and the app shows empty feeds and empty search results.
-                    await musicAuth.requestIfNeeded()
+                    // The demo runs without an Apple Music account; asking would cover the screen.
+                    if !DemoMode.isOn { await musicAuth.requestIfNeeded() }
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     // iOS doesn't notify us when the user flips the Media & Apple Music switch

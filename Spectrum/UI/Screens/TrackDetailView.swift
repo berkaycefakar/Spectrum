@@ -513,6 +513,14 @@ struct TrackDetailView: View {
     }
 
     private func loadTrackReviews() async {
+        #if DEBUG
+        if DemoMode.isOn {
+            trackReviews = (DemoData.feed + DemoData.myReviews).filter { $0.itunesTrackId == Int64(track.id) }
+            reviewProfiles = DemoData.profilesById
+            isLoadingReviews = false
+            return
+        }
+        #endif
         do {
             let reviews = try await SupabaseManager.shared.getTrackReviews(trackId: Int64(track.id))
             

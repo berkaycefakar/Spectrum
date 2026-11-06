@@ -195,6 +195,9 @@ class MusicService {
     // MARK: - Fetch: Single Track by ID
 
     func fetchTrack(id: Int64) async throws -> Track? {
+        #if DEBUG
+        if DemoMode.isOn { return DemoData.tracksById[id] }
+        #endif
         let musicItemId = MusicItemID(String(id))
         var request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: musicItemId)
         request.properties = [.artists, .albums]
@@ -209,6 +212,9 @@ class MusicService {
     /// Feeds and profiles were fetching sequentially, which made them slow to populate.
     func fetchTracks(ids: [Int64]) async -> [Int64: Track] {
         guard !ids.isEmpty else { return [:] }
+        #if DEBUG
+        if DemoMode.isOn { return DemoData.tracksById.filter { ids.contains($0.key) } }
+        #endif
         // MusicKit can sit on a catalog request for a long time — the first one after launch
         // waits on a developer token, and with no Apple Music access it may never answer.
         // Every feed card waits on this for its artwork, so after a few seconds whatever is
@@ -287,6 +293,9 @@ class MusicService {
     /// Batch album lookup, keyed by collection id.
     func fetchAlbums(ids: [Int64]) async -> [Int64: Album] {
         guard !ids.isEmpty else { return [:] }
+        #if DEBUG
+        if DemoMode.isOn { return DemoData.albumsById.filter { ids.contains($0.key) } }
+        #endif
         do {
             let itemIds = ids.map { MusicItemID(String($0)) }
             let request = MusicCatalogResourceRequest<MusicKit.Album>(matching: \.id, memberOf: itemIds)
@@ -308,6 +317,9 @@ class MusicService {
     // MARK: - Fetch: Single Album by ID
 
     func fetchAlbum(collectionId: Int64) async throws -> Album? {
+        #if DEBUG
+        if DemoMode.isOn { return DemoData.albumsById[collectionId] }
+        #endif
         let musicItemId = MusicItemID(String(collectionId))
         let request = MusicCatalogResourceRequest<MusicKit.Album>(matching: \.id, equalTo: musicItemId)
         let response = try await request.response()

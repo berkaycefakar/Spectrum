@@ -442,6 +442,22 @@ struct ProfileView: View {
     }
     
     private func loadProfileData() async {
+        #if DEBUG
+        if DemoMode.isOn {
+            profile = DemoData.me
+            reviews = DemoData.myReviews
+            albumReviews = DemoData.myAlbumReviews
+            tracks = DemoData.tracksById
+            albums = DemoData.albumsById
+            followers = DemoData.followers
+            following = DemoData.following
+            totals = DemoData.totals
+            summary = DemoData.summary
+            favoriteAlbums = (DemoData.me.favoriteAlbumIds ?? []).compactMap { DemoData.albumsById[$0] }
+            isLoading = false
+            return
+        }
+        #endif
         defer { Task { @MainActor in self.isLoading = false } }
         
         do {

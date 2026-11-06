@@ -176,6 +176,17 @@ struct FeedView: View {
     
     // Fetch reviews from followed users (or recent reviews if not following anyone)
     private func loadFeedData() async {
+        #if DEBUG
+        if DemoMode.isOn {
+            currentUserId = DemoData.me.id
+            reviews = DemoData.feed
+            tracks = DemoData.tracksById
+            profiles = DemoData.profilesById
+            likes = DemoData.likes
+            isLoading = false
+            return
+        }
+        #endif
         await MainActor.run {
             self.isLoading = true
             self.errorMessage = nil

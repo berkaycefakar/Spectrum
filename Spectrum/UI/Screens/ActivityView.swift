@@ -296,6 +296,13 @@ struct ActivityView: View {
     
     // MARK: - Data Loading
     private func loadNotifications() async {
+        #if DEBUG
+        if DemoMode.isOn {
+            activities = DemoData.activity
+            isLoading = false
+            return
+        }
+        #endif
         do {
             let items = try await SupabaseManager.shared.fetchActivityFeed()
             await MainActor.run {
