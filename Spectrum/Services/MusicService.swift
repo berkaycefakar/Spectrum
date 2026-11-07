@@ -215,16 +215,26 @@ class MusicService {
         #if DEBUG
         if DemoMode.isOn { return DemoData.tracksById.filter { ids.contains($0.key) } }
         #endif
-        // MusicKit can sit on a catalog request for a long time — the first one after launch
-        // waits on a developer token, and with no Apple Music access it may never answer.
-        // Every feed card waits on this for its artwork, so after a few seconds whatever is
-        // still missing is filled from the public iTunes lookup instead.
-        var result = await Self.withDeadline(seconds: 4) { await self.fetchTracksFromCatalog(ids: ids) } ?? [:]
+        // The public iTunes lookup goes first: one request, no token, usually well under a
+        // second. MusicKit's first catalog request after launch waits on a developer token and
+        // held every feed card back for seconds. It only fills what iTunes didn't return.
+        var result = await Self.withDeadline(seconds: 3) { await self.fetchTracksFromITunes(ids: ids) } ?? [:]
         let missing = ids.filter { result[$0] == nil }
         if !missing.isEmpty {
-            for (id, track) in await fetchTracksFromITunes(ids: missing) { result[id] = track }
+            let catalog = await Self.withDeadline(seconds: 4) { await self.fetchTracksFromCatalog(ids: missing) } ?? [:]
+            for (id, track) in catalog { result[id] = track }
         }
         return result
+    }
+
+    /// Catalog-only lookup, for upgrading tracks already on screen: the catalog adds the
+    /// credited artists that let collaborations link to each artist's page.
+    func fetchCatalogTracks(ids: [Int64]) async -> [Int64: Track] {
+        guard !ids.isEmpty else { return [:] }
+        #if DEBUG
+        if DemoMode.isOn { return [:] }
+        #endif
+        return await Self.withDeadline(seconds: 10) { await self.fetchTracksFromCatalog(ids: ids) } ?? [:]
     }
 
     private func fetchTracksFromCatalog(ids: [Int64]) async -> [Int64: Track] {

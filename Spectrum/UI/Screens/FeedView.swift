@@ -299,6 +299,13 @@ struct FeedView: View {
             for (id, track) in fetchedTracks { self.tracks[id] = track }
         }
 
+        // The cards are drawn from the quick iTunes data; the catalog's richer copy (credited
+        // artists for collaborations) swaps in whenever it arrives.
+        let upgraded = await MusicService.shared.fetchCatalogTracks(ids: Array(trackIds))
+        await MainActor.run {
+            for (id, track) in upgraded { self.tracks[id] = track }
+        }
+
     }
 
     /// Optimistic like: the heart flips in the same frame as the tap, and only reverts if
