@@ -7,6 +7,25 @@
 
 ---
 
+## 🟢 DURUM — 17 Kasım 2026 (incelemeye hazırlık)
+
+- **Build 1.0 (4)** yüklendi, VALID, sürüme bağlandı. Akış hızı düzeltmesini içeriyor (`0617f3c`); `main` güncel.
+- **Supabase projesi duraklatılmıştı** (ücretsiz plan, hareketsizlik). API ile geri açıldı.
+  Yine kapanabilir: inceleme sırasında kapanırsa uygulama boş görünür → Pro plan ya da düzenli ping düşün.
+- **Demo hesap:** `berkaycefakar+applereview@icloud.com` (`applereview`), şifresi App Store Connect
+  inceleme bilgisinde. Arkadaşı `maya` (`berkaycefakar+maya@icloud.com`, şifre rastgele, bilinmiyor);
+  karşılıklı takip, temiz loglar. Eski test hesaplarında küfürlü deneme yorumları var.
+- **Ekran görüntüleri:** 6.9" set (01–06) yüklendi.
+- Yeniden tasarım denemeleri (4 yön) reddedildi; mevcut tasarımla çıkılıyor.
+
+### Kalan
+1. TestFlight'ta build 4'ü cihazda dene (davet kabulü gerekli).
+2. Panelden kontrol (API bu uçlarda 401/500 verdi): App Privacy anketi, yaş derecelendirmesi, fiyat, ad/alt başlık.
+3. İncelemeye gönder.
+4. Spotify client secret'ını iptal et.
+
+---
+
 ## 🟢 DURUM — 4 Kasım 2026 (profil/aktivite/ayarlar yeniden tasarım)
 
 Hepsi commit'li ve push'lu (`feature/backlog-pass`).
