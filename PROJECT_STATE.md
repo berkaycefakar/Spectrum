@@ -9,7 +9,11 @@
 
 ## 🟢 DURUM — 17 Kasım 2026 (incelemeye hazırlık)
 
-- **Build 1.0 (4)** yüklendi, VALID, sürüme bağlandı. Akış hızı düzeltmesini içeriyor (`0617f3c`); `main` güncel.
+- **Build 1.0 (5)** yüklendi, VALID, sürüme bağlandı (18 Kasım). İçinde: akış kartları eksik şarkı/yazar
+  için tekrar deniyor (soğuk açılışta "yükleniyor"da takılma), yorumdan yazarın profiline geçiş
+  (feed isim etiketi, şarkı sayfası yorumu, log detay), şarkı paylaş menüsü (Apple Music / Spotify /
+  YouTube Music + song.link). Spotify/YT Music arama linki açıyor — song.link API'si ücretsiz erişimi kapattı.
+  **Hiçbiri cihazda denenmedi.**
 - **Supabase projesi duraklatılmıştı** (ücretsiz plan, hareketsizlik). API ile geri açıldı.
   Yine kapanabilir: inceleme sırasında kapanırsa uygulama boş görünür → Pro plan ya da düzenli ping düşün.
 - **Demo hesap:** `berkaycefakar+applereview@icloud.com` (`applereview`), şifresi App Store Connect
@@ -19,7 +23,7 @@
 - Yeniden tasarım denemeleri (4 yön) reddedildi; mevcut tasarımla çıkılıyor.
 
 ### Kalan
-1. TestFlight'ta build 4'ü cihazda dene (davet kabulü gerekli).
+1. TestFlight'ta build 5'i cihazda dene (davet kabulü gerekli).
 2. Panelden kontrol (API bu uçlarda 401/500 verdi): App Privacy anketi, yaş derecelendirmesi, fiyat, ad/alt başlık.
 3. İncelemeye gönder.
 4. Spotify client secret'ını iptal et.
