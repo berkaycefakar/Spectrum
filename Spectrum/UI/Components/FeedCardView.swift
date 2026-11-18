@@ -10,6 +10,8 @@ struct FeedCardView: View {
     /// for previews and for surfaces that aren't a feed of other people's logs.
     var likeState: LikeState? = nil
     var onToggleLike: (() -> Void)? = nil
+    /// Opens the author's profile from the name pill. Nil leaves the pill as plain text.
+    var onTapAuthor: (() -> Void)? = nil
     
     @ObservedObject private var audioManager = AudioManager.shared
 
@@ -21,6 +23,24 @@ struct FeedCardView: View {
     @State private var dynamicColor: Color = .gray.opacity(0.3) // Default neutral
     @State private var loadedImage: UIImage?
     
+    private var namePill: some View {
+        Text(vibeLabel)
+            .font(.caption2)
+            .fontWeight(.bold)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill((vibeColor ?? dynamicColor).opacity(0.5))
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(vibeColor ?? dynamicColor, lineWidth: 1)
+                    )
+            )
+            .shadow(color: (vibeColor ?? dynamicColor).opacity(0.6), radius: 8)
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             // Top Section: Artwork & Info
@@ -64,21 +84,13 @@ struct FeedCardView: View {
                     
                     // Vibe Pill & Rating
                     HStack(spacing: 8) {
-                        Text(vibeLabel)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill((vibeColor ?? dynamicColor).opacity(0.5))
-                                    .overlay(
-                                        Capsule()
-                                            .strokeBorder(vibeColor ?? dynamicColor, lineWidth: 1)
-                                    )
-                            )
-                            .shadow(color: (vibeColor ?? dynamicColor).opacity(0.6), radius: 8)
+                        if let onTapAuthor {
+                            Button(action: onTapAuthor) { namePill }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Opens their profile")
+                        } else {
+                            namePill
+                        }
                         
                         if let rating = rating, rating > 0 {
                             HStack(spacing: 2) {

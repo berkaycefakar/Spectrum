@@ -23,6 +23,8 @@ struct LogDetailView: View {
     /// artwork, so it can't happen inline in the toolbar action.
     @State private var shareImage: ShareCardImage?
     @State private var isRenderingShare = false
+    /// The author's name for the byline; starts from what the caller passed, else loaded.
+    @State private var authorName: String?
 
     var vibeColor: Color {
         Color(hex: review.vibeColor)
@@ -71,6 +73,27 @@ struct LogDetailView: View {
                         Text(track.artist)
                             .font(.title3)
                             .foregroundStyle(.white.opacity(0.7))
+
+                        // Someone else's log: the byline opens their profile.
+                        if !isOwner {
+                            NavigationLink(value: AppRoute.user(review.userId)) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "person.crop.circle")
+                                    Text(authorName ?? authorUsername ?? String(localized: "View profile", bundle: appStringsBundle))
+                                        .fontWeight(.semibold)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.bold))
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(vibeColor)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(vibeColor.opacity(0.15)))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 4)
+                            .accessibilityHint("Opens their profile")
+                        }
                     }
                     
                     // The Glass Card (Review Details)
@@ -141,6 +164,10 @@ struct LogDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadLikeState() }
+        .task {
+            guard !isOwner, authorUsername == nil else { return }
+            authorName = try? await SupabaseManager.shared.getProfile(userId: review.userId).username
+        }
         .toolbar {
             // Someone else's log: this screen shows their review full-width, so it carries the
             // app's visible Report / Block control. The feed and activity cards keep the

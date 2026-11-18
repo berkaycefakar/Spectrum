@@ -1474,6 +1474,17 @@
         }
       }
     },
+    "Listen on": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şurada dinle"
+          }
+        }
+      }
+    },
     "Lists": {
       "extractionState": "manual",
       "localizations": {
@@ -2011,6 +2022,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ayarları Aç"
+          }
+        }
+      }
+    },
+    "Opens their profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilini açar"
           }
         }
       }
@@ -2731,6 +2753,17 @@
         }
       }
     },
+    "Share link": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linki paylaş"
+          }
+        }
+      }
+    },
     "Share this log": {
       "extractionState": "manual",
       "localizations": {
@@ -3342,6 +3375,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vibe"
+          }
+        }
+      }
+    },
+    "View profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profili gör"
           }
         }
       }

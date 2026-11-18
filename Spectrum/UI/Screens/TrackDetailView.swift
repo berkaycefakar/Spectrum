@@ -7,6 +7,8 @@ struct TrackDetailView: View {
 
     @ObservedObject private var audioManager = AudioManager.shared
     @State private var showAddLog = false
+    /// Set from a review card's author; pushes that user's profile.
+    @State private var profileToOpen: UUID?
     @State private var showAddToList = false
     @State private var artworkColor: ArtworkColor = .placeholder
 
@@ -73,6 +75,7 @@ struct TrackDetailView: View {
             .ignoresSafeArea(edges: .top)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $profileToOpen) { UserProfileView(userId: $0) }
         .sheet(isPresented: $showAddToList) {
             AddToListView(kind: .song, contentRef: String(track.id), displayTitle: track.title)
         }
@@ -282,27 +285,23 @@ struct TrackDetailView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Add to List")
 
-            if let shareURL = track.appleMusicLink {
-                ShareLink(
-                    item: shareURL,
-                    subject: Text(track.title),
-                    message: Text("\(track.title) — \(track.artist)")
-                ) {
-                    ZStack {
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                Circle()
-                                    .stroke(.white.opacity(0.15), lineWidth: 1)
-                            )
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-                    .frame(width: 48, height: 48)
+            // Share opens a menu: listen on Apple Music, Spotify or YouTube Music, or send
+            // a song.link URL so the person receiving it can choose their own service.
+            ListenOnMenu(track: track) {
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            Circle()
+                                .stroke(.white.opacity(0.15), lineWidth: 1)
+                        )
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.8))
                 }
-                .accessibilityLabel("Share")
+                .frame(width: 48, height: 48)
             }
+            .accessibilityLabel("Share")
         }
     }
 
@@ -494,7 +493,8 @@ struct TrackDetailView: View {
                         ) {
                             TrackReviewCard(
                                 review: review,
-                                profile: reviewProfiles[review.userId]
+                                profile: reviewProfiles[review.userId],
+                                onTapAuthor: { profileToOpen = review.userId }
                             )
                         }
                         .buttonStyle(.plain)
@@ -633,10 +633,14 @@ private struct PreviewScrubBar: View {
 struct TrackReviewCard: View {
     let review: Review
     let profile: Profile?
+    /// Opens the author's profile from the avatar and name.
+    var onTapAuthor: (() -> Void)? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
+                Button { onTapAuthor?() } label: {
+                HStack(spacing: 10) {
                 ZStack {
                     Circle()
                         .fill(Color(hex: review.vibeColor).opacity(0.3))
@@ -673,6 +677,11 @@ struct TrackReviewCard: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.4))
                 }
+                }
+                .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens their profile")
                 
                 Spacer()
                 
