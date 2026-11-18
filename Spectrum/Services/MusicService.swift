@@ -218,7 +218,7 @@ class MusicService {
         // The public iTunes lookup goes first: one request, no token, usually well under a
         // second. MusicKit's first catalog request after launch waits on a developer token and
         // held every feed card back for seconds. It only fills what iTunes didn't return.
-        var result = await Self.withDeadline(seconds: 3) { await self.fetchTracksFromITunes(ids: ids) } ?? [:]
+        var result = await Self.withDeadline(seconds: 6) { await self.fetchTracksFromITunes(ids: ids) } ?? [:]
         let missing = ids.filter { result[$0] == nil }
         if !missing.isEmpty {
             let catalog = await Self.withDeadline(seconds: 4) { await self.fetchTracksFromCatalog(ids: missing) } ?? [:]
@@ -264,6 +264,9 @@ class MusicService {
         components?.queryItems = [
             URLQueryItem(name: "id", value: ids.map(String.init).joined(separator: ",")),
             URLQueryItem(name: "entity", value: "song"),
+            // Without a country the lookup reads the US store, and a song only sold in the
+            // user's own storefront came back missing.
+            URLQueryItem(name: "country", value: Locale.current.region?.identifier.lowercased() ?? "us"),
         ]
         guard let url = components?.url else { return [:] }
         do {

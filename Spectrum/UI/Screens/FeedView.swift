@@ -16,6 +16,9 @@ struct FeedView: View {
     @State private var offset = 0
     @State private var hasMore = false
     @State private var isLoadingMore = false
+    /// Reviews whose song or author still couldn't be resolved after every retry. They are
+    /// left out instead of spinning forever (a deleted author, a song pulled from the store).
+    @State private var unresolved: Set<UUID> = []
     /// Like count + "did I like it", keyed by review id. Loaded one page at a time alongside
     /// the artwork, never per card — thirty cards fetching their own would be thirty requests.
     @State private var likes: [UUID: LikeState] = [:]
@@ -122,7 +125,8 @@ struct FeedView: View {
                                                 // than one that silently does nothing.
                                                 onToggleLike: review.userId == currentUserId
                                                     ? nil
-                                                    : { toggleLike(review) }
+                                                    : { toggleLike(review) },
+                                                onTapAuthor: { path.append(AppRoute.user(review.userId)) }
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())
@@ -134,7 +138,7 @@ struct FeedView: View {
                                             reportedText: review.reviewText,
                                             onBlocked: { Task { await loadFeedData() } }
                                         )
-                                    } else {
+                                    } else if !unresolved.contains(review.id) {
                                         RoundedRectangle(cornerRadius: 16)
                                             .fill(.white.opacity(0.05))
                                             .frame(height: 200)
@@ -213,6 +217,7 @@ struct FeedView: View {
             await MainActor.run {
                 self.currentUserId = currentUser.id
                 self.reviews = page.reviews
+                self.unresolved = []
                 self.offset = SupabaseManager.pageSize
                 self.hasMore = page.hasMore
                 self.isShowingRecentFallback = showingRecent
@@ -264,14 +269,42 @@ struct FeedView: View {
 
     /// Resolves the artwork and author for a page of reviews. Both caches are additive, so
     /// appending a page never re-fetches what earlier pages already hold.
+    ///
+    /// Retries what is still missing: on a cold launch the first lookups can come back empty
+    /// (network still waking up, MusicKit token not issued yet), and the cards used to spin
+    /// until the user left the tab and came back.
     private func hydrate(_ page: [Review]) async {
         guard !page.isEmpty else { return }
+        let pageTrackIds = Set(page.map(\.itunesTrackId))
 
-        let knownTracks = await MainActor.run { Set(self.tracks.keys) }
-        let knownProfiles = await MainActor.run { Set(self.profiles.keys) }
+        for attempt in 0..<5 {
+            if attempt > 0 {
+                try? await Task.sleep(for: .seconds(Double(attempt)))
+                if Task.isCancelled { return }
+            }
+            let (trackIds, userIds) = await MainActor.run {
+                (pageTrackIds.subtracting(self.tracks.keys),
+                 Set(page.map(\.userId)).subtracting(self.profiles.keys))
+            }
+            if trackIds.isEmpty && userIds.isEmpty { break }
+            await fillIn(trackIds: trackIds, userIds: userIds, likesFor: attempt == 0 ? page : [])
+        }
 
-        let trackIds = Set(page.map(\.itunesTrackId)).subtracting(knownTracks)
-        let userIds = Set(page.map(\.userId)).subtracting(knownProfiles)
+        await MainActor.run {
+            for review in page where self.tracks[review.itunesTrackId] == nil || self.profiles[review.userId] == nil {
+                self.unresolved.insert(review.id)
+            }
+        }
+
+        // The cards are drawn from the quick iTunes data; the catalog's richer copy (credited
+        // artists for collaborations) swaps in whenever it arrives.
+        let upgraded = await MusicService.shared.fetchCatalogTracks(ids: Array(pageTrackIds))
+        await MainActor.run {
+            for (id, track) in upgraded { self.tracks[id] = track }
+        }
+    }
+
+    private func fillIn(trackIds: Set<Int64>, userIds: Set<UUID>, likesFor page: [Review]) async {
 
         // Three independent lookups, run side by side. They used to be chained, so a slow
         // MusicKit answer held back every author name and like count on the page too.
@@ -279,7 +312,7 @@ struct FeedView: View {
             ? [:] : MusicService.shared.fetchTracks(ids: Array(trackIds))
         async let profilesLoad: [Profile] = userIds.isEmpty
             ? [] : ((try? await SupabaseManager.shared.batchGetProfiles(ids: userIds.map(\.uuidString))) ?? [])
-        async let statesLoad = SupabaseManager.shared.likeStates(
+        async let statesLoad: [UUID: LikeState] = page.isEmpty ? [:] : SupabaseManager.shared.likeStates(
             contentType: .songReview,
             contentIds: page.map(\.id)
         )
@@ -298,14 +331,6 @@ struct FeedView: View {
         await MainActor.run {
             for (id, track) in fetchedTracks { self.tracks[id] = track }
         }
-
-        // The cards are drawn from the quick iTunes data; the catalog's richer copy (credited
-        // artists for collaborations) swaps in whenever it arrives.
-        let upgraded = await MusicService.shared.fetchCatalogTracks(ids: Array(trackIds))
-        await MainActor.run {
-            for (id, track) in upgraded { self.tracks[id] = track }
-        }
-
     }
 
     /// Optimistic like: the heart flips in the same frame as the tap, and only reverts if
