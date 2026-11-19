@@ -23,6 +23,8 @@ Spectrum+ üç şey satıyor:
 | **Kendi loglarında arama ve filtre** (puan, vibe, yıl) | | ✓ |
 | **Profil vurgu rengi**: kendi spektrumundan seç | | ✓ |
 | **Spectrum+ rozeti** profilde | | ✓ |
+| **Hareketli profil fotoğrafı ve kapak** (GIF / Live Photo; Musicboard Pro'da var) | | ✓ |
+| **Alternatif uygulama ikonları** (Musicboard Pro'nun "tema" karşılığı) | | ✓ |
 | Yeni özelliklere erken erişim | | ✓ |
 
 Reklam yok, olmayacak; o yüzden "reklamsız" bir satış maddesi değil.
@@ -31,6 +33,15 @@ Reklam yok, olmayacak; o yüzden "reklamsız" bir satış maddesi değil.
 doğrudan ya da dolaylı yoldan paraya bağlanamaz. Spectrum+ yalnızca kullanıcının kendi
 loglarından üretilen şeyleri satar. "Listeyi Apple Music çalma listesine aktar" bu yüzden
 ücretsiz kalmalı (ya da hiç yapılmamalı), premium'a konamaz. Ayrıntı: `docs/API_COMPLIANCE.md`.
+
+## Ekran (seçildi: B, 20 Kasım)
+
+Kaydırmalı 5 sayfa, altta sabit "1 hafta ücretsiz dene" ve fiyat satırı:
+1. Yıl özeti kartı · 2. Ay ay spektrum · 3. Derin istatistik · 4. Loglarında arama ·
+5. Görünüş (hareketli fotoğraf/kapak, profil rengi, uygulama ikonu, rozet).
+Tasarım: https://claude.ai/artifact/AuaiwSNEDMj7Z5f4eEfcVK
+
+Musicboard Pro'dan "reklamsız" alınmadı: Spectrum'da reklam yok.
 
 ## Fiyat
 
