@@ -94,7 +94,7 @@ struct ReportContentView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(reason == nil ? Color.white.opacity(0.12) : Color(hex: "#FF00FF"))
+                    .background(reason == nil ? Color.white.opacity(0.12) : Color.spectrumAccent)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .contentShape(RoundedRectangle(cornerRadius: 14))
@@ -119,7 +119,7 @@ struct ReportContentView: View {
             HStack(spacing: 12) {
                 Image(systemName: option.icon)
                     .font(.system(size: 15))
-                    .foregroundStyle(reason == option ? Color(hex: "#FF00FF") : .white.opacity(0.5))
+                    .foregroundStyle(reason == option ? Color.spectrumAccent : .white.opacity(0.5))
                     .frame(width: 24)
                 Text(option.title)
                     .font(.subheadline)
@@ -128,7 +128,7 @@ struct ReportContentView: View {
                 if reason == option {
                     Image(systemName: "checkmark")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(hex: "#FF00FF"))
+                        .foregroundStyle(Color.spectrumAccent)
                 }
             }
             .padding(.vertical, 14)
@@ -155,7 +155,7 @@ struct ReportContentView: View {
         VStack(spacing: 18) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 54))
-                .foregroundStyle(Color(hex: "#FF00FF"))
+                .foregroundStyle(Color.spectrumAccent)
 
             Text("Thanks — we're on it")
                 .font(.title3)

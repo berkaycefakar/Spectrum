@@ -31,7 +31,7 @@ struct AuthView: View {
             Color.black.ignoresSafeArea()
 
             Circle()
-                .fill(Color(hex: "#FF00FF").opacity(0.3))
+                .fill(Color.spectrumAccent.opacity(0.3))
                 .frame(width: 250, height: 250)
                 .blur(radius: 50)
                 .offset(x: animateBlobs ? -100 : -50, y: animateBlobs ? -200 : -150)

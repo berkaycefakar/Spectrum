@@ -107,7 +107,7 @@ struct TrackCardView: View {
                 artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/9b/6e/81/9b6e8198-315f-5100-3622-261548e69f87/source/100x100bb.jpg",
                 previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/3b/6e/81/3b6e8198-315f-5100-3622-261548e69f87/mzaf_123456789.plus.aac.p.m4a"
             ),
-            vibeColor: Color(hex: "#FF00FF") // Neon Purple
+            vibeColor: Color.spectrumAccent // Neon Purple
         )
     }
 }

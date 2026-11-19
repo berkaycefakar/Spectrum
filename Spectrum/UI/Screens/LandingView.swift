@@ -154,7 +154,7 @@ struct LandingView: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(hex: "#FF00FF").opacity(0.6), Color(hex: "#FF00FF").opacity(0)],
+                        colors: [Color.spectrumAccent.opacity(0.6), Color.spectrumAccent.opacity(0)],
                         center: .center,
                         startRadius: 0,
                         endRadius: 200
@@ -211,7 +211,7 @@ struct LandingView: View {
                 .font(.system(size: 52, weight: .heavy, design: .default))
                 .foregroundStyle(.white)
                 .shadow(color: .white.opacity(0.8), radius: 2)
-                .shadow(color: Color(hex: "#FF00FF").opacity(0.5), radius: 20)
+                .shadow(color: Color.spectrumAccent.opacity(0.5), radius: 20)
                 .shadow(color: Color(hex: "#00FFFF").opacity(0.3), radius: 40)
             
             Text("Feel the Music in Color")

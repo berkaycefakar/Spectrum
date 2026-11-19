@@ -58,3 +58,10 @@ extension Color {
         )
     }
 }
+
+extension Color {
+    /// The app's one accent: the tangerine bar of the logo, lifted a little to read on black.
+    /// Replaces the old #FF00FF magenta (and its magenta→cyan gradients), which every screen
+    /// used and which looked generated rather than chosen.
+    static let spectrumAccent = Color(hex: "#FF8A3D")
+}

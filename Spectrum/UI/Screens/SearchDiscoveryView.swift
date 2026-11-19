@@ -7,7 +7,7 @@ private struct SearchAmbientBackground: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color(hex: "#FF00FF").opacity(0.15))
+                .fill(Color.spectrumAccent.opacity(0.15))
                 .frame(width: 300, height: 300)
                 .blur(radius: 80)
                 .offset(x: -150, y: -300)
@@ -235,7 +235,7 @@ struct SearchDiscoveryView: View {
                                 }
                             }
                             .font(.subheadline)
-                            .foregroundStyle(Color(hex: "#FF00FF"))
+                            .foregroundStyle(Color.spectrumAccent)
                             .padding(.top, 4)
                         }
                     }
@@ -264,7 +264,7 @@ struct SearchDiscoveryView: View {
                                 }
                             }
                             .font(.subheadline)
-                            .foregroundStyle(Color(hex: "#FF00FF"))
+                            .foregroundStyle(Color.spectrumAccent)
                             .padding(.top, 4)
                         }
                     }
@@ -293,7 +293,7 @@ struct SearchDiscoveryView: View {
                                 }
                             }
                             .font(.subheadline)
-                            .foregroundStyle(Color(hex: "#FF00FF"))
+                            .foregroundStyle(Color.spectrumAccent)
                             .padding(.top, 4)
                         }
                     }
@@ -672,12 +672,12 @@ struct QuickAddTrackRow: View {
                     .font(.system(size: 28))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                            colors: [Color.spectrumAccent, Color.spectrumAccent],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: Color(hex: "#FF00FF").opacity(0.4), radius: 6)
+                    .shadow(color: Color.spectrumAccent.opacity(0.4), radius: 6)
             }
         }
         .padding(12)
@@ -756,7 +756,7 @@ struct ArtistRow: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [Color(hex: "#FF00FF").opacity(0.4), Color(hex: "#8B00FF").opacity(0.2)],
+                                colors: [Color.spectrumAccent.opacity(0.4), Color(hex: "#8B00FF").opacity(0.2)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -836,7 +836,7 @@ struct UserRow: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                                colors: [Color.spectrumAccent, Color.spectrumAccent],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -1343,7 +1343,7 @@ struct UserProfileHeader: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                            colors: [Color.spectrumAccent, Color.spectrumAccent],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -1429,7 +1429,7 @@ struct UserProfileHeader: View {
                                 Color.white.opacity(0.15)
                             } else {
                                 LinearGradient(
-                                    colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                                    colors: [Color.spectrumAccent, Color.spectrumAccent],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

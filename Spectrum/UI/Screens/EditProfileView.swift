@@ -195,7 +195,7 @@ struct EditProfileView: View {
     private var avatarPlaceholder: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                colors: [Color.spectrumAccent, Color.spectrumAccent],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

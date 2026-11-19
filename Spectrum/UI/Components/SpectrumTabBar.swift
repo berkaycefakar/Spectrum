@@ -243,7 +243,7 @@ struct SpectrumTabBar: View {
                 .overlay(alignment: .topTrailing) {
                     if showsBadge {
                         Circle()
-                            .fill(Color(hex: "#FF00FF"))
+                            .fill(Color.spectrumAccent)
                             .frame(width: 7, height: 7)
                             // A ring in the bar's own colour so the dot reads as a dot
                             // rather than as part of the bell.
@@ -258,7 +258,7 @@ struct SpectrumTabBar: View {
                 .frame(height: isCollapsed ? 0 : 12)
                 .opacity(isCollapsed ? 0 : 1)
         }
-        .foregroundStyle(isSelected ? Color(hex: "#FF00FF") : Color.white.opacity(0.5))
+        .foregroundStyle(isSelected ? Color.spectrumAccent : Color.white.opacity(0.5))
         .frame(maxWidth: .infinity)
         .frame(height: itemHeight)
         .contentShape(Capsule())

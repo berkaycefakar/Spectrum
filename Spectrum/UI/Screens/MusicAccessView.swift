@@ -67,7 +67,7 @@ struct MusicAccessView: View {
                             .padding(.vertical, 16)
                             .background(
                                 LinearGradient(
-                                    colors: [Color(hex: "#FF00FF"), Color(hex: "#5856D6")],
+                                    colors: [Color.spectrumAccent, Color(hex: "#5856D6")],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -94,7 +94,7 @@ struct MusicAccessView: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15))
-                .foregroundStyle(Color(hex: "#FF00FF"))
+                .foregroundStyle(Color.spectrumAccent)
                 .frame(width: 20)
 
             Text(text)

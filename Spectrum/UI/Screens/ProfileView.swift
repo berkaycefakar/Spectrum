@@ -209,17 +209,17 @@ struct ProfileView: View {
                     onSave: saveFavorites
                 )
             }
-            .confirmationDialog("Change Cover", isPresented: $showCoverPicker, titleVisibility: .visible) {
-                Button("Your Spectrum") { Task { await saveCover(nil) } }
-                ForEach(favoriteAlbums) { album in
-                    Button(album.title) { Task { await saveCover(album.id) } }
-                }
-                if favoriteAlbums.isEmpty {
-                    Button("Pick Favorite Albums") { showFavoritesEditor = true }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("The cover can be your spectrum or one of your favorite four.")
+            .sheet(isPresented: $showCoverPicker) {
+                CoverPickerSheet(
+                    favorites: favoriteAlbums,
+                    currentAlbumId: profile?.coverAlbumId,
+                    vibeHexes: vibeStats.map(\.color),
+                    onPick: saveCover,
+                    // Waits for the cover sheet to finish closing; two sheets can't animate at once.
+                    onEditFavorites: {
+                        Task { try? await Task.sleep(for: .milliseconds(450)); showFavoritesEditor = true }
+                    }
+                )
             }
             .sheet(isPresented: $showEditProfile) {
                 if let profile = profile {
@@ -554,7 +554,7 @@ struct ProfileCategoryButton: View {
                 
                 Text("\(count)")
                     .font(.caption2)
-                    .foregroundStyle(isSelected ? Color(hex: "#FF00FF") : .white.opacity(0.4))
+                    .foregroundStyle(isSelected ? Color.spectrumAccent : .white.opacity(0.4))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)

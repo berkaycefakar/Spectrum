@@ -94,36 +94,19 @@ struct ProfileCoverHeader: View {
         }
     }
 
-    /// The user's spectrum as soft overlapping glows — their banner before they pick an album.
-    private var vibeBands: some View {
-        let hexes = vibeHexes.isEmpty ? ["#5856D6", "#FF2D55", "#FF9500"] : Array(vibeHexes.prefix(4))
-        return GeometryReader { geo in
-            ZStack {
-                Color(hex: "#0E0A14")
-                ForEach(Array(hexes.enumerated()), id: \.offset) { index, hex in
-                    let step = geo.size.width / CGFloat(max(hexes.count, 1))
-                    Circle()
-                        .fill(Color(hex: hex).opacity(index == 0 ? 0.85 : 0.65))
-                        .frame(width: geo.size.width * 0.62, height: geo.size.width * 0.62)
-                        .position(x: step * (CGFloat(index) + 0.5),
-                                  y: geo.size.height * (index.isMultiple(of: 2) ? 0.35 : 0.6))
-                        .blur(radius: 46)
-                }
-            }
-        }
-    }
+    private var vibeBands: some View { VibeBands(hexes: vibeHexes) }
 
     private var bannerButtons: some View {
         HStack(spacing: 8) {
             if let onChangeCover {
                 Button(action: onChangeCover) {
-                    Label("Change Cover", systemImage: "photo")
-                        .font(.caption.weight(.semibold))
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .frame(height: 32)
-                        .background(.ultraThinMaterial, in: Capsule())
+                        .frame(width: 32, height: 32)
+                        .background(.ultraThinMaterial, in: Circle())
                 }
+                .accessibilityLabel("Change Cover")
             }
             if let onSettings {
                 Button(action: onSettings) {
@@ -143,7 +126,7 @@ struct ProfileCoverHeader: View {
 
     private var avatar: some View {
         ZStack {
-            Circle().fill(Color(hex: vibeHexes.first ?? "#FF00FF").opacity(0.35))
+            Circle().fill(Color(hex: vibeHexes.first ?? "#FF8A3D").opacity(0.35))
             if let avatarUrl = profile.avatarUrl, let url = URL(string: avatarUrl) {
                 AsyncImage(url: url) { phase in
                     if let image = phase.image {
@@ -195,7 +178,7 @@ struct FavoriteShelf: View {
                     if let onEdit {
                         Button("Edit", action: onEdit)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color(hex: "#FF4DFF"))
+                            .foregroundStyle(Color.spectrumAccent)
                     }
                 }
 
@@ -302,7 +285,7 @@ struct AllTimeSummaryCard: View {
                             Text("See all").font(.caption.weight(.semibold))
                             Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
                         }
-                        .foregroundStyle(Color(hex: "#FF00FF"))
+                        .foregroundStyle(Color.spectrumAccent)
                     }
                 }
 
@@ -383,7 +366,7 @@ struct AllTimeSummaryCard: View {
             HStack(alignment: .bottom, spacing: 4) {
                 ForEach(0..<10, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(i == peakIndex ? Color(hex: "#FF4DFF") : .white.opacity(0.22))
+                        .fill(i == peakIndex ? Color.spectrumAccent : .white.opacity(0.22))
                         .frame(height: max(3, 48 * CGFloat(buckets[i]) / CGFloat(peak)))
                         .frame(maxWidth: .infinity)
                 }
@@ -417,7 +400,8 @@ struct FavoritesEditorSheet: View {
     @State private var picked: [Album] = []
     @State private var query = ""
     @State private var results: [Album] = []
-    @State private var isSaving = false
+    /// Ids last written, so closing the sheet only saves when something actually changed.
+    @State private var savedIds: [Int64] = []
 
     var body: some View {
         NavigationStack {
@@ -426,19 +410,10 @@ struct FavoritesEditorSheet: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         pickedRow
-                        Text(query.isEmpty ? "Albums you've rated" : "Results")
-                            .font(.caption.weight(.semibold))
-                            .textCase(.uppercase)
-                            .foregroundStyle(.white.opacity(0.45))
                         LazyVStack(spacing: 8) {
                             ForEach(query.isEmpty ? ratedAlbums : results) { album in
                                 row(album)
                             }
-                        }
-                        if query.isEmpty && ratedAlbums.isEmpty {
-                            Text("Search for an album to add it.")
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.5))
                         }
                     }
                     .padding()
@@ -454,25 +429,35 @@ struct FavoritesEditorSheet: View {
                 guard !Task.isCancelled else { return }
                 results = (try? await MusicService.shared.searchAlbums(query: q)) ?? []
             }
+            // Every change saves itself; there's no Save button to miss. The short pause
+            // folds a quick run of taps into one write.
+            .task(id: picked.map(\.id)) {
+                let ids = picked.map(\.id)
+                guard ids != savedIds else { return }
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                savedIds = ids
+                await onSave(picked)
+            }
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        isSaving = true
-                        Task {
-                            await onSave(picked)
-                            isSaving = false
-                            dismiss()
-                        }
-                    }
-                    .disabled(isSaving)
+                    Button { dismiss() } label: { Image(systemName: "checkmark") }
+                        .accessibilityLabel(Text("Done", bundle: appStringsBundle))
                 }
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear { picked = initial }
+        .presentationDetents([.large])
+        .onAppear {
+            picked = initial
+            savedIds = initial.map(\.id)
+        }
+        // Closing inside the pause would cancel the pending write; finish it here instead.
+        .onDisappear {
+            let final = picked
+            guard final.map(\.id) != savedIds else { return }
+            Task { await onSave(final) }
+        }
     }
 
     private var pickedRow: some View {
@@ -526,11 +511,137 @@ struct FavoritesEditorSheet: View {
                 Spacer()
                 Image(systemName: isPicked ? "checkmark.circle.fill" : "plus.circle")
                     .font(.system(size: 22))
-                    .foregroundStyle(isPicked ? Color(hex: "#FF4DFF") : .white.opacity(picked.count < 4 ? 0.5 : 0.15))
+                    .foregroundStyle(isPicked ? Color.spectrumAccent : .white.opacity(picked.count < 4 ? 0.5 : 0.15))
             }
             .padding(10)
             .background(.white.opacity(isPicked ? 0.08 : 0.03), in: RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+    }
+}
+
+
+// MARK: - Vibe bands
+
+/// The user's spectrum as soft overlapping glows: the banner before they pick an album, and
+/// the "spectrum" tile in the cover picker.
+struct VibeBands: View {
+    let hexes: [String]
+
+    var body: some View {
+        let shown = hexes.isEmpty ? ["#5856D6", "#FF2D55", "#FF9500"] : Array(hexes.prefix(4))
+        GeometryReader { geo in
+            ZStack {
+                Color(hex: "#0E0A14")
+                ForEach(Array(shown.enumerated()), id: \.offset) { index, hex in
+                    let step = geo.size.width / CGFloat(max(shown.count, 1))
+                    Circle()
+                        .fill(Color(hex: hex).opacity(index == 0 ? 0.85 : 0.65))
+                        .frame(width: geo.size.width * 0.62, height: geo.size.width * 0.62)
+                        .position(x: step * (CGFloat(index) + 0.5),
+                                  y: geo.size.height * (index.isMultiple(of: 2) ? 0.35 : 0.6))
+                        .blur(radius: geo.size.width * 0.12)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Cover Picker
+
+/// Picks the profile banner: the user's spectrum, or one of their favourite four. Each choice
+/// is shown as it will look; tapping one saves it and closes the sheet.
+struct CoverPickerSheet: View {
+    let favorites: [Album]
+    let currentAlbumId: Int64?
+    let vibeHexes: [String]
+    let onPick: (Int64?) async -> Void
+    let onEditFavorites: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var saving: Int64?? = nil
+
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    tile(id: nil, label: String(localized: "Your spectrum", bundle: appStringsBundle)) { VibeBands(hexes: vibeHexes) }
+                    ForEach(favorites) { album in
+                        tile(id: album.id, label: album.title) {
+                            AsyncImage(url: album.artworkUrl600) { phase in
+                                if let image = phase.image {
+                                    image.resizable().aspectRatio(contentMode: .fill)
+                                } else {
+                                    Color.white.opacity(0.06)
+                                }
+                            }
+                        }
+                    }
+                    if favorites.count < 4 {
+                        Button {
+                            dismiss()
+                            onEditFavorites()
+                        } label: {
+                            RoundedRectangle(cornerRadius: 14)
+                                .strokeBorder(.white.opacity(0.18), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                                .aspectRatio(1.6, contentMode: .fit)
+                                .overlay(Image(systemName: "plus").font(.title3).foregroundStyle(.white.opacity(0.5)))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("Add favorite albums", bundle: appStringsBundle))
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black.ignoresSafeArea())
+            .navigationTitle(Text("Cover", bundle: appStringsBundle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel(Text("Close", bundle: appStringsBundle))
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium, .large])
+    }
+
+    private func tile<Content: View>(id: Int64?, label: String, @ViewBuilder content: () -> Content) -> some View {
+        let isCurrent = id == currentAlbumId
+        return Button {
+            guard saving == nil else { return }
+            saving = .some(id)
+            Task {
+                await onPick(id)
+                dismiss()
+            }
+        } label: {
+            // A fixed-ratio frame the content fills, so every tile is the same size whatever
+            // the artwork's own shape.
+            Color.clear
+                .aspectRatio(1.6, contentMode: .fit)
+                .overlay { content() }
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(isCurrent ? Color.spectrumAccent : .white.opacity(0.08), lineWidth: isCurrent ? 2.5 : 1)
+                )
+                .overlay(alignment: .topTrailing) {
+                    if isCurrent {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white, Color.spectrumAccent)
+                            .padding(8)
+                    } else if saving == .some(id) {
+                        ProgressView().tint(.white).padding(8)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isCurrent ? .isSelected : [])
     }
 }

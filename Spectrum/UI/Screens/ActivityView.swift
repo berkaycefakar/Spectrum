@@ -23,7 +23,7 @@ struct ActivityView: View {
 
                 // Subtle ambient glow
                 Circle()
-                    .fill(Color(hex: "#9652FF").opacity(0.12))
+                    .fill(Color.spectrumAccent.opacity(0.08))
                     .frame(width: 320, height: 320)
                     .blur(radius: 110)
                     .offset(x: 150, y: -240)
@@ -65,10 +65,7 @@ struct ActivityView: View {
         HStack(spacing: 11) {
             Image(systemName: "bell.badge.fill")
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(
-                    LinearGradient(colors: [Color(hex: "#9652FF"), Color(hex: "#5AC8FA")],
-                                   startPoint: .top, endPoint: .bottom)
-                )
+                .foregroundStyle(.white)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Activity")
                     .font(.system(size: titleSize, weight: .bold, design: .rounded))
@@ -123,7 +120,7 @@ struct ActivityView: View {
                         Text(option.title)
                         if option == .followers, followerCount > 0 {
                             Text("\(followerCount)")
-                                .foregroundStyle(selected ? Color(hex: "#C800C8") : Color(hex: "#FF4DFF"))
+                                .foregroundStyle(selected ? Color(hex: "#C800C8") : Color.spectrumAccent)
                         }
                     }
                     .font(.subheadline.weight(selected ? .bold : .semibold))

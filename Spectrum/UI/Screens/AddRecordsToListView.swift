@@ -247,7 +247,7 @@ struct AddRecordsToListView: View {
                 } else {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 22))
-                        .foregroundStyle(Color(hex: "#FF00FF"))
+                        .foregroundStyle(Color.spectrumAccent)
                 }
             }
             .padding(12)

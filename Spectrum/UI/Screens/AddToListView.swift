@@ -104,7 +104,7 @@ struct AddToListView: View {
                 .foregroundStyle(.white.opacity(0.6))
             Button("Make your first list") { showCreate = true }
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color(hex: "#FF00FF"))
+                .foregroundStyle(Color.spectrumAccent)
         }
         .padding(.vertical, 12)
     }

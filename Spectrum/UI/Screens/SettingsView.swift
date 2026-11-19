@@ -208,7 +208,7 @@ struct SettingsView: View {
                 Spacer()
                 Button("Done") { isPresented = false }
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(Color(hex: "#FF4DFF"))
+                    .foregroundStyle(Color.spectrumAccent)
             }
         }
         .padding(.horizontal)

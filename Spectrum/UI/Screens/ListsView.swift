@@ -33,7 +33,7 @@ struct ProfileListsSection: View {
                             Text("New")
                                 .font(.caption.weight(.semibold))
                         }
-                        .foregroundStyle(Color(hex: "#FF00FF"))
+                        .foregroundStyle(Color.spectrumAccent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .contentShape(Rectangle())

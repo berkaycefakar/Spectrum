@@ -19,7 +19,7 @@ struct ProfileHeader: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                            colors: [Color.spectrumAccent, Color.spectrumAccent],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -49,7 +49,7 @@ struct ProfileHeader: View {
                         .clipShape(Circle())
                 }
             }
-            .shadow(color: Color(hex: "#FF00FF").opacity(0.5), radius: 20)
+            .shadow(color: Color.spectrumAccent.opacity(0.5), radius: 20)
             
             // Username & Bio
             VStack(spacing: 8) {
@@ -381,7 +381,7 @@ struct AlbumGridItem: View {
                 
                 AlbumGridItem(
                     track: Track(id: 1, title: "Blinding Lights", artist: "The Weeknd", artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a0/4d/a4/a04da453-3a4b-851b-5813-2b20aa8024e0/source/100x100bb.jpg", previewUrl: nil),
-                    vibeColor: Color(hex: "#FF00FF")
+                    vibeColor: Color.spectrumAccent
                 )
                 
                 AccountActionsSection(

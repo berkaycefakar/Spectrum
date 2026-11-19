@@ -27,8 +27,8 @@ struct ContentView: View {
         itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.5)
         itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.5)]
         
-        itemAppearance.selected.iconColor = UIColor(Color(hex: "#FF00FF"))
-        itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: "#FF00FF"))]
+        itemAppearance.selected.iconColor = UIColor(Color.spectrumAccent)
+        itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color.spectrumAccent)]
         
         appearance.stackedLayoutAppearance = itemAppearance
         appearance.inlineLayoutAppearance = itemAppearance
@@ -121,7 +121,7 @@ struct ContentView: View {
                     .toolbar(.hidden, for: .tabBar)
                     .tag(3)
             }
-            .tint(Color(hex: "#FF00FF")) // Neon Purple Tint
+            .tint(Color.spectrumAccent) // Neon Purple Tint
 
             VStack(spacing: 8) {
                 // Sits above the tab bar rather than inside a screen: a preview started in

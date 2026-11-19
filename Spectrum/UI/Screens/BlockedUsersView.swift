@@ -74,7 +74,7 @@ struct BlockedUsersView: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [Color(hex: "#FF00FF"), Color(hex: "#00FFFF")],
+                        colors: [Color.spectrumAccent, Color.spectrumAccent],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )

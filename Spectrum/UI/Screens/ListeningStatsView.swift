@@ -135,7 +135,7 @@ struct ListeningStatsView: View {
 
                     GeometryReader { proxy in
                         Capsule()
-                            .fill(Color(hex: "#FF00FF").opacity(0.75))
+                            .fill(Color.spectrumAccent.opacity(0.75))
                             // `max(…, 0)` because an empty bucket must draw nothing, not a
                             // negative width — Capsule traps on one.
                             .frame(width: max(0, proxy.size.width * bucket.share))

@@ -261,7 +261,7 @@ struct ListDetailView: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
-                    .background(Color(hex: "#FF00FF"), in: Capsule())
+                    .background(Color.spectrumAccent, in: Capsule())
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
