@@ -10,6 +10,8 @@ struct LogDetailView: View {
     var authorUsername: String? = nil
     /// Called after the owner edits or deletes, so the presenting screen can refresh.
     var onChanged: (() -> Void)? = nil
+    /// Off when this log was opened from the song's own page, where the link would loop back.
+    var showsSongLink: Bool = true
 
     @Environment(\.dismiss) private var dismiss
     @State private var showEditSheet = false
@@ -73,6 +75,25 @@ struct LogDetailView: View {
                         Text(track.artist)
                             .font(.title3)
                             .foregroundStyle(.white.opacity(0.7))
+
+                        if showsSongLink {
+                            NavigationLink(value: AppRoute.track(track)) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "music.note")
+                                    Text("Go to song", bundle: appStringsBundle)
+                                        .fontWeight(.semibold)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.bold))
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.85))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(.white.opacity(0.1)))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 4)
+                        }
 
                         // Someone else's log: the byline opens their profile.
                         if !isOwner {

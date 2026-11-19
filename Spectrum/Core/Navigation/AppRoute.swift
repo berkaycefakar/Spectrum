@@ -21,6 +21,8 @@ enum AppRoute: Hashable {
     /// Activity rows only carry the target's id, so the destination loads it on appear.
     case activityTrack(Int64)
     case activityAlbum(Int64)
+    /// Someone's song log from the activity list: their log first, the song one tap further.
+    case activityLog(reviewId: UUID, trackId: Int64)
 }
 
 extension View {
@@ -43,6 +45,8 @@ extension View {
                 ActivityTrackDestination(trackId: trackId)
             case .activityAlbum(let collectionId):
                 ActivityAlbumDestination(collectionId: collectionId)
+            case .activityLog(let reviewId, let trackId):
+                ActivityLogDestination(reviewId: reviewId, trackId: trackId)
             case .log(let track, let review, let isOwner):
                 LogDetailView(
                     track: track,

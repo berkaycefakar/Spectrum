@@ -901,6 +901,18 @@ final class SupabaseManager {
             .execute()
     }
     
+    /// One song log by id. Nil when it was deleted (or is hidden from the reader by RLS).
+    func fetchReview(id: UUID) async throws -> Review? {
+        let rows: [Review] = try await client
+            .from("reviews")
+            .select()
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
     func followingIds(userId: UUID) async throws -> [UUID] {
         struct FollowRow: Decodable { let following_id: UUID }
         let rows: [FollowRow] = try await client

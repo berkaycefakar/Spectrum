@@ -488,7 +488,8 @@ struct TrackDetailView: View {
                                 review: review,
                                 isOwner: review.userId == currentUserId,
                                 authorUsername: reviewProfiles[review.userId]?.username,
-                                onChanged: { Task { await loadTrackReviews() } }
+                                onChanged: { Task { await loadTrackReviews() } },
+                                showsSongLink: false
                             )
                         ) {
                             TrackReviewCard(

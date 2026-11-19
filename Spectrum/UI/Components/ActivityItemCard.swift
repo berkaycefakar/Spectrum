@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct ActivityItemCard: View {
     let activity: ActivityItem
@@ -29,7 +30,9 @@ struct ActivityItemCard: View {
         switch activity.type {
         case .trackReview:
             guard let targetId = activity.targetId, let trackId = Int64(targetId) else { return nil }
-            return .activityTrack(trackId)
+            // The activity is about the person's log, so that is what opens; the song is a
+            // link on it. (The id of a track-review activity is the review's id.)
+            return .activityLog(reviewId: activity.id, trackId: trackId)
         case .albumReview:
             guard let targetId = activity.targetId, let collectionId = Int64(targetId) else { return nil }
             return .activityAlbum(collectionId)
@@ -423,6 +426,52 @@ struct ActivityTrackDestination: View {
             } catch {
                 await MainActor.run { self.failed = true }
             }
+        }
+    }
+}
+
+// MARK: - Activity Log Destination
+
+/// Loads a log and its song by id, then shows the log.
+struct ActivityLogDestination: View {
+    let reviewId: UUID
+    let trackId: Int64
+    @State private var loaded: (Track, Review, String?)?
+    @State private var failed = false
+    @ObservedObject private var session = SessionStore.shared
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            if let (track, review, username) = loaded {
+                LogDetailView(
+                    track: track,
+                    review: review,
+                    isOwner: review.userId == session.currentUser?.id,
+                    authorUsername: username
+                )
+            } else if failed {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.white.opacity(0.3))
+                    Text("Could not load this log")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            } else {
+                ProgressView().tint(.white)
+            }
+        }
+        .task {
+            async let reviewLoad = try? SupabaseManager.shared.fetchReview(id: reviewId)
+            async let trackLoad = try? MusicService.shared.fetchTrack(id: trackId)
+            guard let review = await reviewLoad, let track = await trackLoad else {
+                failed = true
+                return
+            }
+            let username = try? await SupabaseManager.shared.getProfile(userId: review.userId).username
+            loaded = (track, review, username ?? nil)
         }
     }
 }
