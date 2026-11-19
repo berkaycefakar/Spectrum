@@ -118,14 +118,12 @@ struct ActivityItemCard: View {
                             .lineLimit(1)
                     }
                     HStack(spacing: 8) {
-                        if let hex = activity.vibeColor {
-                            Text(VibePalette.label(for: hex))
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 3)
-                                .background(vibe.opacity(0.22), in: Capsule())
-                                .overlay(Capsule().stroke(vibe, lineWidth: 1))
+                        if activity.vibeColor != nil {
+                            // Just the colour: the picker doesn't name vibes, so neither does this.
+                            Circle()
+                                .fill(vibe)
+                                .frame(width: 10, height: 10)
+                                .shadow(color: vibe.opacity(0.7), radius: 4)
                         }
                         if let rating = activity.rating {
                             HStack(spacing: 3) {

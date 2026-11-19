@@ -350,13 +350,13 @@ struct AllTimeSummaryCard: View {
             .frame(height: 14)
             .clipShape(Capsule())
 
-            // Top four named; colour alone can't carry the meaning.
+            // Top four with their share.
             LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)],
                       alignment: .leading, spacing: 6) {
                 ForEach(vibeShares.prefix(4), id: \.hex) { item in
                     HStack(spacing: 5) {
                         Circle().fill(Color(hex: item.hex)).frame(width: 8, height: 8)
-                        Text("\(VibePalette.label(for: item.hex)) \(Int((item.share * 100).rounded()))%")
+                        Text("\(Int((item.share * 100).rounded()))%")
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1)

@@ -85,12 +85,6 @@ struct ListeningStatsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeading(String(localized: "Your colours", bundle: appStringsBundle))
 
-            if let top = stats.topVibe {
-                Text("Mostly **\(VibePalette.label(for: top.hex))**")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
-            }
-
             // One bar, split by share — the palette is the point, so it reads better as a
             // single spectrum than as separate rows.
             GeometryReader { proxy in
