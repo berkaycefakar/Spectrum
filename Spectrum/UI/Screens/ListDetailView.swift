@@ -23,6 +23,7 @@ struct ListDetailView: View {
     @State private var isEditingOrder = false
     @State private var showAddRecords = false
     @State private var currentList: MusicList
+    @State private var ownerName: String?
 
     init(list: MusicList, isOwner: Bool, onChanged: (() -> Void)? = nil) {
         self.list = list
@@ -47,10 +48,10 @@ struct ListDetailView: View {
                 content
             }
         }
-        .navigationTitle(currentList.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .task { await load() }
+        .task { ownerName = try? await SupabaseManager.shared.getProfile(userId: currentList.userId).username }
         .sheet(isPresented: $showEdit) {
             EditListView(list: currentList) {
                 Task { await reloadList() }
@@ -131,43 +132,90 @@ struct ListDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Text(currentList.title)
+                .font(.system(size: 34, weight: .heavy))
+                .tracking(-0.6)
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+
             if let description = currentList.description, !description.isEmpty {
                 Text(description)
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.8))
             }
 
             HStack(spacing: 8) {
+                if let ownerName {
+                    NavigationLink(value: AppRoute.user(currentList.userId)) {
+                        HStack(spacing: 6) {
+                            Circle().fill(.white.opacity(0.15)).frame(width: 22, height: 22)
+                                .overlay(Text(String(ownerName.prefix(1)).uppercased())
+                                    .font(.caption2.weight(.bold)).foregroundStyle(.white))
+                            Text(ownerName).font(.subheadline.weight(.medium)).foregroundStyle(.white)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
                 Text(items.count == 1 ? "1 record" : "\(items.count) records")
                 if !currentList.isPublic {
                     Text("· Private")
                 }
             }
-            .font(.caption)
-            .foregroundStyle(.white.opacity(0.4))
+            .font(.subheadline)
+            .foregroundStyle(.white.opacity(0.5))
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The first record's artwork, blurred into a wash behind the title.
+    private var headerGlow: some View {
+        let url = items.first.flatMap { item -> URL? in
+            guard let id = item.numericRef else { return nil }
+            return item.kind == .song ? tracks[id]?.artworkUrl600 : albums[id]?.artworkUrl600
+        }
+        return AsyncImage(url: url) { phase in
+            if let image = phase.image {
+                image.resizable().aspectRatio(contentMode: .fill)
+            } else {
+                Color.clear
+            }
+        }
+        .frame(height: 320)
+        .frame(maxWidth: .infinity)
+        .blur(radius: 50)
+        .saturation(1.3)
+        .opacity(0.55)
+        .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+        .clipped()
+        .allowsHitTesting(false)
+    }
+
+    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3)
+
     private var content: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
+            ZStack(alignment: .top) {
+                headerGlow.offset(y: -120)
+                VStack(alignment: .leading, spacing: 22) {
+                    header
+                        .padding(.top, 24)
 
-                LazyVStack(spacing: 10) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        row(for: item, rank: index + 1)
+                    LazyVGrid(columns: gridColumns, spacing: 16) {
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            row(for: item, rank: index + 1)
+                        }
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 110)
             }
-            .padding(20)
-            .padding(.bottom, 100)
         }
     }
 
     @ViewBuilder
     private func row(for item: MusicListItem, rank: Int) -> some View {
-        let card = ListItemRow(
+        let card = ListGridCell(
             rank: rank,
             item: item,
             track: item.numericRef.flatMap { tracks[$0] },
@@ -188,6 +236,8 @@ struct ListDetailView: View {
         // `swipeActions` was the original gesture here and never fired once: it only applies
         // to rows inside a `List`, and this is a LazyVStack in a ScrollView. Removing an item
         // was therefore impossible. A context menu works in both containers.
+        // Long press shows the note (there's no room for it under a third-width cover) and,
+        // for the owner, the remove action.
         .contextMenu {
             if isOwner {
                 Button(role: .destructive) {
@@ -196,6 +246,16 @@ struct ListDetailView: View {
                     Label("Remove from list", systemImage: "trash")
                 }
             }
+        } preview: {
+            ListItemRow(
+                rank: rank,
+                item: item,
+                track: item.numericRef.flatMap { tracks[$0] },
+                album: item.numericRef.flatMap { albums[$0] },
+                brief: item.kind == .artist ? artistBriefs[item.contentRef] : nil
+            )
+            .frame(width: 320)
+            .background(Color.black)
         }
     }
 
@@ -424,5 +484,80 @@ private struct ListItemRow: View {
         .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
         .contentShape(RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Grid cell
+
+/// A record on the list wall: cover with its rank, then title and artist underneath.
+private struct ListGridCell: View {
+    let rank: Int
+    let item: MusicListItem
+    let track: Track?
+    let album: Album?
+    let brief: ArtistBrief?
+
+    private var title: String { track?.title ?? album?.title ?? brief?.name ?? item.contentRef }
+    private var subtitle: String? { track?.artist ?? album?.artist }
+    private var artworkUrl: URL? { track?.artworkUrl600 ?? album?.artworkUrl600 ?? brief?.artworkUrl }
+    private var isUnresolved: Bool { item.kind != .artist && track == nil && album == nil }
+    private var hasNote: Bool { !(item.note ?? "").isEmpty }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Color.white.opacity(0.08)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if let artworkUrl {
+                        AsyncImage(url: artworkUrl) { phase in
+                            if let image = phase.image {
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } else {
+                                Color.white.opacity(0.08).shimmering()
+                            }
+                        }
+                    } else if !isUnresolved {
+                        Image(systemName: item.kind.icon)
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: item.kind == .artist ? 200 : 10))
+                .overlay(alignment: .bottomLeading) {
+                    Text("\(rank)")
+                        .font(.caption.weight(.heavy).monospacedDigit())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 7))
+                        .padding(6)
+                }
+                .overlay(alignment: .topTrailing) {
+                    if hasNote {
+                        Image(systemName: "text.quote")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 22, height: 22)
+                            .background(.black.opacity(0.6), in: Circle())
+                            .padding(6)
+                    }
+                }
+
+            Text(isUnresolved ? " " : title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.5))
+                    .lineLimit(1)
+                    .padding(.top, -4)
+            }
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(rank). \(title)\(subtitle.map { ", \($0)" } ?? "")")
+        .accessibilityHint(hasNote ? (item.note.map(ProfanityFilter.masked) ?? "") : "")
     }
 }
