@@ -129,6 +129,17 @@
         }
       }
     },
+    "%lld ratings": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld puan"
+          }
+        }
+      }
+    },
     "%lld records": {
       "extractionState": "manual",
       "localizations": {
@@ -1454,6 +1465,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kalp Kırıklığı"
+          }
+        }
+      }
+    },
+    "Highest Rated on Spectrum": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum'da En Yüksek Puanlılar"
           }
         }
       }

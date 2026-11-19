@@ -901,6 +901,41 @@ final class SupabaseManager {
             .execute()
     }
     
+    // MARK: - Highest rated
+
+    nonisolated struct TopRatedRow: Decodable, Hashable, Sendable {
+        /// Track or collection id; nil for artists.
+        let itemId: Int64?
+        let artistName: String?
+        let avgRating: Double
+        let ratingCount: Int
+        enum CodingKeys: String, CodingKey {
+            case itemId = "item_id", artistName = "artist_name"
+            case avgRating = "avg_rating", ratingCount = "rating_count"
+        }
+    }
+
+    enum TopRatedKind: String, CaseIterable, Identifiable {
+        case songs, albums, artists
+        var id: String { rawValue }
+        fileprivate var function: String {
+            switch self {
+            case .songs: "top_rated_tracks"
+            case .albums: "top_rated_albums"
+            case .artists: "top_rated_artists"
+            }
+        }
+    }
+
+    /// Bayesian-ranked items with at least `minRatings` ratings (Supabase_migration_top_rated.sql).
+    func topRated(_ kind: TopRatedKind, minRatings: Int, limit: Int = 20) async throws -> [TopRatedRow] {
+        nonisolated struct Params: Encodable, Sendable { let min_ratings: Int; let lim: Int }
+        return try await client
+            .rpc(kind.function, params: Params(min_ratings: minRatings, lim: limit))
+            .execute()
+            .value
+    }
+
     // MARK: - Comments
 
     static let commentMaxLength = 500

@@ -492,6 +492,9 @@ struct DiscoveryContentView: View {
                 }
             }
 
+            // Community ranking; hidden until there are enough ratings to mean something.
+            TopRatedSection()
+
             // Quick Add Section.
             //
             // The "See All" button here did nothing — it carried a `TODO: Navigate to full
