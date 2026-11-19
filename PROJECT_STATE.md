@@ -9,7 +9,10 @@
 
 ## 🟢 DURUM — 17 Kasım 2026 (incelemeye hazırlık)
 
-- **Build 1.0 (5)** yüklendi, VALID, sürüme bağlandı (18 Kasım). İçinde: akış kartları eksik şarkı/yazar
+- **Build 1.0 (6)** yüklendi, VALID, sürüme bağlandı (19 Kasım). Açılış simülatörde ölçüldü (`launchTrace`):
+  iTunes hızlı yolu `artistId` sayı geldiği için hiç çalışmıyormuş (0/4) → düzeltildi; akış diskten
+  önbellekle anında çiziliyor; splash profili beklemiyor. İlk kareden kapaklı kartlara ~0,4 sn.
+- Build 5 (18 Kasım): İçinde: akış kartları eksik şarkı/yazar
   için tekrar deniyor (soğuk açılışta "yükleniyor"da takılma), yorumdan yazarın profiline geçiş
   (feed isim etiketi, şarkı sayfası yorumu, log detay), şarkı paylaş menüsü (Apple Music / Spotify /
   YouTube Music + song.link). Spotify/YT Music arama linki açıyor — song.link API'si ücretsiz erişimi kapattı.
@@ -23,7 +26,7 @@
 - Yeniden tasarım denemeleri (4 yön) reddedildi; mevcut tasarımla çıkılıyor.
 
 ### Kalan
-1. TestFlight'ta build 5'i cihazda dene (davet kabulü gerekli).
+1. TestFlight'ta build 6'yı cihazda dene (davet kabulü gerekli).
 2. Panelden kontrol (API bu uçlarda 401/500 verdi): App Privacy anketi, yaş derecelendirmesi, fiyat, ad/alt başlık.
 3. İncelemeye gönder.
 4. Spotify client secret'ını iptal et.
