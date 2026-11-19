@@ -114,7 +114,9 @@ struct FeedView: View {
                                 ForEach(reviews) { review in
                                     if let track = tracks[review.itunesTrackId],
                                        let profile = profiles[review.userId] {
-                                        NavigationLink(value: AppRoute.track(track)) {
+                                        // The card opens the log; its artwork and title
+                                        // open the song.
+                                        NavigationLink(value: AppRoute.log(track: track, review: review, isOwner: review.userId == currentUserId)) {
                                             FeedCardView(
                                                 track: track,
                                                 vibeLabel: profile.username ?? String(localized: "User", bundle: appStringsBundle),
@@ -131,7 +133,8 @@ struct FeedView: View {
                                                     ? nil
                                                     : { toggleLike(review) },
                                                 onTapAuthor: { path.append(AppRoute.user(review.userId)) },
-                                                commentCount: commentCounts[review.id] ?? 0
+                                                commentCount: commentCounts[review.id] ?? 0,
+                                                onTapTrack: { path.append(AppRoute.track(track)) }
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())

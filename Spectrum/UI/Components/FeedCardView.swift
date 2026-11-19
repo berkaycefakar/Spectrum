@@ -14,6 +14,8 @@ struct FeedCardView: View {
     var onTapAuthor: (() -> Void)? = nil
     /// Comments under this log. Shown only when there are some.
     var commentCount: Int = 0
+    /// Opens the song from the artwork, title or artist. The rest of the card opens the log.
+    var onTapTrack: (() -> Void)? = nil
     
     @ObservedObject private var audioManager = AudioManager.shared
 
@@ -43,11 +45,24 @@ struct FeedCardView: View {
             .shadow(color: (vibeColor ?? dynamicColor).opacity(0.6), radius: 8)
     }
 
+    /// Makes the artwork and the title a link to the song when `onTapTrack` is set.
+    @ViewBuilder
+    private func trackTarget<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        if let onTapTrack {
+            Button(action: onTapTrack) { content() }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens the song", bundle: appStringsBundle))
+        } else {
+            content()
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             // Top Section: Artwork & Info
             HStack(alignment: .top, spacing: 16) {
                 // Artwork
+                trackTarget {
                 ZStack {
                     if let image = loadedImage {
                         Image(uiImage: image)
@@ -65,9 +80,11 @@ struct FeedCardView: View {
                         .stroke(.white.opacity(0.1), lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
                 
                 // Info
                 VStack(alignment: .leading, spacing: 6) {
+                    trackTarget {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(track.artist)
                             .font(.caption)
@@ -80,6 +97,8 @@ struct FeedCardView: View {
                             .foregroundStyle(.white)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .multilineTextAlignment(.leading)
                     }
                     
                     Spacer()
