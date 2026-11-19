@@ -14,6 +14,8 @@ struct LogCommentsSection: View {
 
     @State private var comments: [ReviewComment] = []
     @State private var profiles: [UUID: Profile] = [:]
+    /// Comment id → like count and whether I liked it.
+    @State private var likes: [UUID: LikeState] = [:]
     @State private var draft = ""
     @State private var isSending = false
     @State private var errorMessage: String?
@@ -64,14 +66,7 @@ struct LogCommentsSection: View {
         let canDelete = comment.userId == me || logOwnerId == me
         return HStack(alignment: .top, spacing: 10) {
             NavigationLink(value: AppRoute.user(comment.userId)) {
-                Circle()
-                    .fill(.white.opacity(0.1))
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Text(String(name.prefix(1)).uppercased())
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.white)
-                    )
+                avatar(profile, name: name)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(name)
@@ -94,6 +89,8 @@ struct LogCommentsSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
+
+            commentLike(comment)
         }
         .contentShape(Rectangle())
         .moderationActions(
@@ -105,6 +102,78 @@ struct LogCommentsSection: View {
             onBlocked: { Task { await load() } },
             onDelete: canDelete ? { Task { await delete(comment) } } : nil
         )
+    }
+
+    /// The commenter's photo, or their initial when they haven't set one.
+    private func avatar(_ profile: Profile?, name: String) -> some View {
+        let initial = Circle()
+            .fill(.white.opacity(0.1))
+            .overlay(
+                Text(String(name.prefix(1)).uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+            )
+        return Group {
+            if let url = profile?.avatarUrl.flatMap(URL.init(string:)) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        initial
+                    }
+                }
+            } else {
+                initial
+            }
+        }
+        .frame(width: 32, height: 32)
+        .clipShape(Circle())
+    }
+
+    /// A small heart under-the-thumb on the right of each comment. Your own comment shows
+    /// the count but can't be liked.
+    private func commentLike(_ comment: ReviewComment) -> some View {
+        let state = likes[comment.id] ?? .unknown
+        let isMine = comment.userId == me
+        return Button {
+            Task { await toggleLike(comment) }
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: state.likedByMe ? "heart.fill" : "heart")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(state.likedByMe ? Color(hex: "#FF2D55") : .white.opacity(0.45))
+                Text(state.count > 0 ? "\(state.count)" : " ")
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            .frame(width: 32, height: 40)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isMine || me == nil)
+        .accessibilityLabel(Text(state.likedByMe ? "Unlike comment" : "Like comment", bundle: appStringsBundle))
+        .accessibilityValue(state.count > 0 ? "\(state.count)" : "")
+    }
+
+    private func toggleLike(_ comment: ReviewComment) async {
+        var state = likes[comment.id] ?? .unknown
+        let wasLiked = state.likedByMe
+        // Optimistic: flip now, put it back if the request fails.
+        state.likedByMe.toggle()
+        state.count = max(0, state.count + (wasLiked ? -1 : 1))
+        likes[comment.id] = state
+        HapticFeedback.shared.impact()
+        do {
+            if wasLiked {
+                try await SupabaseManager.shared.unlike(contentType: .comment, contentId: comment.id)
+            } else {
+                try await SupabaseManager.shared.like(contentType: .comment, contentId: comment.id)
+            }
+        } catch {
+            state.likedByMe = wasLiked
+            state.count = max(0, state.count + (wasLiked ? 1 : -1))
+            likes[comment.id] = state
+        }
     }
 
     private var composer: some View {
@@ -159,7 +228,10 @@ struct LogCommentsSection: View {
             return
         }
         comments = rows
-        await loadProfiles(for: rows)
+        async let profilesLoad: Void = loadProfiles(for: rows)
+        async let likesLoad = SupabaseManager.shared.likeStates(contentType: .comment, contentIds: rows.map(\.id))
+        let (_, states) = await (profilesLoad, likesLoad)
+        likes = states
         loaded = true
     }
 

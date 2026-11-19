@@ -81,6 +81,8 @@ enum LikeableContentType: String, Codable, Sendable {
     case songReview = "song_review"
     case albumReview = "album_review"
     case artistReview = "artist_review"
+    /// A comment under a log (`review_comments`).
+    case comment
 }
 
 /// The like state of one log, as far as the current user is concerned.
