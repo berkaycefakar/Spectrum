@@ -12,6 +12,15 @@
 	  links open a browser error instead of the app — the redirect was configured in code and
 	  in the Supabase dashboard, but never claimed by the bundle.
 	-->
+	<!--
+	  The launch screen's dark background. Set through the INFOPLIST_KEY build setting it came
+	  out as an empty dict, so iOS drew a white launch screen that flashed before the app.
+	-->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
