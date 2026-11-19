@@ -52,9 +52,12 @@ struct FeedView: View {
                         .padding(.horizontal)
                         
                         if isLoading {
-                            ProgressView()
-                                .tint(.white)
-                                .frame(maxWidth: .infinity, minHeight: 200)
+                            // The shape of the feed rather than a spinner, so the cards land
+                            // where the eye is already looking.
+                            VStack(spacing: 20) {
+                                ForEach(0..<3, id: \.self) { _ in FeedCardSkeleton() }
+                            }
+                            .padding(.horizontal)
                         } else if let error = errorMessage {
                             VStack(spacing: 12) {
                                 Image(systemName: "exclamationmark.triangle")
@@ -139,10 +142,7 @@ struct FeedView: View {
                                             onBlocked: { Task { await loadFeedData() } }
                                         )
                                     } else if !unresolved.contains(review.id) {
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(.white.opacity(0.05))
-                                            .frame(height: 200)
-                                            .overlay(ProgressView().tint(.white))
+                                        FeedCardSkeleton()
                                     }
                                 }
 

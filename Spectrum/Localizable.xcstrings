@@ -1496,6 +1496,17 @@
         }
       }
     },
+    "Loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yükleniyor"
+          }
+        }
+      }
+    },
     "Loading...": {
       "extractionState": "manual",
       "localizations": {

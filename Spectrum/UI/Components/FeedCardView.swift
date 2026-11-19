@@ -52,8 +52,8 @@ struct FeedCardView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } else {
-                        Color.black.opacity(0.3)
-                            .overlay(ProgressView().tint(.white))
+                        Color.white.opacity(0.08)
+                            .shimmering()
                     }
                 }
                 .frame(width: 100, height: 100)
