@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// One list, open.
 ///
@@ -24,6 +25,9 @@ struct ListDetailView: View {
     @State private var showAddRecords = false
     @State private var currentList: MusicList
     @State private var ownerName: String?
+    @State private var showCoverPicker = false
+    @State private var coverPick: PhotosPickerItem?
+    @State private var isSavingCover = false
 
     init(list: MusicList, isOwner: Bool, onChanged: (() -> Void)? = nil) {
         self.list = list
@@ -52,6 +56,11 @@ struct ListDetailView: View {
         .toolbar { toolbarContent }
         .task { await load() }
         .task { ownerName = try? await SupabaseManager.shared.getProfile(userId: currentList.userId).username }
+        .photosPicker(isPresented: $showCoverPicker, selection: $coverPick, matching: .images)
+        .onChange(of: coverPick) { _, item in
+            guard let item else { return }
+            Task { await saveCover(item) }
+        }
         .sheet(isPresented: $showEdit) {
             EditListView(list: currentList) {
                 Task { await reloadList() }
@@ -103,6 +112,20 @@ struct ListDetailView: View {
                         Label("Edit Details", systemImage: "pencil")
                     }
 
+                    Button {
+                        showCoverPicker = true
+                    } label: {
+                        Label(currentList.coverUrl == nil ? "Add Cover" : "Change Cover", systemImage: "photo")
+                    }
+
+                    if currentList.coverUrl != nil {
+                        Button {
+                            Task { await removeCover() }
+                        } label: {
+                            Label("Remove Cover", systemImage: "photo.badge.minus")
+                        }
+                    }
+
                     if items.count > 1 {
                         Button {
                             isEditingOrder.toggle()
@@ -130,8 +153,41 @@ struct ListDetailView: View {
 
     // MARK: - Content
 
+    @ViewBuilder
+    private var coverImage: some View {
+        if let url = currentList.coverUrl.flatMap(URL.init(string:)) {
+            Color.white.opacity(0.06)
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: 220)
+                .overlay {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } else {
+                            Color.white.opacity(0.06).shimmering()
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .overlay {
+                    if isSavingCover { ProgressView().tint(.white) }
+                }
+                .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(Text("List cover", bundle: appStringsBundle))
+        } else if isSavingCover {
+            RoundedRectangle(cornerRadius: 18).fill(.white.opacity(0.06))
+                .frame(width: 220, height: 220)
+                .overlay(ProgressView().tint(.white))
+                .frame(maxWidth: .infinity)
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
+            coverImage
+                .padding(.bottom, 12)
+
             Text(currentList.title)
                 .font(.system(size: 34, weight: .heavy))
                 .tracking(-0.6)
@@ -168,9 +224,9 @@ struct ListDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The first record's artwork, blurred into a wash behind the title.
+    /// The cover (or first record's artwork), blurred into a wash behind the title.
     private var headerGlow: some View {
-        let url = items.first.flatMap { item -> URL? in
+        let url = currentList.coverUrl.flatMap(URL.init(string:)) ?? items.first.flatMap { item -> URL? in
             guard let id = item.numericRef else { return nil }
             return item.kind == .song ? tracks[id]?.artworkUrl600 : albums[id]?.artworkUrl600
         }
@@ -352,6 +408,31 @@ struct ListDetailView: View {
             self.albums = albumsById
             self.artistBriefs = briefs
             self.isLoading = false
+        }
+    }
+
+    private func saveCover(_ item: PhotosPickerItem) async {
+        defer { coverPick = nil }
+        guard let raw = try? await item.loadTransferable(type: Data.self),
+              let jpeg = ImageUploadPrep.jpeg(raw, maxSide: 1200) else { return }
+        isSavingCover = true
+        defer { isSavingCover = false }
+        do {
+            let url = try await SupabaseManager.shared.setListCover(listId: currentList.id, imageData: jpeg)
+            currentList.coverUrl = url
+            onChanged?()
+        } catch {
+            debugLog("List: cover upload failed:", error)
+        }
+    }
+
+    private func removeCover() async {
+        do {
+            try await SupabaseManager.shared.removeListCover(listId: currentList.id)
+            currentList.coverUrl = nil
+            onChanged?()
+        } catch {
+            debugLog("List: cover removal failed:", error)
         }
     }
 

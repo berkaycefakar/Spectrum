@@ -35,12 +35,16 @@ struct MusicList: Codable, Identifiable, Hashable {
     var isPublic: Bool
     let createdAt: Date
     var updatedAt: Date
+    /// A photo the owner picked as the cover (public URL in `list-covers`). Nil shows the
+    /// list's own records instead.
+    var coverUrl: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case title
         case description
+        case coverUrl = "cover_url"
         case isPublic = "is_public"
         case createdAt = "created_at"
         case updatedAt = "updated_at"

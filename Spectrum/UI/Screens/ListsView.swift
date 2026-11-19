@@ -96,6 +96,15 @@ private struct ListRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            if let url = summary.list.coverUrl.flatMap(URL.init(string:)) {
+                AsyncImage(url: url) { phase in
+                    (phase.image?.resizable() ?? Image(systemName: "photo").resizable())
+                        .aspectRatio(contentMode: .fill)
+                }
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(summary.list.title)

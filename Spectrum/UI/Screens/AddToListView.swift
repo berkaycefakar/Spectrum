@@ -257,7 +257,13 @@ struct AddToListView: View {
 
         summaries = loaded
         membership = members
-        covers = coverMap
+        // A cover photo the owner picked leads the stack.
+        covers = coverMap.merging(
+            Dictionary(uniqueKeysWithValues: loaded.compactMap { s in
+                s.list.coverUrl.flatMap(URL.init(string:)).map { (s.list.id, [$0]) }
+            }),
+            uniquingKeysWith: { records, cover in Array((cover + records).prefix(3)) }
+        )
         isLoading = false
     }
 

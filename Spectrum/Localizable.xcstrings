@@ -337,6 +337,17 @@
         }
       }
     },
+    "Add Cover": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapak Ekle"
+          }
+        }
+      }
+    },
     "Add a comment…": {
       "extractionState": "manual",
       "localizations": {
@@ -1716,6 +1727,17 @@
         }
       }
     },
+    "List cover": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste kapağı"
+          }
+        }
+      }
+    },
     "List options": {
       "extractionState": "manual",
       "localizations": {
@@ -2795,6 +2817,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ kaldır"
+          }
+        }
+      }
+    },
+    "Remove Cover": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapağı Kaldır"
           }
         }
       }
