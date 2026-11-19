@@ -3,7 +3,8 @@ import UIKit
 
 /// Custom on-brand rating control using vertical glowing bars.
 /// - Rates in half-steps (3.5, say).
-/// - Each bar is taller than the one before it, left to right; the fifth is the tallest.
+/// - Each bar is taller than the one before it, left to right, all standing on one baseline:
+///   it reads as a volume meter, louder to the right.
 struct SpectrumRatingControl: View {
     /// Rating value in the range 0...5 (0.5 steps).
     @Binding var rating: Double
@@ -15,7 +16,8 @@ struct SpectrumRatingControl: View {
     
     // Heights for the bars - progressively increasing left to right.
     // The first bar is the shortest, the fifth the tallest.
-    private let barHeights: [CGFloat] = [22, 28, 34, 40, 46]
+    // A steep climb so the five read as a volume meter rather than a row of pills.
+    private let barHeights: [CGFloat] = [14, 24, 34, 44, 54]
     
     // Haptic feedback generator - sadece bir kez initialize et
     @State private var hapticGenerator = UIImpactFeedbackGenerator(style: .soft)
@@ -23,13 +25,13 @@ struct SpectrumRatingControl: View {
     
     var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: 12 * scale) {
+            HStack(alignment: .bottom, spacing: 9 * scale) {
                 Spacer()
                 ForEach(1...maxRating, id: \.self) { index in
                     SpectrumBar(
                         fillPercentage: calculateFillPercentage(for: index),
                         height: barHeights[index - 1] * scale,
-                        width: 16 * scale,
+                        width: 14 * scale,
                         accentColor: accentColor
                     )
                     .onTapGesture {
@@ -41,6 +43,7 @@ struct SpectrumRatingControl: View {
                 }
                 Spacer()
             }
+            .frame(maxHeight: .infinity, alignment: .bottom)
             .contentShape(Rectangle()) // Tüm alan drag için aktif
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -103,7 +106,7 @@ struct SpectrumBar: View {
     var body: some View {
         ZStack(alignment: .leading) {
             // Background (the empty part) — always full width
-            RoundedRectangle(cornerRadius: width / 2)
+            RoundedRectangle(cornerRadius: width * 0.3)
                 .fill(
                     LinearGradient(
                         colors: [Color.white.opacity(0.15), Color.white.opacity(0.08)],
@@ -117,7 +120,7 @@ struct SpectrumBar: View {
             // so half a bar keeps the bar's own rounded outline: rounding the half-width
             // shape on its own drew a blob that spilled outside the bar.
             if fillPercentage > 0 {
-                RoundedRectangle(cornerRadius: width / 2)
+                RoundedRectangle(cornerRadius: width * 0.3)
                     .fill(
                         LinearGradient(
                             colors: [accentColor, accentColor.opacity(0.7)],
@@ -137,7 +140,7 @@ struct SpectrumBar: View {
             radius: fillPercentage > 0 ? 8 : 0
         )
         .overlay(
-            RoundedRectangle(cornerRadius: width / 2)
+            RoundedRectangle(cornerRadius: width * 0.3)
                 .stroke(
                     fillPercentage > 0 ? accentColor.opacity(0.8) : Color.white.opacity(0.1),
                     lineWidth: 1
