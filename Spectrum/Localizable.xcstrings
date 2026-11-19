@@ -271,6 +271,17 @@
         }
       }
     },
+    "Add a comment…": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorum ekle…"
+          }
+        }
+      }
+    },
     "Add a favorite album": {
       "extractionState": "manual",
       "localizations": {
@@ -764,6 +775,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kapat"
+          }
+        }
+      }
+    },
+    "Comments": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorumlar"
+          }
+        }
+      }
+    },
+    "Comments can be up to 500 characters.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorumlar en fazla 500 karakter olabilir."
           }
         }
       }
@@ -1855,6 +1888,17 @@
         }
       }
     },
+    "No comments yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz yorum yok."
+          }
+        }
+      }
+    },
     "No lists yet. Make one — “best of 2026”, “songs for driving at night”.": {
       "extractionState": "manual",
       "localizations": {
@@ -2754,6 +2798,17 @@
         }
       }
     },
+    "Send comment": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorumu gönder"
+          }
+        }
+      }
+    },
     "Send reset link": {
       "extractionState": "manual",
       "localizations": {
@@ -2859,6 +2914,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kayıt Ol"
+          }
+        }
+      }
+    },
+    "Sign in to comment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorum yapmak için giriş yap."
           }
         }
       }
@@ -3066,6 +3132,17 @@
         }
       }
     },
+    "Tell us what's wrong with this comment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu yorumda neyin yanlış olduğunu anlat."
+          }
+        }
+      }
+    },
     "Tell us what's wrong with this review.": {
       "localizations": {
         "tr": {
@@ -3165,6 +3242,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu Hafta"
+          }
+        }
+      }
+    },
+    "This comment contains language that isn't allowed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu yorumda izin verilmeyen ifadeler var."
           }
         }
       }
@@ -3550,6 +3638,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neden bu listede"
+          }
+        }
+      }
+    },
+    "Write something first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önce bir şey yaz."
           }
         }
       }

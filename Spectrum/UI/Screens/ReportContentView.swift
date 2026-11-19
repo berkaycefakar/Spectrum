@@ -144,6 +144,8 @@ struct ReportContentView: View {
         switch contentType {
         case .profile:
             return String(localized: "Tell us what's wrong with \(reportedUsername.map { "@\($0)" } ?? String(localized: "this profile", bundle: appStringsBundle)).")
+        case .comment:
+            return String(localized: "Tell us what's wrong with this comment.", bundle: appStringsBundle)
         default:
             return String(localized: "Tell us what's wrong with this review.", bundle: appStringsBundle)
         }

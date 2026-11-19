@@ -220,3 +220,23 @@ struct ActivityItem: Codable, Identifiable {
         }
     }
 }
+
+
+/// A written reply under a log.
+struct ReviewComment: Codable, Identifiable, Hashable {
+    let id: UUID
+    let userId: UUID
+    let contentType: String
+    let contentId: UUID
+    let body: String
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case contentType = "content_type"
+        case contentId = "content_id"
+        case body
+        case createdAt = "created_at"
+    }
+}

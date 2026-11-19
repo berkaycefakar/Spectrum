@@ -901,6 +901,62 @@ final class SupabaseManager {
             .execute()
     }
     
+    // MARK: - Comments
+
+    static let commentMaxLength = 500
+
+    /// Comments under a log, oldest first, without anyone the viewer has blocked.
+    func fetchComments(contentType: ReportedContentType, contentId: UUID) async throws -> [ReviewComment] {
+        let rows: [ReviewComment] = try await client
+            .from("review_comments")
+            .select()
+            .eq("content_type", value: contentType.rawValue)
+            .eq("content_id", value: contentId)
+            .order("created_at", ascending: true)
+            .limit(200)
+            .execute()
+            .value
+        let blocked = await blockedUserIds()
+        return rows.filter { !blocked.contains($0.userId) }
+    }
+
+    enum CommentError: LocalizedError {
+        case empty, tooLong, offensive, signedOut
+        var errorDescription: String? {
+            switch self {
+            case .empty: String(localized: "Write something first.", bundle: appStringsBundle)
+            case .tooLong: String(localized: "Comments can be up to 500 characters.", bundle: appStringsBundle)
+            case .offensive: String(localized: "This comment contains language that isn't allowed.", bundle: appStringsBundle)
+            case .signedOut: String(localized: "Sign in to comment.", bundle: appStringsBundle)
+            }
+        }
+    }
+
+    func addComment(contentType: ReportedContentType, contentId: UUID, body: String) async throws -> ReviewComment {
+        let text = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { throw CommentError.empty }
+        guard text.count <= Self.commentMaxLength else { throw CommentError.tooLong }
+        guard !ProfanityFilter.contains(text) else { throw CommentError.offensive }
+        guard let user = try await getCurrentUser() else { throw CommentError.signedOut }
+        struct NewComment: Encodable {
+            let user_id: UUID
+            let content_type: String
+            let content_id: UUID
+            let body: String
+        }
+        return try await client
+            .from("review_comments")
+            .insert(NewComment(user_id: user.id, content_type: contentType.rawValue, content_id: contentId, body: text))
+            .select()
+            .single()
+            .execute()
+            .value
+    }
+
+    func deleteComment(id: UUID) async throws {
+        try await client.from("review_comments").delete().eq("id", value: id).execute()
+    }
+
     /// One song log by id. Nil when it was deleted (or is hidden from the reader by RLS).
     func fetchReview(id: UUID) async throws -> Review? {
         let rows: [Review] = try await client

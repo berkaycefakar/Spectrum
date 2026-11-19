@@ -71,6 +71,9 @@ struct ModerationMenu: View {
 struct ModerationActions: ViewModifier {
     let target: ModerationTarget
     var onBlocked: (() -> Void)?
+    /// Adds Delete to the same menu, for content the viewer may remove (their own, or a
+    /// comment on their own log).
+    var onDelete: (() -> Void)? = nil
 
     @State private var showReport = false
     @State private var showBlockConfirm = false
@@ -79,6 +82,11 @@ struct ModerationActions: ViewModifier {
     func body(content: Content) -> some View {
         content
             .contextMenu {
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
                 if target.isOtherUsersContent {
                     Button { showReport = true } label: {
                         Label("Report", systemImage: "flag")
@@ -170,7 +178,8 @@ extension View {
         authorId: UUID?,
         authorUsername: String?,
         reportedText: String? = nil,
-        onBlocked: (() -> Void)? = nil
+        onBlocked: (() -> Void)? = nil,
+        onDelete: (() -> Void)? = nil
     ) -> some View {
         modifier(ModerationActions(
             target: ModerationTarget(
@@ -180,7 +189,8 @@ extension View {
                 authorUsername: authorUsername,
                 reportedText: reportedText
             ),
-            onBlocked: onBlocked
+            onBlocked: onBlocked,
+            onDelete: onDelete
         ))
     }
 }

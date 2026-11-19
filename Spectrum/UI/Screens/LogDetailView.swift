@@ -178,7 +178,15 @@ struct LogDetailView: View {
                             )
                     )
                     .padding(.horizontal, 20)
-                    
+
+                    LogCommentsSection(
+                        contentType: .songReview,
+                        contentId: review.id,
+                        logOwnerId: review.userId,
+                        accent: vibeColor
+                    )
+                    .padding(.horizontal, 24)
+
                     Spacer(minLength: 50)
                 }
             }
