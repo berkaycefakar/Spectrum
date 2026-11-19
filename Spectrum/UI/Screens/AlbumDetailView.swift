@@ -40,6 +40,8 @@ struct AlbumDetailView: View {
                     communitySection
                     trackListSection
                     rateButton
+                    AppleMusicAttribution(url: album.appleMusicLink)
+                        .padding(.horizontal)
                 }
                 // The tab bar — and the mini-player above it when something is playing — float
                 // over this scroll view, and 40pt left the rate button underneath them at the

@@ -286,6 +286,11 @@ struct SettingsView: View {
             Text("Music data from Apple Music")
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.3))
+            Text("Apple and Apple Music are trademarks of Apple Inc., registered in the U.S. and other countries.", bundle: appStringsBundle)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.3))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 4)

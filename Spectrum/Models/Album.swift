@@ -47,6 +47,9 @@ struct Album: Identifiable, Decodable, Hashable {
     let audioBadges: [AudioBadge]
     let recordLabel: String?
 
+    /// The album on Apple Music, for the "Listen on Apple Music" badge.
+    var appleMusicLink: URL? { URL(string: "https://music.apple.com/album/\(id)") }
+
     var artworkUrl600: URL? {
         let highResString = artworkUrl100.replacingOccurrences(of: "100x100", with: "600x600")
         return URL(string: highResString)

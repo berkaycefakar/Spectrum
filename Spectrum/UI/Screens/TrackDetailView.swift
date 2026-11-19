@@ -53,6 +53,8 @@ struct TrackDetailView: View {
 
                         previewPlayer
 
+                        AppleMusicAttribution(url: track.appleMusicLink, showsPreviewCredit: track.previewUrl != nil)
+
                         if let album = album {
                             albumLink(album: album)
                         }
