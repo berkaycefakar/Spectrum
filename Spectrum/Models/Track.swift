@@ -8,7 +8,7 @@ struct ArtistRef: Identifiable, Hashable {
     var id: String { artistId ?? name }
 }
 
-struct Track: Identifiable, Decodable, Hashable {
+struct Track: Identifiable, Codable, Hashable {
     let id: Int
     let title: String
     let artist: String
@@ -104,7 +104,14 @@ struct Track: Identifiable, Decodable, Hashable {
         self.genreNames = try container.decodeIfPresent([String].self, forKey: .genreNames)
         self.durationInMillis = try container.decodeIfPresent(Int.self, forKey: .durationInMillis)
         self.releaseDate = try container.decodeIfPresent(Date.self, forKey: .releaseDate)
-        self.artistId = try container.decodeIfPresent(String.self, forKey: .artistId)
+        // Stored/MusicKit JSON carries it as a string, the iTunes lookup as a number. Reading
+        // only the string form made every iTunes row fail to decode, so the feed's fast path
+        // returned nothing and every card waited on MusicKit instead.
+        if let text = try? container.decodeIfPresent(String.self, forKey: .artistId) {
+            self.artistId = text
+        } else {
+            self.artistId = (try? container.decodeIfPresent(Int64.self, forKey: .artistId)).flatMap { $0.map(String.init) }
+        }
         self.artists = []  // populated from MusicKit relationships, not JSON
         self.appleMusicUrl = try container.decodeIfPresent(String.self, forKey: .appleMusicUrl)
         // MusicKit-only: nothing in the stored JSON carries these.
@@ -112,6 +119,23 @@ struct Track: Identifiable, Decodable, Hashable {
         self.isExplicit = nil
     }
     
+    /// Mirrors `init(from:)` so a track survives the feed's disk cache. The credited-artist
+    /// list and the MusicKit-only fields are not stored; the catalog fills them in again.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(artist, forKey: .artist)
+        try c.encode(artworkUrl100, forKey: .artworkUrl100)
+        try c.encodeIfPresent(previewUrl, forKey: .previewUrl)
+        try c.encodeIfPresent(collectionId, forKey: .collectionId)
+        try c.encodeIfPresent(genreNames, forKey: .genreNames)
+        try c.encodeIfPresent(durationInMillis, forKey: .durationInMillis)
+        try c.encodeIfPresent(releaseDate, forKey: .releaseDate)
+        try c.encodeIfPresent(artistId, forKey: .artistId)
+        try c.encodeIfPresent(appleMusicUrl, forKey: .appleMusicUrl)
+    }
+
     enum CodingKeys: String, CodingKey {
         case id = "trackId"
         case title = "trackName"
