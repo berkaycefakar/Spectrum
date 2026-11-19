@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var showLogoutAlert = false
     @State private var showChangePassword = false
     @State private var showBlockedUsers = false
+    @State private var showPaywall = false
+    @ObservedObject private var premium = PremiumStore.shared
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
     @State private var deleteError: String?
@@ -39,6 +41,17 @@ struct SettingsView: View {
                 VStack(spacing: 26) {
                     header
                     accountCard
+
+                    if PremiumStore.isOfferEnabled {
+                        section("Spectrum+") {
+                            navRow(icon: "sparkles", tint: "#FF8A3D",
+                                   title: premium.isPlus
+                                       ? String(localized: "You're on Spectrum+", bundle: appStringsBundle)
+                                       : String(localized: "Get Spectrum+", bundle: appStringsBundle)) {
+                                showPaywall = true
+                            }
+                        }
+                    }
 
                     section(String(localized: "Preferences", bundle: appStringsBundle)) {
                         languageRow
@@ -97,6 +110,7 @@ struct SettingsView: View {
         .task {
             email = try? await SupabaseManager.shared.getCurrentUser()?.email
         }
+        .sheet(isPresented: $showPaywall) { PaywallView() }
         .sheet(isPresented: $showBlockedUsers) {
             NavigationStack {
                 BlockedUsersView()

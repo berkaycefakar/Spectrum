@@ -212,6 +212,17 @@
         }
       }
     },
+    "1 week free, then billed yearly": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hafta ücretsiz, sonra yıllık faturalanır"
+          }
+        }
+      }
+    },
     "@%@": {
       "extractionState": "manual",
       "shouldTranslate": false
@@ -1022,6 +1033,17 @@
         }
       }
     },
+    "Deeper stats": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daha derin istatistik"
+          }
+        }
+      }
+    },
     "Delete": {
       "extractionState": "manual",
       "localizations": {
@@ -1332,6 +1354,17 @@
         }
       }
     },
+    "Filter by rating, vibe and year.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puana, vibe'a ve yıla göre filtrele."
+          }
+        }
+      }
+    },
     "Focus Flow": {
       "localizations": {
         "tr": {
@@ -1413,6 +1446,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Türler"
+          }
+        }
+      }
+    },
+    "Get Spectrum+": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum+'a geç"
           }
         }
       }
@@ -1606,6 +1650,17 @@
         }
       }
     },
+    "Lists to Apple Music": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listeler Apple Music'e"
+          }
+        }
+      }
+    },
     "Loading": {
       "extractionState": "manual",
       "localizations": {
@@ -1726,6 +1781,17 @@
         }
       }
     },
+    "Logging, lists and reviews stay free. Spectrum+ is for going deeper.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loglama, listeler ve yorumlar ücretsiz kalır. Spectrum+ daha derine inmek için."
+          }
+        }
+      }
+    },
     "Logs": {
       "localizations": {
         "tr": {
@@ -1764,6 +1830,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gece Yarısı Havası"
+          }
+        }
+      }
+    },
+    "Month by month, and this year against last.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ay ay, bu yıl geçen yıla karşı."
+          }
+        }
+      }
+    },
+    "Monthly": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aylık"
           }
         }
       }
@@ -2286,6 +2374,17 @@
         }
       }
     },
+    "Pick it from your own spectrum, plus a Spectrum+ badge.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendi spektrumundan seç, bir de Spectrum+ rozeti."
+          }
+        }
+      }
+    },
     "Pick something you haven't used here before.": {
       "localizations": {
         "tr": {
@@ -2547,6 +2646,17 @@
         }
       }
     },
+    "Renews automatically until cancelled. Cancel anytime in Settings › Apple ID › Subscriptions.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İptal edilene kadar otomatik yenilenir. İstediğin zaman Ayarlar › Apple Kimliği › Abonelikler'den iptal et."
+          }
+        }
+      }
+    },
     "Reorder": {
       "extractionState": "manual",
       "localizations": {
@@ -2608,6 +2718,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Şifreni sıfırla"
+          }
+        }
+      }
+    },
+    "Restore Purchases": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satın Alımları Geri Yükle"
           }
         }
       }
@@ -2783,6 +2904,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Şarkı ara"
+          }
+        }
+      }
+    },
+    "Search your logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loglarında ara"
           }
         }
       }
@@ -3091,6 +3223,17 @@
         }
       }
     },
+    "Start free week": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ücretsiz haftayı başlat"
+          }
+        }
+      }
+    },
     "Stop preview": {
       "extractionState": "manual",
       "localizations": {
@@ -3109,6 +3252,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bildirimi gönder"
+          }
+        }
+      }
+    },
+    "Subscribe": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abone ol"
           }
         }
       }
@@ -3386,6 +3540,17 @@
         }
       }
     },
+    "Top artists, genres and decades.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En çok dinlenen sanatçılar, türler ve on yıllar."
+          }
+        }
+      }
+    },
     "Tracks": {
       "extractionState": "manual",
       "localizations": {
@@ -3415,6 +3580,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tekrar Dene"
+          }
+        }
+      }
+    },
+    "Turn any list into a playlist.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herhangi bir listeyi çalma listesine çevir."
           }
         }
       }
@@ -3696,6 +3872,28 @@
         }
       }
     },
+    "Year in review card": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yıl özeti kartı"
+          }
+        }
+      }
+    },
+    "Yearly": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yıllık"
+          }
+        }
+      }
+    },
     "You appear to be offline. Check your connection and try again.": {
       "localizations": {
         "tr": {
@@ -3789,6 +3987,17 @@
         }
       }
     },
+    "You're on Spectrum+": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum+ kullanıyorsun"
+          }
+        }
+      }
+    },
     "You're signed in from the reset link. Set a new password to finish — until you do, your old one still works.": {
       "localizations": {
         "tr": {
@@ -3817,6 +4026,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senin Spektrumun, tüm istatistikleri gör"
+          }
+        }
+      }
+    },
+    "Your accent colour": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vurgu rengin"
           }
         }
       }
@@ -3873,6 +4093,17 @@
         }
       }
     },
+    "Your spectrum over time": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaman içinde spektrumun"
+          }
+        }
+      }
+    },
     "Your thoughts": {
       "extractionState": "manual",
       "localizations": {
@@ -3901,6 +4132,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senin vibe'ın"
+          }
+        }
+      }
+    },
+    "Your year in music, ready to share.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Müzikte geçen yılın, paylaşmaya hazır."
           }
         }
       }

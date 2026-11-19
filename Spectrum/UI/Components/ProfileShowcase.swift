@@ -19,6 +19,8 @@ struct ProfileCoverHeader: View {
     var onFollowersTapped: () -> Void = {}
     var onFollowingTapped: () -> Void = {}
 
+    @ObservedObject private var premium = PremiumStore.shared
+
     private let bannerHeight: CGFloat = 210
     private let avatarSize: CGFloat = 92
 
@@ -40,9 +42,19 @@ struct ProfileCoverHeader: View {
                     .padding(.top, -avatarSize / 2)
 
                 VStack(spacing: 6) {
-                    Text(profile.username ?? String(localized: "Anonymous", bundle: appStringsBundle))
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.white)
+                    HStack(spacing: 6) {
+                        Text(profile.username ?? String(localized: "Anonymous", bundle: appStringsBundle))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(.white)
+                        // Own profile only until the subscription is mirrored to Supabase
+                        // (docs/PREMIUM_PLAN.md, step 3).
+                        if PremiumStore.isOfferEnabled, onEdit != nil, premium.isPlus {
+                            Image(systemName: "sparkles")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(Color.spectrumAccent)
+                                .accessibilityLabel("Spectrum+")
+                        }
+                    }
 
                     if let bio = profile.bio, !bio.isEmpty {
                         Text(bio)
