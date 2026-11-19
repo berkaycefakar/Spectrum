@@ -31,6 +31,7 @@ final class MusicAuthorizationStore: ObservableObject {
 
     /// Prompts on first launch; afterwards just re-reads the system's answer.
     func requestIfNeeded() async {
+        launchTrace("musickit auth: \(MusicAuthorization.currentStatus)")
         if MusicAuthorization.currentStatus == .notDetermined {
             status = await MusicAuthorization.request()
             debugLog("MusicKit: authorization status = \(status)")

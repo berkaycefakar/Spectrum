@@ -66,6 +66,7 @@ struct ContentView: View {
         // system alerts, action sheets and the photo picker light-on-black.
         .preferredColorScheme(.dark)
         .task {
+            launchTrace("first frame (ContentView task)")
             await sessionStore.checkSession()
         }
         .fullScreenCover(isPresented: musicAccessBinding) {

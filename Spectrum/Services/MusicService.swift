@@ -218,7 +218,9 @@ class MusicService {
         // The public iTunes lookup goes first: one request, no token, usually well under a
         // second. MusicKit's first catalog request after launch waits on a developer token and
         // held every feed card back for seconds. It only fills what iTunes didn't return.
+        launchTrace("music: iTunes lookup start (\(ids.count))")
         var result = await Self.withDeadline(seconds: 6) { await self.fetchTracksFromITunes(ids: ids) } ?? [:]
+        launchTrace("music: iTunes lookup done \(result.count)/\(ids.count)")
         let missing = ids.filter { result[$0] == nil }
         if !missing.isEmpty {
             let catalog = await Self.withDeadline(seconds: 4) { await self.fetchTracksFromCatalog(ids: missing) } ?? [:]

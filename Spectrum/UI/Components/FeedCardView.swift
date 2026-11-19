@@ -208,6 +208,7 @@ struct FeedCardView: View {
             guard let uiImage = UIImage(data: data) else { return }
 
             await MainActor.run { self.loadedImage = uiImage }
+            launchTrace("card artwork: \(track.title)")
 
             // Extract the dominant colour off the main thread — doing this inline on the main
             // actor for every visible feed card was locking up the UI. The shared loader runs

@@ -12,6 +12,7 @@ import MusicKit
 @main
 struct SpectrumApp: App {
     init() {
+        launchTrace("app init")
         // AsyncImage goes through URLSession.shared, and the default cache is far too small
         // for a grid of album art — artwork was being refetched on every re-render, which is
         // what made search feel sluggish while typing.
