@@ -30,6 +30,8 @@ struct ProfileView: View {
     @State private var loadedMore: Set<ProfileCategory> = []
     @State private var isLoadingMore = false
     @State private var showStats = false
+    @State private var showPaywall = false
+    @ObservedObject private var premium = PremiumStore.shared
     /// The favourite-four shelf, resolved to albums in shelf order.
     @State private var favoriteAlbums: [Album] = []
     @State private var showFavoritesEditor = false
@@ -116,6 +118,34 @@ struct ProfileView: View {
                                 onTap: summary.entries.isEmpty ? nil : { showStats = true }
                             )
                             .padding(.horizontal)
+
+                            // Spectrum+ lives where its main feature would: under the all-time
+                            // summary it extends. (Also in Settings.)
+                            if PremiumStore.isOfferEnabled, !premium.isPlus, !summary.entries.isEmpty {
+                                Button { showPaywall = true } label: {
+                                    HStack(spacing: 12) {
+                                        SpectrumStream(colors: vibeStats.prefix(5).map { Color(hex: $0.color) })
+                                            .frame(width: 54, height: 34)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("See your spectrum move", bundle: appStringsBundle)
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(.white)
+                                            Text("Month by month with Spectrum+", bundle: appStringsBundle)
+                                                .font(.caption)
+                                                .foregroundStyle(.white.opacity(0.55))
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white.opacity(0.4))
+                                    }
+                                    .padding(12)
+                                    .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.horizontal)
+                            }
                         } else if isLoading {
                             ProgressView().tint(.white)
                                 .padding(.top, 120)
@@ -194,6 +224,9 @@ struct ProfileView: View {
             .navigationBarHidden(true)
             .task {
                 await loadProfileData()
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(vibeHexes: vibeStats.map(\.color))
             }
             .sheet(isPresented: $showStats) {
                 ListeningStatsView(

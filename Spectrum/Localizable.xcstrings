@@ -223,6 +223,17 @@
         }
       }
     },
+    "1 week free": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hafta ücretsiz"
+          }
+        }
+      }
+    },
     "1 week free, then billed yearly": {
       "extractionState": "manual",
       "localizations": {
@@ -237,6 +248,17 @@
     "@%@": {
       "extractionState": "manual",
       "shouldTranslate": false
+    },
+    "A card of your year in music, made to share.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Müzikte geçen yılın, paylaşmak için bir kartta."
+          }
+        }
+      }
     },
     "About": {
       "extractionState": "manual",
@@ -597,6 +619,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple Music bu parça için önizleme sunmuyor."
+          }
+        }
+      }
+    },
+    "Apple and Apple Music are trademarks of Apple Inc., registered in the U.S. and other countries.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple ve Apple Music, Apple Inc.'in ABD'de ve diğer ülkelerde tescilli ticari markalarıdır."
           }
         }
       }
@@ -1420,6 +1453,17 @@
         }
       }
     },
+    "Find any log by rating, vibe or year.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herhangi bir logu puana, vibe'a ya da yıla göre bul."
+          }
+        }
+      }
+    },
     "Focus Flow": {
       "localizations": {
         "tr": {
@@ -1694,6 +1738,17 @@
         }
       }
     },
+    "Listen on Apple Music": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music'te dinle"
+          }
+        }
+      }
+    },
     "Lists": {
       "extractionState": "manual",
       "localizations": {
@@ -1868,6 +1923,17 @@
         }
       }
     },
+    "Make it yours": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendine göre yap"
+          }
+        }
+      }
+    },
     "Make your first list": {
       "extractionState": "manual",
       "localizations": {
@@ -1885,6 +1951,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gece Yarısı Havası"
+          }
+        }
+      }
+    },
+    "Month by month with Spectrum+": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum+ ile ay ay"
           }
         }
       }
@@ -2461,6 +2538,17 @@
         }
       }
     },
+    "Pick your accent colour from your spectrum, and wear the Spectrum+ mark.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vurgu rengini spektrumundan seç, Spectrum+ işaretini taşı."
+          }
+        }
+      }
+    },
     "Play Preview": {
       "extractionState": "manual",
       "localizations": {
@@ -2544,6 +2632,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Önizleme konumu"
+          }
+        }
+      }
+    },
+    "Preview provided courtesy of Apple Music.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizleme Apple Music'in izniyle sunulmaktadır."
           }
         }
       }
@@ -3007,6 +3106,17 @@
         }
       }
     },
+    "Search your own logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendi loglarında ara"
+          }
+        }
+      }
+    },
     "See all": {
       "extractionState": "manual",
       "localizations": {
@@ -3025,6 +3135,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Daha fazla"
+          }
+        }
+      }
+    },
+    "See your spectrum move": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spektrumunun değişimini gör"
+          }
+        }
+      }
+    },
+    "See your spectrum move.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spektrumunun değişimini gör."
           }
         }
       }
@@ -3307,6 +3439,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spectrum tam şarkı çalmaz ve kütüphanene hiç dokunmaz."
+          }
+        }
+      }
+    },
+    "Spectrum+ turns your logs into the story of how you listen, month by month. Logging, lists and reviews stay free.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum+ loglarını ay ay nasıl dinlediğinin hikâyesine çevirir. Loglama, listeler ve yorumlar ücretsiz kalır."
           }
         }
       }
@@ -3624,6 +3767,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Popüler Şarkılar"
+          }
+        }
+      }
+    },
+    "Top artists, genres and decades, and how your ratings move.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En çok dinlediğin sanatçılar, türler, on yıllar ve puanlarının değişimi."
           }
         }
       }
@@ -4246,6 +4400,17 @@
         }
       }
     },
+    "Your year in review": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yıl özetin"
+          }
+        }
+      }
+    },
     "a list": {
       "localizations": {
         "tr": {
@@ -4366,6 +4531,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "veya"
+          }
+        }
+      }
+    },
+    "per month": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aylık"
+          }
+        }
+      }
+    },
+    "per year": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yıllık"
           }
         }
       }

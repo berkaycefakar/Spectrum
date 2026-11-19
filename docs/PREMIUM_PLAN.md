@@ -21,12 +21,16 @@ Spectrum+ üç şey satıyor:
 | **Yıl özeti kartı**: paylaşılabilir, Spotify Wrapped tadında | | ✓ |
 | **En çok dinlenen**: sanatçı, tür, on yıl kırılımları | | ✓ |
 | **Kendi loglarında arama ve filtre** (puan, vibe, yıl) | | ✓ |
-| **Listeyi Apple Music çalma listesine aktarma** | | ✓ |
 | **Profil vurgu rengi**: kendi spektrumundan seç | | ✓ |
 | **Spectrum+ rozeti** profilde | | ✓ |
 | Yeni özelliklere erken erişim | | ✓ |
 
 Reklam yok, olmayacak; o yüzden "reklamsız" bir satış maddesi değil.
+
+**Kural (Apple Developer Program License Agreement 3.3.6(D)):** Apple Music erişimi
+doğrudan ya da dolaylı yoldan paraya bağlanamaz. Spectrum+ yalnızca kullanıcının kendi
+loglarından üretilen şeyleri satar. "Listeyi Apple Music çalma listesine aktar" bu yüzden
+ücretsiz kalmalı (ya da hiç yapılmamalı), premium'a konamaz. Ayrıntı: `docs/API_COMPLIANCE.md`.
 
 ## Fiyat
 
