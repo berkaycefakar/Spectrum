@@ -10,6 +10,7 @@ struct TrackDetailView: View {
     /// Set from a review card's author; pushes that user's profile.
     @State private var profileToOpen: UUID?
     @State private var showAddToList = false
+    @State private var showArtwork = false
     @State private var artworkColor: ArtworkColor = .placeholder
 
     private var dominantColor: Color { artworkColor.accent }
@@ -42,8 +43,9 @@ struct TrackDetailView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-            
+            // The page takes the cover's colour, the way Apple Music tints an album page.
+            pageBackground
+
             ScrollView {
                 VStack(spacing: 0) {
                     heroSection
@@ -60,6 +62,7 @@ struct TrackDetailView: View {
                         CommunityStatsCard(
                             stats: communityStats,
                             countLabel: String(localized: "logs", bundle: appStringsBundle),
+                            countLabelSingular: String(localized: "log", bundle: appStringsBundle),
                             emptyMessage: String(localized: "No logs yet — be the first!", bundle: appStringsBundle)
                         )
 
@@ -75,6 +78,7 @@ struct TrackDetailView: View {
             .ignoresSafeArea(edges: .top)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showArtwork) { ArtworkViewer(url: track.artworkUrl600) }
         .navigationDestination(item: $profileToOpen) { UserProfileView(userId: $0) }
         .sheet(isPresented: $showAddToList) {
             AddToListView(kind: .song, contentRef: String(track.id), displayTitle: track.title)
@@ -99,6 +103,20 @@ struct TrackDetailView: View {
         // here would make backing out of the page the one action that silences it.
     }
     
+    /// Black, washed with the cover's colour: strongest at the top, deepening further down.
+    private var pageBackground: some View {
+        ZStack {
+            Color.black
+            LinearGradient(
+                colors: [dominantColor.opacity(0.55), dominantColor.opacity(0.32), dominantColor.opacity(0.2)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.45), value: dominantColor)
+    }
+
     // MARK: - Hero Section
 
     /// Apple Music-style hero: the cover almost full width over a blurred copy of itself.
@@ -128,6 +146,9 @@ struct TrackDetailView: View {
                 .containerRelativeFrame(.horizontal) { width, _ in width - 56 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
+                .onTapGesture { showArtwork = true }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(Text("Show cover full screen", bundle: appStringsBundle))
 
                 VStack(spacing: 8) {
                     Text(track.title)
@@ -407,6 +428,8 @@ struct TrackDetailView: View {
     }
 
     // MARK: - Album Link
+
+    /// The album as a plain row between hairlines, like a credit rather than a card.
     private func albumLink(album: Album) -> some View {
         NavigationLink(destination: AlbumDetailView(album: album)) {
             HStack(spacing: 14) {
@@ -417,47 +440,48 @@ struct TrackDetailView: View {
                         Color.white.opacity(0.1)
                     }
                 }
-                .frame(width: 48, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("FROM THE ALBUM")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white.opacity(0.4))
-                        .tracking(0.5)
                     Text(album.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(albumSubtitle(album))
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.55))
                         .lineLimit(1)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.35))
             }
-            .padding(14)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.1), lineWidth: 1)
-            )
+            .padding(.vertical, 12)
+            .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.12)).frame(height: 0.5) }
+            .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.12)).frame(height: 0.5) }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
-    
+
+    /// "Album · 2015"
+    private func albumSubtitle(_ album: Album) -> String {
+        let kind = String(localized: "Album", bundle: appStringsBundle)
+        guard let date = album.releaseDate else { return kind }
+        return "\(kind) · \(date.formatted(.dateTime.year()))"
+    }
+
     // MARK: - Reviews Section
     private var reviewsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Only carries the written reviews now — the numbers moved into CommunityStatsCard.
             if !trackReviews.isEmpty || isLoadingReviews {
                 Text("Reviews")
-                    .font(.headline)
+                    .font(.title3.weight(.bold))
                     .foregroundStyle(.white)
             }
 
@@ -468,7 +492,9 @@ struct TrackDetailView: View {
             } else if trackReviews.isEmpty {
                 EmptyView()
             } else {
-                LazyVStack(spacing: 12) {
+                // Side by side, like reviews on the App Store: each one a card to swipe past.
+                ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
                     ForEach(trackReviews) { review in
                         // The card used to be inert: you could read someone's review of the
                         // song and had no way to open it, which made every other log in the
@@ -490,8 +516,15 @@ struct TrackDetailView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .containerRelativeFrame(.horizontal) { width, _ in
+                            trackReviews.count == 1 ? width : width * 0.82
+                        }
                     }
                 }
+                .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .scrollClipDisabled()
             }
         }
     }
@@ -627,94 +660,53 @@ struct TrackReviewCard: View {
     let profile: Profile?
     /// Opens the author's profile from the avatar and name.
     var onTapAuthor: (() -> Void)? = nil
-    
+
+    private var name: String { profile?.username ?? String(localized: "Anonymous", bundle: appStringsBundle) }
+    private var stars: Double { Double(review.rating) / 2.0 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Button { onTapAuthor?() } label: {
-                HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(Color(hex: review.vibeColor).opacity(0.3))
-                        .frame(width: 36, height: 36)
-                    
-                    if let avatarUrl = profile?.avatarUrl, let url = URL(string: avatarUrl) {
-                        AsyncImage(url: url) { phase in
-                            if let image = phase.image {
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } else {
-                                Text(String((profile?.username ?? "U").prefix(1)).uppercased())
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(.white)
-                            }
+                    HStack(spacing: 10) {
+                        avatar
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Text(review.createdAt.timeAgoDisplay())
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.5))
                         }
-                        .frame(width: 32, height: 32)
-                        .clipShape(Circle())
-                    } else {
-                        Text(String((profile?.username ?? "U").prefix(1)).uppercased())
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
                     }
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(profile?.username ?? String(localized: "Anonymous", bundle: appStringsBundle))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                    
-                    Text(review.createdAt.timeAgoDisplay())
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                }
-                .contentShape(Rectangle())
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens their profile")
-                
-                Spacer()
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color(hex: "#FFCC00"))
-                    Text(String(format: "%.1f", Double(review.rating) / 2.0))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                }
-                
+
+                Spacer(minLength: 4)
+
                 Circle()
                     .fill(Color(hex: review.vibeColor))
-                    .frame(width: 14, height: 14)
-                    .shadow(color: Color(hex: review.vibeColor).opacity(0.6), radius: 4)
+                    .frame(width: 12, height: 12)
+                    .accessibilityHidden(true)
             }
-            
+
+            starRow
+
             if let text = review.reviewText, !text.isEmpty {
                 // Masked on read: rows written before the profanity filter are still in the DB.
                 Text(ProfanityFilter.masked(text))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.8))
-                    .lineLimit(4)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
             }
         }
         .padding(16)
-        // The whole card is a link now, so it has to look like one.
-        .overlay(alignment: .bottomTrailing) {
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.25))
-                .padding(12)
-        }
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.1), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
         .contentShape(RoundedRectangle(cornerRadius: 16))
         // Long press to report or block — the community list is where an offensive review is
         // most likely to be seen, so the action has to be reachable from here too.
@@ -725,6 +717,41 @@ struct TrackReviewCard: View {
             authorUsername: profile?.username,
             reportedText: review.reviewText
         )
+    }
+
+    /// Five small stars, filled to the score (halves included).
+    private var starRow: some View {
+        HStack(spacing: 2) {
+            ForEach(1...5, id: \.self) { i in
+                let d = Double(i)
+                Image(systemName: stars >= d ? "star.fill" : (stars >= d - 0.5 ? "star.leadinghalf.filled" : "star"))
+                    .font(.system(size: 11, weight: .semibold))
+            }
+        }
+        .foregroundStyle(Color(hex: "#FFCC00"))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(String(format: "%.1f", stars)) stars"))
+    }
+
+    private var avatar: some View {
+        let initial = Circle()
+            .fill(Color(hex: review.vibeColor).opacity(0.35))
+            .overlay(
+                Text(String(name.prefix(1)).uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+            )
+        return Group {
+            if let url = profile?.avatarUrl.flatMap(URL.init(string:)) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image { image.resizable().aspectRatio(contentMode: .fill) } else { initial }
+                }
+            } else {
+                initial
+            }
+        }
+        .frame(width: 34, height: 34)
+        .clipShape(Circle())
     }
 }
 

@@ -6,6 +6,7 @@ import Supabase
 struct AlbumDetailView: View {
     let album: Album
     
+    @State private var showArtwork = false
     @State private var tracks: [Track] = []
     @State private var tracksLoading = true
     @State private var albumRating: Double = 0
@@ -32,8 +33,18 @@ struct AlbumDetailView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-            
+            // The page takes the cover's colour, the way Apple Music tints an album page.
+            ZStack {
+                Color.black
+                LinearGradient(
+                    colors: [artworkColor.accent.opacity(0.55), artworkColor.accent.opacity(0.32), artworkColor.accent.opacity(0.2)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 0.45), value: artworkColor.accent)
+
             ScrollView {
                 VStack(spacing: 28) {
                     heroSection
@@ -62,6 +73,7 @@ struct AlbumDetailView: View {
                 .accessibilityLabel("Add to List")
             }
         }
+        .fullScreenCover(isPresented: $showArtwork) { ArtworkViewer(url: album.artworkUrl600) }
         .sheet(isPresented: $showAddToList) {
             AddToListView(kind: .album, contentRef: String(album.id), displayTitle: album.title)
         }
@@ -111,6 +123,9 @@ struct AlbumDetailView: View {
                 .containerRelativeFrame(.horizontal) { width, _ in width - 80 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
+                .onTapGesture { showArtwork = true }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(Text("Show cover full screen", bundle: appStringsBundle))
             }
             
             VStack(spacing: 6) {

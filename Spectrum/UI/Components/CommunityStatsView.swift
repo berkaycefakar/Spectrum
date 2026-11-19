@@ -93,11 +93,18 @@ struct CommunityStats {
     /// Palette buckets, most-picked first.
     let vibes: [VibeShare]
 
+    /// How many logs landed on each whole star, index 0 = 1 star … 4 = 5 stars. Half stars
+    /// round up (3.5 counts as 4), the way the App Store groups them.
+    let starCounts: [Int]
+
     var topVibe: VibeShare? { vibes.first }
     var isEmpty: Bool { count == 0 }
 
     init(ratings: [Int], vibeHexes: [String]) {
         count = ratings.count
+        var stars = [0, 0, 0, 0, 0]
+        for r in ratings { stars[min(max((r + 1) / 2, 1), 5) - 1] += 1 }
+        starCounts = stars
         averageRating = ratings.isEmpty
             ? 0
             : Double(ratings.reduce(0, +)) / Double(ratings.count) / 2.0
@@ -119,156 +126,108 @@ struct CommunityStats {
 
 // MARK: - Community Stats Card
 
-/// "What did everyone else think?" — average score, how many people scored it, and which
-/// vibe they picked most. Shared by the track, album and artist pages.
+/// "What did everyone else think?" Laid out like the App Store's ratings: the average large
+/// on the left, how the scores spread over one to five stars on the right, and underneath
+/// the colours people heard in it. Shared by the track, album and artist pages.
+///
+/// Colours have no names here on purpose: the picker doesn't name them either, so a word
+/// like "Passionate" would be the app putting a label on someone else's pick.
 struct CommunityStatsCard: View {
     let stats: CommunityStats
-    /// Plural noun for the count column: "logs" on tracks, "ratings" elsewhere.
+    /// Plural noun for the count line: "logs" on tracks, "ratings" elsewhere.
     var countLabel: String = String(localized: "ratings", bundle: appStringsBundle)
+    /// The same noun for exactly one: "log", "rating".
+    var countLabelSingular: String = String(localized: "rating", bundle: appStringsBundle)
     var title: String? = String(localized: "Community", bundle: appStringsBundle)
     var emptyMessage: String = String(localized: "No ratings yet — be the first!", bundle: appStringsBundle)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             if let title {
                 Text(title)
-                    .font(.headline)
+                    .font(.title3.weight(.bold))
                     .foregroundStyle(.white)
             }
 
             if stats.isEmpty {
-                emptyState
+                Text(emptyMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.5))
             } else {
                 content
             }
         }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 26))
-                .foregroundStyle(.white.opacity(0.25))
-            Text(emptyMessage)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.5))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.1), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var content: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 0) {
-                averageColumn
-                columnDivider
-                countColumn
-                if let topVibe = stats.topVibe {
-                    columnDivider
-                    topVibeColumn(topVibe)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .bottom, spacing: 20) {
+                VStack(spacing: 0) {
+                    Text(String(format: "%.1f", stats.averageRating))
+                        .font(.system(size: 52, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                    Text("out of 5", bundle: appStringsBundle)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+                .fixedSize()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    ForEach((1...5).reversed(), id: \.self) { star in
+                        distributionRow(star)
+                    }
+                    Text("\(stats.count) \(stats.count == 1 ? countLabelSingular : countLabel)")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .padding(.top, 4)
                 }
             }
 
-            // Only worth drawing once people actually disagree.
-            if stats.vibes.count > 1 {
-                vibeBreakdownBar
+            vibeBar
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Average \(String(format: "%.1f", stats.averageRating)) out of 5, \(stats.count) \(countLabel)"))
+    }
+
+    private func distributionRow(_ star: Int) -> some View {
+        let maxCount = max(stats.starCounts.max() ?? 1, 1)
+        let share = CGFloat(stats.starCounts[star - 1]) / CGFloat(maxCount)
+        return HStack(spacing: 8) {
+            HStack(spacing: 1) {
+                ForEach(0..<star, id: \.self) { _ in
+                    Image(systemName: "star.fill").font(.system(size: 7))
+                }
             }
-        }
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.1), lineWidth: 1)
-        )
-    }
+            .foregroundStyle(.white.opacity(0.5))
+            .frame(width: 44, alignment: .trailing)
 
-    private var averageColumn: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 5) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color(hex: "#FFCC00"))
-                Text(String(format: "%.1f", stats.averageRating))
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.12))
+                    Capsule().fill(.white.opacity(0.75))
+                        .frame(width: stats.starCounts[star - 1] == 0 ? 0 : max(geo.size.width * share, 4))
+                }
             }
-            Text("avg rating")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.4))
+            .frame(height: 4)
         }
-        .frame(maxWidth: .infinity)
     }
 
-    private var countColumn: some View {
-        VStack(spacing: 6) {
-            Text("\(stats.count)")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(.white)
-            Text(countLabel)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.4))
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func topVibeColumn(_ vibe: VibeShare) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(Color(hex: vibe.hex))
-                    .frame(width: 12, height: 12)
-                    .shadow(color: Color(hex: vibe.hex).opacity(0.8), radius: 5)
-                Text(vibe.label)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            Text("top vibe · \(vibe.percentText)")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.4))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 4)
-    }
-
-    private var columnDivider: some View {
-        Rectangle()
-            .fill(.white.opacity(0.1))
-            .frame(width: 1, height: 36)
-    }
-
-    private var vibeBreakdownBar: some View {
+    /// Every colour people picked, as one strip split by share.
+    private var vibeBar: some View {
         GeometryReader { geo in
+            let gaps = CGFloat(max(stats.vibes.count - 1, 0)) * 2
             HStack(spacing: 2) {
                 ForEach(stats.vibes) { vibe in
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(hex: vibe.hex))
-                        // Floor so a single-log bucket stays visible on a busy page.
-                        .frame(width: max(geo.size.width * vibe.share - 2, 4))
-                        .shadow(color: Color(hex: vibe.hex).opacity(0.5), radius: 3)
+                    Color(hex: vibe.hex)
+                        .frame(width: max((geo.size.width - gaps) * vibe.share, 4))
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: 10)
-        .background(
-            RoundedRectangle(cornerRadius: 5).fill(.white.opacity(0.05))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 5))
-        .padding(.horizontal, 16)
+        .frame(height: 6)
+        .clipShape(Capsule())
+        .accessibilityHidden(true)
     }
 }
 
