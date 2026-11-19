@@ -7,6 +7,20 @@
 
 ---
 
+## 🟢 DURUM — 19 Kasım 2026 gece
+
+Build 1.0 (9) sürüme bağlı. Bu turda:
+- **Profil fotoğrafı yükleme 4 Kasım'dan beri bozuktu** (klasör adı büyük harf, depolama kuralı küçük harf) → düzeltildi, canlı kovaya karşı test edildi.
+- Liste kapak fotoğrafı (galeriden). `Supabase_migration_list_covers.sql` canlıda.
+- Log ekranındaki boşluk dağıtıldı; log detayında kapağa/başlığa basınca şarkı açılıyor; akış kartında yorum sayısı.
+- Diskten açılan akışta beğeniler hiç yüklenmiyordu → düzeltildi.
+- Resmi "Listen on Apple Music" rozeti, önizleme atfı, marka satırı (Apple kuralları). Ayrıntı ve Supabase kapasite tahmini: `docs/API_COMPLIANCE.md`.
+- Paywall yeniden tasarlandı (hâlâ kapalı); "Apple Music'e aktar" premium'dan çıkarıldı (PLA 3.3.6(D)).
+
+**Yayından önce:** Supabase Pro'ya geç ($25/ay): 1 haftalık durdurma ve yedeksizlik riski.
+
+---
+
 ## 🟢 DURUM — 19 Kasım 2026 akşam (13 maddelik liste)
 
 Build 1.0 (8) yüklendi (sürüme bağlanıyor). Hepsi simülatörde UI testiyle denendi, cihazda değil.
