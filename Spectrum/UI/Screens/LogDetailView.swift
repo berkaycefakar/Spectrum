@@ -28,6 +28,18 @@ struct LogDetailView: View {
     /// The author's name for the byline; starts from what the caller passed, else loaded.
     @State private var authorName: String?
 
+    /// Wraps `content` in a link to the song page, unless this log was opened from that page.
+    @ViewBuilder
+    private func songLink<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        if showsSongLink {
+            NavigationLink(value: AppRoute.track(track)) { content() }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens the song", bundle: appStringsBundle))
+        } else {
+            content()
+        }
+    }
+
     var vibeColor: Color {
         Color(hex: review.vibeColor)
     }
@@ -46,7 +58,8 @@ struct LogDetailView: View {
             
             ScrollView {
                 VStack(spacing: 30) {
-                    // Artwork
+                    // Artwork — tapping it (or the title) opens the song.
+                    songLink {
                     AsyncImage(url: track.artworkUrl600) { phase in
                         if let image = phase.image {
                             image
@@ -63,37 +76,29 @@ struct LogDetailView: View {
                             .stroke(.white.opacity(0.2), lineWidth: 1)
                     )
                     .shadow(color: vibeColor.opacity(0.6), radius: 30)
+                    }
                     .padding(.top, 40)
                     
                     // Title & Artist
                     VStack(spacing: 8) {
-                        Text(track.title)
-                            .font(.system(size: titleSize, weight: .bold))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
+                        songLink {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(track.title)
+                                    .font(.system(size: titleSize, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .multilineTextAlignment(.center)
+                                if showsSongLink {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: titleSize * 0.55, weight: .bold))
+                                        .foregroundStyle(.white.opacity(0.4))
+                                }
+                            }
+                        }
                         
                         Text(track.artist)
                             .font(.title3)
                             .foregroundStyle(.white.opacity(0.7))
 
-                        if showsSongLink {
-                            NavigationLink(value: AppRoute.track(track)) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "music.note")
-                                    Text("Go to song", bundle: appStringsBundle)
-                                        .fontWeight(.semibold)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption2.weight(.bold))
-                                }
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.85))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(Capsule().fill(.white.opacity(0.1)))
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.top, 4)
-                        }
 
                         // Someone else's log: the byline opens their profile.
                         if !isOwner {
