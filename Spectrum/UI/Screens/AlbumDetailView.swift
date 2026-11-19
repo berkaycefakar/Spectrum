@@ -394,7 +394,7 @@ struct AlbumDetailView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {
             // Nothing to do: `loadUserAlbumReview` has already filled in the saved values.
