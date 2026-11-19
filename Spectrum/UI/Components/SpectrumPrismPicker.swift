@@ -159,19 +159,17 @@ struct SpectrumPrismPicker: View {
             }
             .frame(height: beamHeight)
 
-            // Mood label
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(Color(hex: selectedHex))
-                    .frame(width: 10, height: 10)
-                    .shadow(color: Color(hex: selectedHex).opacity(0.8), radius: 4)
-
-                Text(VibePalette.label(for: selectedHex))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            .animation(.easeInOut(duration: 0.2), value: selectedHex)
+            // No name under the prism: the colour is the choice. VoiceOver still reads the
+            // vibe's name from the accessibility value.
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Vibe", bundle: appStringsBundle))
+        .accessibilityValue(VibePalette.label(for: selectedHex))
+        .accessibilityAdjustableAction { direction in
+            guard !vibeColors.isEmpty else { return }
+            let next = direction == .increment ? selectedIndex + 1 : selectedIndex - 1
+            selectedHex = vibeColors[(next + vibeColors.count) % vibeColors.count]
+            onManualPick?()
         }
     }
 
