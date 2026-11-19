@@ -260,7 +260,7 @@ final class SupabaseManager {
         do {
             _ = try await client.storage
                 .from("avatars")
-                .remove(paths: ["\(userId.uuidString)/avatar.jpg"])
+                .remove(paths: ["\(userId.uuidString.lowercased())/avatar.jpg"])
         } catch {
             debugLog("Account deletion: couldn't remove avatar object:", error)
         }
@@ -358,7 +358,10 @@ final class SupabaseManager {
     func uploadAvatar(userId: UUID, imageData: Data) async throws -> String {
         // Per-user folder so a storage policy can restrict writes to a user's own folder.
         // Stable filename so a new upload overwrites the old avatar instead of piling up.
-        let path = "\(userId.uuidString)/avatar.jpg"
+        // Lowercase: the storage policy compares the folder with `auth.uid()::text`, which
+        // Postgres prints lowercase, while `uuidString` is uppercase. Uppercase uploads were
+        // rejected by RLS, so avatar changes silently failed after the 4 Nov hardening.
+        let path = "\(userId.uuidString.lowercased())/avatar.jpg"
 
         try await client.storage
             .from("avatars")
@@ -1468,6 +1471,32 @@ final class SupabaseManager {
             .execute()
             .value
         return created
+    }
+
+    /// Uploads a cover photo for a list and stores its URL on the list. One file per list
+    /// (`{user}/{list}.jpg`, lowercase to match `auth.uid()::text` in the storage policy),
+    /// overwritten on change so covers don't pile up.
+    func setListCover(listId: UUID, imageData: Data) async throws -> String {
+        guard let user = try await getCurrentUser() else { throw CommentError.signedOut }
+        let path = "\(user.id.uuidString.lowercased())/\(listId.uuidString.lowercased()).jpg"
+        try await client.storage
+            .from("list-covers")
+            .upload(path, data: imageData,
+                    options: FileOptions(cacheControl: "3600", contentType: "image/jpeg", upsert: true))
+        let url = try client.storage.from("list-covers").getPublicURL(path: path).absoluteString
+            + "?v=\(Int(Date().timeIntervalSince1970))"
+        nonisolated struct Patch: Encodable, Sendable { let cover_url: String? }
+        try await client.from("lists").update(Patch(cover_url: url)).eq("id", value: listId).execute()
+        return url
+    }
+
+    /// Removes a list's cover photo; the list goes back to showing its records.
+    func removeListCover(listId: UUID) async throws {
+        guard let user = try await getCurrentUser() else { throw CommentError.signedOut }
+        let path = "\(user.id.uuidString.lowercased())/\(listId.uuidString.lowercased()).jpg"
+        _ = try? await client.storage.from("list-covers").remove(paths: [path])
+        nonisolated struct Patch: Encodable, Sendable { let cover_url: String? }
+        try await client.from("lists").update(Patch(cover_url: nil)).eq("id", value: listId).execute()
     }
 
     func updateList(
