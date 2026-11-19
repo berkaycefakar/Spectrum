@@ -30,6 +30,7 @@ class SessionStore: ObservableObject {
     /// Listens to Supabase auth changes so we auto-update after email confirmation / login.
     private func startAuthStateListener() async {
         for await (event, session) in SupabaseManager.shared.client.auth.authStateChanges {
+            launchTrace("auth event \(event) expired=\(session?.isExpired ?? false)")
             // Second signal for password recovery. The SDK only emits this from the
             // implicit-flow handler, so `AuthDeepLink` covers the PKCE case from the URL.
             if event == .passwordRecovery {
@@ -68,14 +69,18 @@ class SessionStore: ObservableObject {
     
     /// Check for existing session on app launch
     func checkSession() async {
+        launchTrace("checkSession start")
         isLoading = true
         errorMessage = nil
         
         do {
             if let user = try await SupabaseManager.shared.getCurrentUser() {
                 self.currentUser = user
-                // Also load the profile
-                await loadProfile()
+                launchTrace("session found")
+                // The profile loads behind the feed: nothing on the first screen needs it,
+                // and waiting for it kept the splash up for another round trip.
+                isLoading = false
+                Task { await loadProfile() }
             } else {
                 self.currentUser = nil
                 self.currentProfile = nil
@@ -230,6 +235,8 @@ class SessionStore: ObservableObject {
         // left on screen to stop it.
         AudioManager.shared.stop()
         ActivityBadgeStore.shared.reset()
+        // The cached home feed belongs to the account that just left.
+        FeedCache.clear()
         isLoading = false
     }
     

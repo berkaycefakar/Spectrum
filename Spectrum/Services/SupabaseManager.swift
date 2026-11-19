@@ -901,6 +901,17 @@ final class SupabaseManager {
             .execute()
     }
     
+    func followingIds(userId: UUID) async throws -> [UUID] {
+        struct FollowRow: Decodable { let following_id: UUID }
+        let rows: [FollowRow] = try await client
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", value: userId)
+            .execute()
+            .value
+        return rows.map(\.following_id)
+    }
+
     func getFollowing(userId: UUID) async throws -> [Profile] {
         struct FollowRow: Codable {
             let following_id: UUID
@@ -1013,10 +1024,13 @@ final class SupabaseManager {
         limit: Int = SupabaseManager.pageSize,
         offset: Int = 0
     ) async throws -> ReviewPage {
-        let following = try await getFollowing(userId: userId)
-        let blocked = await blockedUserIds()
-        let userIdStrings = following
-            .map(\.id)
+        // Only the ids are needed here, and the two reads don't depend on each other. This
+        // used to fetch every followed profile first and then the blocked list, one after
+        // the other, before the reviews query could even start.
+        async let followingIds = followingIds(userId: userId)
+        async let blockedIds = blockedUserIds()
+        let blocked = await blockedIds
+        let userIdStrings = try await followingIds
             .filter { !blocked.contains($0) }
             .map(\.uuidString)
 

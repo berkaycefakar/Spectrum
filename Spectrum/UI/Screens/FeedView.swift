@@ -191,6 +191,7 @@ struct FeedView: View {
             return
         }
         #endif
+        launchTrace("feed: load start")
         await MainActor.run {
             self.isLoading = true
             self.errorMessage = nil
@@ -200,6 +201,18 @@ struct FeedView: View {
             guard let currentUser = try await SupabaseManager.shared.getCurrentUser() else {
                 await MainActor.run { self.isLoading = false }
                 return
+            }
+
+            // Cold launch: draw the last feed straight from disk, then refresh it in place.
+            await MainActor.run {
+                guard self.reviews.isEmpty, let cached = FeedCache.load(for: currentUser.id) else { return }
+                self.currentUserId = currentUser.id
+                self.reviews = cached.reviews
+                for track in cached.tracks { self.tracks[Int64(track.id)] = track }
+                for profile in cached.profiles { self.profiles[profile.id] = profile }
+                self.isShowingRecentFallback = cached.showingRecent
+                self.isLoading = false
+                launchTrace("feed: \(cached.reviews.count) reviews drawn from disk cache")
             }
 
             // Try the people you follow first (may fail if the follows table doesn't exist).
@@ -214,6 +227,7 @@ struct FeedView: View {
                 showingRecent = true
             }
 
+            launchTrace("feed: \(page.reviews.count) reviews fetched (recent=\(showingRecent))")
             await MainActor.run {
                 self.currentUserId = currentUser.id
                 self.reviews = page.reviews
@@ -225,6 +239,15 @@ struct FeedView: View {
             }
 
             await hydrate(page.reviews)
+            await MainActor.run {
+                FeedCache.save(FeedSnapshot(
+                    userId: currentUser.id,
+                    reviews: page.reviews,
+                    tracks: page.reviews.compactMap { self.tracks[$0.itunesTrackId] },
+                    profiles: Array(Set(page.reviews.map(\.userId))).compactMap { self.profiles[$0] },
+                    showingRecent: showingRecent
+                ))
+            }
         } catch {
             debugLog("Failed to load feed: \(error)")
             await MainActor.run {
@@ -286,6 +309,7 @@ struct FeedView: View {
                 (pageTrackIds.subtracting(self.tracks.keys),
                  Set(page.map(\.userId)).subtracting(self.profiles.keys))
             }
+            launchTrace("feed: hydrate attempt \(attempt) missing tracks=\(trackIds.count) users=\(userIds.count)")
             if trackIds.isEmpty && userIds.isEmpty { break }
             await fillIn(trackIds: trackIds, userIds: userIds, likesFor: attempt == 0 ? page : [])
         }
@@ -299,6 +323,7 @@ struct FeedView: View {
         // The cards are drawn from the quick iTunes data; the catalog's richer copy (credited
         // artists for collaborations) swaps in whenever it arrives.
         let upgraded = await MusicService.shared.fetchCatalogTracks(ids: Array(pageTrackIds))
+        launchTrace("feed: catalog upgrade \(upgraded.count)/\(pageTrackIds.count)")
         await MainActor.run {
             for (id, track) in upgraded { self.tracks[id] = track }
         }
@@ -318,7 +343,9 @@ struct FeedView: View {
         )
 
         let fetchedProfiles = await profilesLoad
+        launchTrace("feed: profiles \(fetchedProfiles.count)/\(userIds.count)")
         let states = await statesLoad
+        launchTrace("feed: like states")
         await MainActor.run {
             for profile in fetchedProfiles { self.profiles[profile.id] = profile }
             // Merge rather than replace: an optimistic toggle the user made while this page
@@ -328,6 +355,7 @@ struct FeedView: View {
             }
         }
         let fetchedTracks = await tracksLoad
+        launchTrace("feed: tracks \(fetchedTracks.count)/\(trackIds.count)")
         await MainActor.run {
             for (id, track) in fetchedTracks { self.tracks[id] = track }
         }
