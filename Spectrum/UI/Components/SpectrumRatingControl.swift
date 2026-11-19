@@ -7,7 +7,7 @@ import UIKit
 struct SpectrumRatingControl: View {
     /// Rating value in the range 0...5 (0.5 steps).
     @Binding var rating: Double
-    var accentColor: Color = Color(hex: "#FF00FF")
+    var accentColor: Color = Color.spectrumAccent
     /// Maximum display rating (5 = 5 bars).
     var maxRating: Int = 5
     
@@ -109,7 +109,9 @@ struct SpectrumBar: View {
                 )
                 .frame(width: 16, height: height)
             
-            // The filled part, growing left to right
+            // The filled part, growing left to right. A full-size bar cut to the fill width,
+            // so half a bar keeps the bar's own rounded outline: rounding the half-width
+            // shape on its own drew a blob that spilled outside the bar.
             if fillPercentage > 0 {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -119,8 +121,10 @@ struct SpectrumBar: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 16 * fillPercentage, height: height)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .frame(width: 16, height: height)
+                    .mask(alignment: .leading) {
+                        Rectangle().frame(width: 16 * fillPercentage, height: height)
+                    }
             }
         }
         .frame(width: 16, height: height)
@@ -135,7 +139,6 @@ struct SpectrumBar: View {
                     lineWidth: 1
                 )
         )
-        .scaleEffect(fillPercentage > 0 ? 1.05 : 1.0)
     }
 }
 
@@ -145,7 +148,7 @@ struct RatingLabel: View {
     /// Rating value 0...5 (0.5 steps supported).
     let rating: Double
     let maxRating: Int
-    var accentColor: Color = Color(hex: "#FF00FF")
+    var accentColor: Color = Color.spectrumAccent
     
     var body: some View {
         HStack(spacing: 4) {
