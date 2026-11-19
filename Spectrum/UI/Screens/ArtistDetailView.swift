@@ -89,7 +89,9 @@ struct ArtistDetailView: View {
 
                         ratingSection
                     }
-                    .padding(.bottom, 40)
+                    // Clears the floating tab bar and the mini-player above it, the same as
+                    // the song and album pages; 40 left the rating bars underneath them.
+                    .padding(.bottom, 140)
                 }
             }
             .ignoresSafeArea(edges: .top)

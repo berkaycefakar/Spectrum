@@ -225,7 +225,8 @@ struct AddLogView: View {
                     }
                     .padding(.horizontal)
                 }
-                .padding(.top, isCompact ? 8 : 16)
+                // Room under the sheet's grabber, so the cover doesn't sit right against it.
+                .padding(.top, isCompact ? 20 : 40)
                 .padding(.bottom, 12)
                 .frame(width: geo.size.width, height: height)
             }
