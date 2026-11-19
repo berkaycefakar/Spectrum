@@ -40,14 +40,14 @@ struct AlbumDetailView: View {
                     communitySection
                     trackListSection
                     rateButton
-                    AppleMusicAttribution(url: album.appleMusicLink)
-                        .padding(.horizontal)
                 }
                 // The tab bar — and the mini-player above it when something is playing — float
                 // over this scroll view, and 40pt left the rate button underneath them at the
                 // bottom of the page. 120 is what the other detail screens clear them with.
                 .padding(.bottom, 120)
             }
+            // Under the status bar, so the blurred cover behind the hero runs to the top edge.
+            .ignoresSafeArea(edges: .top)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -94,20 +94,23 @@ struct AlbumDetailView: View {
     private var heroSection: some View {
         VStack(spacing: 16) {
             if let url = album.artworkUrl600 {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    default:
-                        Color.gray.opacity(0.3)
+                Color.clear
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            default:
+                                Color.gray.opacity(0.3)
+                            }
+                        }
                     }
-                }
-                .frame(width: 200, height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 24))
-                .shadow(color: artworkColor.accent.opacity(0.5), radius: 20)
-                .animation(.easeInOut(duration: 0.45), value: artworkColor.accent)
+                .containerRelativeFrame(.horizontal) { width, _ in width - 80 }
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
             }
             
             VStack(spacing: 6) {
@@ -137,6 +140,9 @@ struct AlbumDetailView: View {
                 )
                 .padding(.top, 2)
 
+                AppleMusicBadge(url: album.appleMusicLink, height: 24)
+                    .padding(.top, 4)
+
                 // Label and year, the way a sleeve credits itself. Only drawn when MusicKit
                 // actually returned them — a lone bullet with nothing on either side is worse
                 // than no line at all.
@@ -149,7 +155,24 @@ struct AlbumDetailView: View {
                 }
             }
         }
-        .padding(.top, 24)
+        .padding(.top, 110)
+        .frame(maxWidth: .infinity)
+        .background(alignment: .top) {
+            // Blurred copy of the cover behind the hero, fading into the page.
+            if let url = album.artworkUrl600 {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Color.clear
+                    }
+                }
+                .blur(radius: 60)
+                .overlay(Color.black.opacity(0.35))
+                .mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom))
+                .clipped()
+            }
+        }
     }
 
     /// "Columbia · 2024 · 14 songs", minus whatever is missing.

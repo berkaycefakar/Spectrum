@@ -53,8 +53,6 @@ struct TrackDetailView: View {
 
                         previewPlayer
 
-                        AppleMusicAttribution(url: track.appleMusicLink, showsPreviewCredit: track.previewUrl != nil)
-
                         if let album = album {
                             albumLink(album: album)
                         }
@@ -103,44 +101,20 @@ struct TrackDetailView: View {
     
     // MARK: - Hero Section
 
-    /// The hero is pinned to this height on purpose. It used to size itself from whatever the
-    /// ScrollView had left over, and because the reviews list below it is also flexible, every
-    /// extra log stole height from the hero — which, being bottom-aligned, slid the artwork
-    /// upward as a song gained logs.
-    private let heroHeight: CGFloat = 420
-
+    /// Apple Music-style hero: the cover almost full width over a blurred copy of itself.
+    ///
+    /// Sized from the container width, not from what the ScrollView has spare, so logs
+    /// loading in below never squeeze it or slide the artwork upward.
     private var heroSection: some View {
-        ZStack(alignment: .bottom) {
-            // Blurred background — Color.clear takes the hero's box, the image overflows it
-            // and gets clipped.
+        VStack(spacing: 22) {
             Color.clear
+                .aspectRatio(1, contentMode: .fit)
                 .overlay {
-                    AsyncImage(url: track.artworkUrl600) { phase in
-                        if let image = phase.image {
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } else {
-                            Color.gray.opacity(0.3)
-                        }
-                    }
-                }
-                .clipped()
-                .blur(radius: 50)
-                .overlay(Color.black.opacity(0.4))
-
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.8), .black],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(spacing: 20) {
                 AsyncImage(url: track.artworkUrl600) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
-                            .aspectRatio(contentMode: .fit)
+                            .aspectRatio(contentMode: .fill)
                     } else {
                         Color.gray.opacity(0.3)
                             .overlay(
@@ -150,13 +124,10 @@ struct TrackDetailView: View {
                             )
                     }
                 }
-                .frame(width: 220, height: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 24))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(.white.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(color: dominantColor.opacity(0.6), radius: 30)
+                }
+                .containerRelativeFrame(.horizontal) { width, _ in width - 56 }
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
 
                 VStack(spacing: 8) {
                     Text(track.title)
@@ -191,12 +162,24 @@ struct TrackDetailView: View {
                             .padding(.horizontal, 24)
                     }
                 }
-            }
-            .padding(.bottom, 30)
-            .padding(.top, 50)
         }
-        .frame(height: heroHeight)
-        .clipped()
+        .padding(.top, 110)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background(alignment: .top) {
+            // Blurred copy of the cover behind the hero, fading into the page.
+            AsyncImage(url: track.artworkUrl600) { phase in
+                if let image = phase.image {
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } else {
+                    Color.gray.opacity(0.2)
+                }
+            }
+            .blur(radius: 60)
+            .overlay(Color.black.opacity(0.35))
+            .mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom))
+            .clipped()
+        }
     }
     
     // MARK: - Artist links (supports collaborations)
@@ -362,10 +345,14 @@ struct TrackDetailView: View {
                 .accessibilityLabel(isPlaying ? String(localized: "Pause preview", bundle: appStringsBundle) : String(localized: "Play preview", bundle: appStringsBundle))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(hasPreview ? String(localized: "PREVIEW", bundle: appStringsBundle) : String(localized: "NO PREVIEW", bundle: appStringsBundle))
-                        .font(.caption2.weight(.semibold))
-                        .tracking(1.2)
-                        .foregroundStyle(.white.opacity(0.45))
+                    HStack {
+                        Text(hasPreview ? String(localized: "PREVIEW", bundle: appStringsBundle) : String(localized: "NO PREVIEW", bundle: appStringsBundle))
+                            .font(.caption2.weight(.semibold))
+                            .tracking(1.2)
+                            .foregroundStyle(.white.opacity(0.45))
+                        Spacer(minLength: 8)
+                        AppleMusicBadge(url: track.appleMusicLink, height: 24)
+                    }
 
                     if hasPreview {
                         PreviewScrubBar(
@@ -382,6 +369,8 @@ struct TrackDetailView: View {
                         }
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.white.opacity(0.4))
+
+                        ApplePreviewCredit()
                     } else {
                         Text("Apple Music doesn't offer a clip for this track.")
                             .font(.caption)
