@@ -8,7 +8,13 @@ extension Date {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = LanguagePreference.shared.locale
         formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: self, relativeTo: Date())
+        // Server timestamps can be a few seconds ahead of the phone's clock, which read
+        // "in 0s" on something just posted. Anything in the future counts as now.
+        let now = Date()
+        if timeIntervalSince(now) > -5 {
+            return String(localized: "now", bundle: appStringsBundle)
+        }
+        return formatter.localizedString(for: self, relativeTo: now)
     }
 
     /// "12 Eyl 2026" / "12 Sep 2026", optionally with a time.
