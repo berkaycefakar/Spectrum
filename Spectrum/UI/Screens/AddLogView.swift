@@ -107,6 +107,10 @@ struct AddLogView: View {
                         .padding(.horizontal)
                     }
 
+                    // The leftover height is shared between the sections rather than pooled
+                    // above the buttons, which left a hole under the rating on tall phones.
+                    Spacer(minLength: 0)
+
                     // Spectrum Prism Color Picker (full-width, beams go edge-to-edge)
                     SpectrumPrismPicker(
                         selectedHex: $selectedColorHex,
@@ -116,6 +120,8 @@ struct AddLogView: View {
                         },
                         beamHeight: beamHeight
                     )
+
+                    Spacer(minLength: 0)
 
                     // Review Text
                     TextField("What's the vibe?", text: $reviewText, axis: .vertical)
@@ -131,6 +137,8 @@ struct AddLogView: View {
                                 .stroke(selectedColor.opacity(0.3), lineWidth: 1)
                         )
                         .padding(.horizontal)
+
+                    Spacer(minLength: 0)
 
                     // Rating Section with Spectrum Control
                     VStack(spacing: 8) {
@@ -149,7 +157,8 @@ struct AddLogView: View {
                         // Custom Spectrum Rating Control (color-synced)
                         SpectrumRatingControl(
                             rating: $rating,
-                            accentColor: selectedColor
+                            accentColor: selectedColor,
+                            scale: isCompact ? 1 : 1.35
                         )
                     }
 

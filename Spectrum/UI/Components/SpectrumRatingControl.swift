@@ -10,6 +10,8 @@ struct SpectrumRatingControl: View {
     var accentColor: Color = Color.spectrumAccent
     /// Maximum display rating (5 = 5 bars).
     var maxRating: Int = 5
+    /// Bar size multiplier: the log sheet on a tall phone has room for bigger bars.
+    var scale: CGFloat = 1
     
     // Heights for the bars - progressively increasing left to right.
     // The first bar is the shortest, the fifth the tallest.
@@ -21,12 +23,13 @@ struct SpectrumRatingControl: View {
     
     var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: 12) {
+            HStack(spacing: 12 * scale) {
                 Spacer()
                 ForEach(1...maxRating, id: \.self) { index in
                     SpectrumBar(
                         fillPercentage: calculateFillPercentage(for: index),
-                        height: barHeights[index - 1],
+                        height: barHeights[index - 1] * scale,
+                        width: 16 * scale,
                         accentColor: accentColor
                     )
                     .onTapGesture {
@@ -67,7 +70,7 @@ struct SpectrumRatingControl: View {
                     }
             )
         }
-        .frame(height: 60)
+        .frame(height: 60 * scale)
         .padding(.vertical, 8)
         .onAppear {
             hapticGenerator.prepare()
@@ -94,12 +97,13 @@ struct SpectrumRatingControl: View {
 struct SpectrumBar: View {
     let fillPercentage: Double // 0.0...1.0
     let height: CGFloat
+    var width: CGFloat = 16
     var accentColor: Color
     
     var body: some View {
         ZStack(alignment: .leading) {
             // Background (the empty part) — always full width
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: width / 2)
                 .fill(
                     LinearGradient(
                         colors: [Color.white.opacity(0.15), Color.white.opacity(0.08)],
@@ -107,13 +111,13 @@ struct SpectrumBar: View {
                         endPoint: .trailing
                     )
                 )
-                .frame(width: 16, height: height)
+                .frame(width: width, height: height)
             
             // The filled part, growing left to right. A full-size bar cut to the fill width,
             // so half a bar keeps the bar's own rounded outline: rounding the half-width
             // shape on its own drew a blob that spilled outside the bar.
             if fillPercentage > 0 {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: width / 2)
                     .fill(
                         LinearGradient(
                             colors: [accentColor, accentColor.opacity(0.7)],
@@ -121,19 +125,19 @@ struct SpectrumBar: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 16, height: height)
+                    .frame(width: width, height: height)
                     .mask(alignment: .leading) {
-                        Rectangle().frame(width: 16 * fillPercentage, height: height)
+                        Rectangle().frame(width: width * fillPercentage, height: height)
                     }
             }
         }
-        .frame(width: 16, height: height)
+        .frame(width: width, height: height)
         .shadow(
             color: fillPercentage > 0 ? accentColor.opacity(0.6 * fillPercentage) : .clear,
             radius: fillPercentage > 0 ? 8 : 0
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: width / 2)
                 .stroke(
                     fillPercentage > 0 ? accentColor.opacity(0.8) : Color.white.opacity(0.1),
                     lineWidth: 1
