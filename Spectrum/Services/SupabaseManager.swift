@@ -988,6 +988,21 @@ final class SupabaseManager {
             .value
     }
 
+    /// Comment counts for a page of logs; ids with no comments are absent.
+    func commentCounts(contentType: ReportedContentType, contentIds: [UUID]) async -> [UUID: Int] {
+        guard !contentIds.isEmpty else { return [:] }
+        nonisolated struct Row: Decodable, Sendable { let content_id: UUID }
+        let rows: [Row] = (try? await client
+            .from("review_comments")
+            .select("content_id")
+            .eq("content_type", value: contentType.rawValue)
+            .in("content_id", values: contentIds.map(\.uuidString))
+            .limit(1000)
+            .execute()
+            .value) ?? []
+        return rows.reduce(into: [:]) { $0[$1.content_id, default: 0] += 1 }
+    }
+
     func deleteComment(id: UUID) async throws {
         try await client.from("review_comments").delete().eq("id", value: id).execute()
     }

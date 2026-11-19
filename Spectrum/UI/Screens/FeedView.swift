@@ -19,6 +19,7 @@ struct FeedView: View {
     /// Reviews whose song or author still couldn't be resolved after every retry. They are
     /// left out instead of spinning forever (a deleted author, a song pulled from the store).
     @State private var unresolved: Set<UUID> = []
+    @State private var commentCounts: [UUID: Int] = [:]
     /// Like count + "did I like it", keyed by review id. Loaded one page at a time alongside
     /// the artwork, never per card — thirty cards fetching their own would be thirty requests.
     @State private var likes: [UUID: LikeState] = [:]
@@ -129,7 +130,8 @@ struct FeedView: View {
                                                 onToggleLike: review.userId == currentUserId
                                                     ? nil
                                                     : { toggleLike(review) },
-                                                onTapAuthor: { path.append(AppRoute.user(review.userId)) }
+                                                onTapAuthor: { path.append(AppRoute.user(review.userId)) },
+                                                commentCount: commentCounts[review.id] ?? 0
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())
@@ -300,6 +302,10 @@ struct FeedView: View {
         guard !page.isEmpty else { return }
         let pageTrackIds = Set(page.map(\.itunesTrackId))
 
+        // Likes and comment counts belong to the page, not to what's missing: a feed drawn
+        // from the disk cache has every song and author already, and used to skip them.
+        async let social: Void = loadSocial(for: page)
+
         for attempt in 0..<5 {
             if attempt > 0 {
                 try? await Task.sleep(for: .seconds(Double(attempt)))
@@ -311,8 +317,9 @@ struct FeedView: View {
             }
             launchTrace("feed: hydrate attempt \(attempt) missing tracks=\(trackIds.count) users=\(userIds.count)")
             if trackIds.isEmpty && userIds.isEmpty { break }
-            await fillIn(trackIds: trackIds, userIds: userIds, likesFor: attempt == 0 ? page : [])
+            await fillIn(trackIds: trackIds, userIds: userIds)
         }
+        await social
 
         await MainActor.run {
             for review in page where self.tracks[review.itunesTrackId] == nil || self.profiles[review.userId] == nil {
@@ -329,30 +336,33 @@ struct FeedView: View {
         }
     }
 
-    private func fillIn(trackIds: Set<Int64>, userIds: Set<UUID>, likesFor page: [Review]) async {
-
-        // Three independent lookups, run side by side. They used to be chained, so a slow
-        // MusicKit answer held back every author name and like count on the page too.
-        async let tracksLoad: [Int64: Track] = trackIds.isEmpty
-            ? [:] : MusicService.shared.fetchTracks(ids: Array(trackIds))
-        async let profilesLoad: [Profile] = userIds.isEmpty
-            ? [] : ((try? await SupabaseManager.shared.batchGetProfiles(ids: userIds.map(\.uuidString))) ?? [])
-        async let statesLoad: [UUID: LikeState] = page.isEmpty ? [:] : SupabaseManager.shared.likeStates(
-            contentType: .songReview,
-            contentIds: page.map(\.id)
-        )
-
-        let fetchedProfiles = await profilesLoad
-        launchTrace("feed: profiles \(fetchedProfiles.count)/\(userIds.count)")
-        let states = await statesLoad
-        launchTrace("feed: like states")
+    private func loadSocial(for page: [Review]) async {
+        let ids = page.map(\.id)
+        async let statesLoad = SupabaseManager.shared.likeStates(contentType: .songReview, contentIds: ids)
+        async let countsLoad = SupabaseManager.shared.commentCounts(contentType: .songReview, contentIds: ids)
+        let (states, counts) = await (statesLoad, countsLoad)
         await MainActor.run {
-            for profile in fetchedProfiles { self.profiles[profile.id] = profile }
             // Merge rather than replace: an optimistic toggle the user made while this page
             // was in flight must not be overwritten by the older server value.
             for (id, state) in states where self.likes[id] == nil {
                 self.likes[id] = state
             }
+            for id in ids { self.commentCounts[id] = counts[id] ?? 0 }
+        }
+    }
+
+    private func fillIn(trackIds: Set<Int64>, userIds: Set<UUID>) async {
+        // Independent lookups, run side by side: a slow MusicKit answer must not hold back
+        // the author names.
+        async let tracksLoad: [Int64: Track] = trackIds.isEmpty
+            ? [:] : MusicService.shared.fetchTracks(ids: Array(trackIds))
+        async let profilesLoad: [Profile] = userIds.isEmpty
+            ? [] : ((try? await SupabaseManager.shared.batchGetProfiles(ids: userIds.map(\.uuidString))) ?? [])
+
+        let fetchedProfiles = await profilesLoad
+        launchTrace("feed: profiles \(fetchedProfiles.count)/\(userIds.count)")
+        await MainActor.run {
+            for profile in fetchedProfiles { self.profiles[profile.id] = profile }
         }
         let fetchedTracks = await tracksLoad
         launchTrace("feed: tracks \(fetchedTracks.count)/\(trackIds.count)")

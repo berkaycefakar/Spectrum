@@ -106,6 +106,17 @@
         }
       }
     },
+    "%lld comments": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld yorum"
+          }
+        }
+      }
+    },
     "%lld likes": {
       "extractionState": "manual",
       "localizations": {
@@ -2286,6 +2297,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ayarları Aç"
+          }
+        }
+      }
+    },
+    "Opens the song": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkıyı açar"
           }
         }
       }

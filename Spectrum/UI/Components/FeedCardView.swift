@@ -12,6 +12,8 @@ struct FeedCardView: View {
     var onToggleLike: (() -> Void)? = nil
     /// Opens the author's profile from the name pill. Nil leaves the pill as plain text.
     var onTapAuthor: (() -> Void)? = nil
+    /// Comments under this log. Shown only when there are some.
+    var commentCount: Int = 0
     
     @ObservedObject private var audioManager = AudioManager.shared
 
@@ -150,6 +152,20 @@ struct FeedCardView: View {
                 )
             }
 
+                if commentCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bubble.left.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("\(commentCount)")
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                    }
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.horizontal, 10)
+                    .frame(height: 44)
+                    .background(.white.opacity(0.08), in: Capsule())
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("\(commentCount) comments", bundle: appStringsBundle))
+                }
                 if let likeState {
                     LikeButton(state: likeState, onToggle: onToggleLike)
                 }
