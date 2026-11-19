@@ -7,6 +7,22 @@
 
 ---
 
+## 🟢 DURUM — 19 Kasım 2026 akşam (13 maddelik liste)
+
+Build 1.0 (8) yüklendi (sürüme bağlanıyor). Hepsi simülatörde UI testiyle denendi, cihazda değil.
+- Favori 4 kendiliğinden kaydediyor (Save yok); kapak seçici gerçek kapakları ızgarada gösteriyor.
+- Yarım puan çubuğu taşmıyor; albüm puanlama ekranı tam açılıyor; prizmada renk adı yok.
+- Mor (#FF00FF) ve mor→turkuaz gradyanlar kalktı → tek vurgu `Color.spectrumAccent` (#FF8A3D, logodaki turuncu).
+- Activity'de log satırı kişinin logunu açıyor, logda "Go to song".
+- **Loglara yorum** (`review_comments`, canlıya uygulandı, RLS curl ile test edildi: sahte user_id ve boş yorum reddediliyor).
+- **Spectrum'da en yüksek puanlılar** (Discover; Bayes ortalaması RPC'leri canlıda). 8 öğe × 3 puan olana kadar gizli.
+- Listeler yeniden tasarlandı (kullanıcı C "Duvar"ı seçti + kapak altında isim).
+- Musicboard araştırması: `docs/MUSICBOARD_RESEARCH.md`. Premium planı: `docs/PREMIUM_PLAN.md`;
+  StoreKit altyapısı kodda ama `PremiumStore.isOfferEnabled` kapalı → 1.1'e.
+- Demo hesabın (`applereview`) bir "Night drives" listesi ve bir yorumu var (inceleme için dolu görünsün).
+
+---
+
 ## 🟢 DURUM — 17 Kasım 2026 (incelemeye hazırlık)
 
 - **Build 1.0 (7)** sürüme bağlı (19 Kasım): akış yüklenirken spinner yerine iskelet kartlar; açılış ekranı
