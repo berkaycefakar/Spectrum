@@ -9,7 +9,9 @@
 
 ## 🟢 DURUM — 19 Kasım 2026 gece
 
-Build 1.0 (9) sürüme bağlı. Bu turda:
+Build 1.0 (10) sürüme bağlı (20 Kasım). 10'da: şarkı/albüm sayfası büyük kapak + bulanık arka plan (Apple Music tarzı), küçük Apple Music rozeti önizleme kartında, akış kartı logu açar (kapak/başlık şarkıyı), log sayfası üst boşluk, sanatçı sayfası alt boşluk. Açık: avatar storage kuralını büyük/küçük harfe duyarsız yapan migration (eski build'lerden yükleme RLS'e takılıyor) kullanıcı onayı bekliyor.
+
+Build 9'da:
 - **Profil fotoğrafı yükleme 4 Kasım'dan beri bozuktu** (klasör adı büyük harf, depolama kuralı küçük harf) → düzeltildi, canlı kovaya karşı test edildi.
 - Liste kapak fotoğrafı (galeriden). `Supabase_migration_list_covers.sql` canlıda.
 - Log ekranındaki boşluk dağıtıldı; log detayında kapağa/başlığa basınca şarkı açılıyor; akış kartında yorum sayısı.
