@@ -38,15 +38,25 @@ struct SpectrumApp: App {
                 // told separately. On `.system` this is `.autoupdatingCurrent`, i.e. no change.
                 .environment(\.locale, language.locale)
                 .onOpenURL { url in
-                    // Check what the link is for *before* handing it over: the PKCE flow
-                    // exchanges the callback and reports a plain `.signedIn`, so a recovery
-                    // link would otherwise just log the user in and leave the password they
-                    // forgot in place.
-                    if AuthDeepLink.isPasswordRecovery(url) {
-                        SessionStore.shared.beginPasswordRecovery()
+                    // Only Supabase's own callback is an auth link. Any app or web page can
+                    // open spectrum://, so a URL saying "type=recovery" proves nothing by
+                    // itself: recovery mode starts only after the link has actually been
+                    // exchanged for a session (a forged code fails the PKCE exchange, which
+                    // needs the verifier stored on this device). Before this, any
+                    // spectrum://x?type=recovery link put a signed-in user on a password
+                    // screen they could only leave by changing the password or signing out.
+                    guard url.host == "auth-callback" else { return }
+                    // Checked before the exchange: PKCE reports a recovery link as a plain
+                    // `.signedIn`, so the URL is the only place it says what it was for.
+                    let isRecovery = AuthDeepLink.isPasswordRecovery(url)
+                    Task {
+                        do {
+                            _ = try await SupabaseManager.shared.client.auth.session(from: url)
+                            if isRecovery { SessionStore.shared.beginPasswordRecovery() }
+                        } catch {
+                            debugLog("Auth callback rejected: \(error)")
+                        }
                     }
-                    // Handle Supabase Auth deep links (email confirmation, magic links, etc.)
-                    SupabaseManager.shared.client.handle(url)
                 }
                 .task {
                     // Catalog search requires this — without `.authorized` every MusicKit
