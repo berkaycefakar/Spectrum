@@ -167,8 +167,38 @@ final class SupabaseManager {
     }
 
     /// Replaces the password on the currently signed-in account.
+    ///
+    /// Only for a session a recovery link just created. An ordinary change from Settings goes
+    /// through `changePassword(current:new:)`, so a borrowed unlocked phone or a stolen token
+    /// can't swap the password and keep the account.
     func updatePassword(_ newPassword: String) async throws {
         try await client.auth.update(user: UserAttributes(password: newPassword))
+    }
+
+    enum PasswordChangeError: LocalizedError {
+        case wrongCurrent
+        var errorDescription: String? {
+            String(localized: "Your current password isn't right.", bundle: appStringsBundle)
+        }
+    }
+
+    /// Checks the current password by signing in with it again, then sets the new one.
+    func changePassword(current: String, new newPassword: String) async throws {
+        guard let email = client.auth.currentSession?.user.email else { throw PasswordChangeError.wrongCurrent }
+        do {
+            _ = try await client.auth.signIn(email: email, password: current)
+        } catch {
+            // Being offline isn't a wrong password; let the caller say so.
+            if (error as NSError).domain == NSURLErrorDomain { throw error }
+            throw PasswordChangeError.wrongCurrent
+        }
+        try await client.auth.update(user: UserAttributes(password: newPassword))
+    }
+
+    /// True when the account signs in with email and password (not only Apple or Google), so
+    /// there is a current password to change.
+    var hasPasswordSignIn: Bool {
+        client.auth.currentSession?.user.identities?.contains { $0.provider == "email" } ?? false
     }
     
     func signOut() async throws {

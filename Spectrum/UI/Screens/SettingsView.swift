@@ -58,11 +58,16 @@ struct SettingsView: View {
                     }
 
                     section(String(localized: "Account", bundle: appStringsBundle)) {
-                        navRow(icon: "key.fill", tint: "#8E8E93",
-                               title: String(localized: "Change Password", bundle: appStringsBundle)) {
-                            showChangePassword = true
+                        // Apple- and Google-only accounts have no password to change, and
+                        // letting them set one without proof would add a sign-in the owner
+                        // doesn't know about.
+                        if SupabaseManager.shared.hasPasswordSignIn {
+                            navRow(icon: "key.fill", tint: "#8E8E93",
+                                   title: String(localized: "Change Password", bundle: appStringsBundle)) {
+                                showChangePassword = true
+                            }
+                            rowDivider
                         }
-                        rowDivider
                         // Blocking has to be undoable from inside the app for Guideline 1.2,
                         // which means the list needs a home somewhere the user can find it.
                         navRow(icon: "hand.raised.fill", tint: "#FF9500",

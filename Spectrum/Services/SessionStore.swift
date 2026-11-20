@@ -183,6 +183,11 @@ class SessionStore: ObservableObject {
         try await SupabaseManager.shared.updatePassword(newPassword)
         isPasswordRecovery = false
     }
+
+    /// An ordinary change from Settings: the current password has to be right first.
+    func changePassword(current: String, new newPassword: String) async throws {
+        try await SupabaseManager.shared.changePassword(current: current, new: newPassword)
+    }
     
     // MARK: - Sign Up
     

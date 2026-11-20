@@ -33,6 +33,7 @@ struct NewPasswordView: View {
     let mode: Mode
     var onFinished: () -> Void
 
+    @State private var currentPassword = ""
     @State private var password = ""
     @State private var confirmation = ""
     @State private var isSaving = false
@@ -40,7 +41,7 @@ struct NewPasswordView: View {
     @State private var didSucceed = false
     @FocusState private var focusedField: Field?
 
-    private enum Field { case password, confirmation }
+    private enum Field { case current, password, confirmation }
 
     var body: some View {
         ZStack {
@@ -67,6 +68,16 @@ struct NewPasswordView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(.top, 12)
+
+                    // A change from Settings asks for the current password: the session
+                    // alone isn't proof it's the owner (an unlocked phone, a stolen token).
+                    if mode == .change {
+                        GlassTextField(icon: "lock.open", placeholder: String(localized: "Current password", bundle: appStringsBundle), text: $currentPassword, isSecure: true)
+                            .textContentType(.password)
+                            .focused($focusedField, equals: .current)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .password }
+                    }
 
                     GlassTextField(icon: "lock", placeholder: String(localized: "New password", bundle: appStringsBundle), text: $password, isSecure: true)
                         .textContentType(.newPassword)
@@ -131,6 +142,10 @@ struct NewPasswordView: View {
     private func save() {
         focusedField = nil
 
+        if mode == .change, currentPassword.isEmpty {
+            errorMessage = String(localized: "Enter your current password.", bundle: appStringsBundle)
+            return
+        }
         guard password.count >= 8 else {
             errorMessage = String(localized: "Use a password of at least 8 characters.", bundle: appStringsBundle)
             return
@@ -145,7 +160,10 @@ struct NewPasswordView: View {
 
         Task {
             do {
-                try await SessionStore.shared.updatePassword(password)
+                switch mode {
+                case .recovery: try await SessionStore.shared.updatePassword(password)
+                case .change: try await SessionStore.shared.changePassword(current: currentPassword, new: password)
+                }
                 await MainActor.run {
                     isSaving = false
                     didSucceed = true
@@ -154,7 +172,8 @@ struct NewPasswordView: View {
             } catch {
                 await MainActor.run {
                     isSaving = false
-                    errorMessage = AuthErrorMessage.friendly(error)
+                    errorMessage = (error as? SupabaseManager.PasswordChangeError)?.errorDescription
+                        ?? AuthErrorMessage.friendly(error)
                 }
             }
         }

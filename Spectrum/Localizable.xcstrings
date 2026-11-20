@@ -1182,6 +1182,16 @@
         }
       }
     },
+    "Current password": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mevcut şifre"
+          }
+        }
+      }
+    },
     "Decades": {
       "localizations": {
         "tr": {
@@ -1434,6 +1444,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enerjik"
+          }
+        }
+      }
+    },
+    "Enter your current password.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mevcut şifreni gir."
           }
         }
       }
@@ -4713,6 +4733,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Renklerin"
+          }
+        }
+      }
+    },
+    "Your current password isn't right.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mevcut şifren yanlış."
           }
         }
       }
