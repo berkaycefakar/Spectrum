@@ -22,6 +22,32 @@ struct Profile: Codable, Identifiable {
 }
 
 extension Profile {
+    /// Where avatars live: this project's public `avatars` bucket. Anything else in
+    /// `avatar_url` is dropped on read, so a profile can't make every viewer's phone fetch an
+    /// image from a server of its choosing (and log their IP). The database enforces the same
+    /// rule (`profiles_avatar_url_own_bucket`); this guards rows from before it.
+    static let avatarURLPrefix = "https://ysgbqlltzdhgsezukxxm.supabase.co/storage/v1/object/public/avatars/"
+
+    static func sanitizedAvatarURL(_ raw: String?, owner: UUID) -> String? {
+        guard let raw else { return nil }
+        let allowed = (avatarURLPrefix + owner.uuidString).lowercased()
+        return raw.lowercased().hasPrefix(allowed) ? raw : nil
+    }
+
+    // In an extension so the memberwise initializer stays available.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try c.decode(UUID.self, forKey: .id)
+        self.init(
+            id: id,
+            username: try c.decodeIfPresent(String.self, forKey: .username),
+            avatarUrl: Self.sanitizedAvatarURL(try c.decodeIfPresent(String.self, forKey: .avatarUrl), owner: id),
+            bio: try c.decodeIfPresent(String.self, forKey: .bio),
+            favoriteAlbumIds: try c.decodeIfPresent([Int64].self, forKey: .favoriteAlbumIds),
+            coverAlbumId: try c.decodeIfPresent(Int64.self, forKey: .coverAlbumId)
+        )
+    }
+
     func withShowcase(favorites: [Int64], cover: Int64?) -> Profile {
         var copy = self
         copy.favoriteAlbumIds = favorites

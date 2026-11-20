@@ -51,6 +51,31 @@ struct MusicList: Codable, Identifiable, Hashable {
     }
 }
 
+extension MusicList {
+    /// Only this project's `list-covers` bucket, under the owner's folder: any other URL is
+    /// dropped on read, so a list can't make every viewer fetch an image from a server of the
+    /// owner's choosing (and log their IP).
+    static let coverURLPrefix = "https://ysgbqlltzdhgsezukxxm.supabase.co/storage/v1/object/public/list-covers/"
+
+    // In an extension so the memberwise initializer stays available.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let userId = try c.decode(UUID.self, forKey: .userId)
+        let rawCover = try c.decodeIfPresent(String.self, forKey: .coverUrl)
+        let allowed = (Self.coverURLPrefix + userId.uuidString + "/").lowercased()
+        self.init(
+            id: try c.decode(UUID.self, forKey: .id),
+            userId: userId,
+            title: try c.decode(String.self, forKey: .title),
+            description: try c.decodeIfPresent(String.self, forKey: .description),
+            isPublic: try c.decode(Bool.self, forKey: .isPublic),
+            createdAt: try c.decode(Date.self, forKey: .createdAt),
+            updatedAt: try c.decode(Date.self, forKey: .updatedAt),
+            coverUrl: rawCover.flatMap { $0.lowercased().hasPrefix(allowed) ? $0 : nil }
+        )
+    }
+}
+
 struct MusicListItem: Codable, Identifiable, Hashable {
     let id: UUID
     let listId: UUID
