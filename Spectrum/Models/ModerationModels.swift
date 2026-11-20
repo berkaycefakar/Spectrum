@@ -7,6 +7,7 @@ enum ReportedContentType: String, Codable {
     case artistReview = "artist_review"
     case profile = "profile"
     case comment = "comment"
+    case share = "share"
 }
 
 /// Why they're reporting it. Apple wants a reason attached, and a flat list is easier to

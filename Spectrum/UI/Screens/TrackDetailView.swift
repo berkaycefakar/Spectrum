@@ -11,6 +11,7 @@ struct TrackDetailView: View {
     @State private var profileToOpen: UUID?
     @State private var showAddToList = false
     @State private var showArtwork = false
+    @State private var showSend = false
     @State private var artworkColor: ArtworkColor = .placeholder
 
     private var dominantColor: Color { artworkColor.accent }
@@ -79,6 +80,10 @@ struct TrackDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $showArtwork) { ArtworkViewer(url: track.artworkUrl600) }
+        .sheet(isPresented: $showSend) {
+            SendToFriendView(kind: .song, contentRef: String(track.id), title: track.title,
+                             subtitle: track.artist, artworkURL: track.artworkUrl600)
+        }
         .navigationDestination(item: $profileToOpen) { UserProfileView(userId: $0) }
         .sheet(isPresented: $showAddToList) {
             AddToListView(kind: .song, contentRef: String(track.id), displayTitle: track.title)
@@ -293,7 +298,7 @@ struct TrackDetailView: View {
 
             // Share opens a menu: listen on Apple Music, Spotify or YouTube Music, or send
             // a song.link URL so the person receiving it can choose their own service.
-            ListenOnMenu(track: track) {
+            ListenOnMenu(track: track, onSendToFriend: { showSend = true }) {
                 ZStack {
                     Circle()
                         .fill(.ultraThinMaterial)

@@ -37,6 +37,8 @@ enum StreamingService: String, CaseIterable, Identifiable {
 /// song.link URL that lets the person receiving it pick their own service.
 struct ListenOnMenu<Label: View>: View {
     let track: Track
+    /// Shows "Send to a friend" first when set.
+    var onSendToFriend: (() -> Void)? = nil
     @ViewBuilder var label: () -> Label
 
     @Environment(\.openURL) private var openURL
@@ -48,6 +50,11 @@ struct ListenOnMenu<Label: View>: View {
 
     var body: some View {
         Menu {
+            if let onSendToFriend {
+                Button(action: onSendToFriend) {
+                    SwiftUI.Label(String(localized: "Send to a friend", bundle: appStringsBundle), systemImage: "paperplane")
+                }
+            }
             Section(String(localized: "Listen on", bundle: appStringsBundle)) {
                 ForEach(StreamingService.allCases) { service in
                     Button(service.name) { open(service) }

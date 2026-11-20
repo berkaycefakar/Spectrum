@@ -7,6 +7,7 @@ struct AlbumDetailView: View {
     let album: Album
     
     @State private var showArtwork = false
+    @State private var showSend = false
     @State private var tracks: [Track] = []
     @State private var tracksLoading = true
     @State private var albumRating: Double = 0
@@ -65,6 +66,15 @@ struct AlbumDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    showSend = true
+                } label: {
+                    Image(systemName: "paperplane")
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel(Text("Send to a friend", bundle: appStringsBundle))
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
                     showAddToList = true
                 } label: {
                     Image(systemName: "text.badge.plus")
@@ -74,6 +84,10 @@ struct AlbumDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showArtwork) { ArtworkViewer(url: album.artworkUrl600) }
+        .sheet(isPresented: $showSend) {
+            SendToFriendView(kind: .album, contentRef: String(album.id), title: album.title,
+                             subtitle: album.artist, artworkURL: album.artworkUrl600)
+        }
         .sheet(isPresented: $showAddToList) {
             AddToListView(kind: .album, contentRef: String(album.id), displayTitle: album.title)
         }

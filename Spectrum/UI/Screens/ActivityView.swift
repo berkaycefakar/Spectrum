@@ -4,6 +4,8 @@ import SwiftUI
 /// Shows likes, follows, and other social interactions
 struct ActivityView: View {
     @State private var activities: [ActivityItem] = []
+    /// Songs and albums friends sent, shown above the activity list.
+    @State private var inbox = SharesInbox()
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var filter: ActivityFilter = .all
@@ -33,7 +35,7 @@ struct ActivityView: View {
                 } else if isLoading {
                     ProgressView()
                         .tint(.white)
-                } else if activities.isEmpty {
+                } else if activities.isEmpty && inbox.isEmpty {
                     emptyState
                 } else {
                     activityList
@@ -120,7 +122,7 @@ struct ActivityView: View {
                         Text(option.title)
                         if option == .followers, followerCount > 0 {
                             Text("\(followerCount)")
-                                .foregroundStyle(selected ? Color(hex: "#C800C8") : Color.spectrumAccent)
+                                .foregroundStyle(selected ? .black : Color.spectrumAccent)
                         }
                     }
                     .font(.subheadline.weight(selected ? .bold : .semibold))
@@ -195,6 +197,11 @@ struct ActivityView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+
+                if !inbox.isEmpty {
+                    SharesInboxSection(inbox: $inbox) { path.append($0) }
+                }
+
                 filterChips
 
                 if groupedActivities.isEmpty {
@@ -300,18 +307,19 @@ struct ActivityView: View {
             return
         }
         #endif
+        // The inbox loads alongside the activity feed; both land before the spinner goes.
+        async let inboxLoad = SharesInbox.load()
         do {
             let items = try await SupabaseManager.shared.fetchActivityFeed()
-            await MainActor.run {
-                self.activities = items
-                self.isLoading = false
-                self.errorMessage = nil
-            }
+            let loadedInbox = await inboxLoad
+            self.activities = items
+            self.inbox = loadedInbox
+            self.isLoading = false
+            self.errorMessage = nil
         } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
-            }
+            self.inbox = await inboxLoad
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
         }
     }
 }
