@@ -16,6 +16,26 @@
     "%@ %@": {
       "shouldTranslate": false
     },
+    "%@ a month": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aylık %@"
+          }
+        }
+      }
+    },
+    "%@ a year": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yıllık %@"
+          }
+        }
+      }
+    },
     "%@ logged a track": {
       "localizations": {
         "tr": {
@@ -260,6 +280,16 @@
         }
       }
     },
+    "A card of your year: what you played most, your average, your colours. Share it in one tap.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yılına özel bir kart: en çok dinlediklerin, ortalaman, renklerin. Tek dokunuşla paylaş."
+          }
+        }
+      }
+    },
     "About": {
       "extractionState": "manual",
       "localizations": {
@@ -366,6 +396,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Favori albüm ekle"
+          }
+        }
+      }
+    },
+    "Add a note (optional)": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not ekle (isteğe bağlı)"
           }
         }
       }
@@ -575,6 +615,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu e-postayla açılmış bir hesap zaten var. Giriş yapmayı dene."
+          }
+        }
+      }
+    },
+    "An animated profile photo and cover, your own profile colour, other app icons and the Plus badge.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hareketli profil fotoğrafı ve kapak, kendi profil rengin, farklı uygulama ikonları ve Plus rozeti."
+          }
+        }
+      }
+    },
+    "Animated profile photo and cover": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hareketli profil fotoğrafı ve kapak"
           }
         }
       }
@@ -1101,6 +1161,16 @@
         }
       }
     },
+    "Cover art": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapak"
+          }
+        }
+      }
+    },
     "Create Account": {
       "extractionState": "manual",
       "localizations": {
@@ -1108,6 +1178,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hesap Oluştur"
+          }
+        }
+      }
+    },
+    "Decades": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On yıllar"
           }
         }
       }
@@ -1389,6 +1469,16 @@
         }
       }
     },
+    "Everything in Spectrum+": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spectrum+'ta neler var"
+          }
+        }
+      }
+    },
     "Explicit": {
       "extractionState": "manual",
       "localizations": {
@@ -1471,6 +1561,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Herhangi bir logu puana, vibe'a ya da yıla göre bul."
+          }
+        }
+      }
+    },
+    "Find any log.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Her logunu bul."
           }
         }
       }
@@ -1644,12 +1744,32 @@
         }
       }
     },
+    "How was your year in music?": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yılın müzikte nasıldı?"
+          }
+        }
+      }
+    },
     "How you rate": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Nasıl puanlıyorsun"
+          }
+        }
+      }
+    },
+    "How your ratings change": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puanlarının nasıl değiştiği"
           }
         }
       }
@@ -1723,6 +1843,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beğen"
+          }
+        }
+      }
+    },
+    "Like comment": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorumu beğen"
           }
         }
       }
@@ -1924,6 +2054,16 @@
         }
       }
     },
+    "Logging, ratings, comments and lists stay free for everyone.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loglama, puanlar, yorumlar ve listeler herkes için ücretsiz kalıyor."
+          }
+        }
+      }
+    },
     "Logs": {
       "localizations": {
         "tr": {
@@ -1963,6 +2103,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "İlk listeni oluştur"
+          }
+        }
+      }
+    },
+    "Make your profile yours.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilin senin gibi görünsün."
           }
         }
       }
@@ -2098,6 +2248,16 @@
         }
       }
     },
+    "New features first": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni özellikler önce sende"
+          }
+        }
+      }
+    },
     "New password": {
       "localizations": {
         "tr": {
@@ -2216,6 +2376,16 @@
         }
       }
     },
+    "No one to send to yet": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz gönderebileceğin kimse yok"
+          }
+        }
+      }
+    },
     "No public lists.": {
       "extractionState": "manual",
       "localizations": {
@@ -2298,6 +2468,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not (isteğe bağlı)"
+          }
+        }
+      }
+    },
+    "Notes can be up to 140 characters.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not en fazla 140 karakter olabilir."
           }
         }
       }
@@ -2422,6 +2602,16 @@
         }
       }
     },
+    "Other app icons": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farklı uygulama ikonları"
+          }
+        }
+      }
+    },
     "PREVIEW": {
       "comment": "A label for a track's preview.",
       "isCommentAutoGenerated": true,
@@ -2430,6 +2620,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ÖNİZLEME"
+          }
+        }
+      }
+    },
+    "Page %lld of %lld": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sayfa %lld / %lld"
           }
         }
       }
@@ -2631,6 +2831,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@” ifadesini çıkar — yorumlar küfür içeremez."
+          }
+        }
+      }
+    },
+    "Plus badge on your profile": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilinde Plus rozeti"
           }
         }
       }
@@ -3062,6 +3272,16 @@
         }
       }
     },
+    "Search and filter your logs": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loglarında arama ve süzme"
+          }
+        }
+      }
+    },
     "Search artists": {
       "localizations": {
         "tr": {
@@ -3113,6 +3333,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Şarkı ara"
+          }
+        }
+      }
+    },
+    "Search what you wrote, and filter by rating, colour, year or genre.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazdıklarında ara; puana, renge, yıla ya da türe göre süz."
           }
         }
       }
@@ -3194,6 +3424,16 @@
         }
       }
     },
+    "Send": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gönder"
+          }
+        }
+      }
+    },
     "Send again": {
       "extractionState": "manual",
       "localizations": {
@@ -3227,6 +3467,26 @@
         }
       }
     },
+    "Send to %lld": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kişiye gönder"
+          }
+        }
+      }
+    },
+    "Send to a friend": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaşına gönder"
+          }
+        }
+      }
+    },
     "Sending…": {
       "extractionState": "manual",
       "localizations": {
@@ -3234,6 +3494,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gönderiliyor…"
+          }
+        }
+      }
+    },
+    "Sent to you": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sana gönderilenler"
           }
         }
       }
@@ -3303,6 +3573,16 @@
         }
       }
     },
+    "Show cover full screen": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapağı tam ekran göster"
+          }
+        }
+      }
+    },
     "Show less": {
       "extractionState": "manual",
       "localizations": {
@@ -3332,6 +3612,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yorum yapmak için giriş yap."
+          }
+        }
+      }
+    },
+    "Sign in to send music.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Müzik göndermek için giriş yap."
           }
         }
       }
@@ -3498,6 +3788,16 @@
         }
       }
     },
+    "Stats on your own taste.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendi zevkinin istatistiği."
+          }
+        }
+      }
+    },
     "Stop preview": {
       "extractionState": "manual",
       "localizations": {
@@ -3583,6 +3883,16 @@
         }
       }
     },
+    "Tell us what's wrong with this message.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu mesajda neyin yanlış olduğunu anlat."
+          }
+        }
+      }
+    },
     "Tell us what's wrong with this review.": {
       "localizations": {
         "tr": {
@@ -3641,6 +3951,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu kullanıcı adı alınmış. Başka birini seç."
+          }
+        }
+      }
+    },
+    "The colours you picked, month by month. Which season sounded like what, at a glance.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçtiğin renkler ay ay. Hangi mevsimin nasıl dinlendiği bir bakışta."
           }
         }
       }
@@ -3704,6 +4024,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@” listesini ve içindeki her şeyi siler. Bu geri alınamaz."
+          }
+        }
+      }
+    },
+    "This note contains language that isn't allowed.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu notta izin verilmeyen ifadeler var."
           }
         }
       }
@@ -3804,6 +4134,16 @@
         }
       }
     },
+    "Top artists, genres and decades": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En çok dinlenen sanatçı, tür ve on yıllar"
+          }
+        }
+      }
+    },
     "Top artists, genres and decades, and how your ratings move.": {
       "extractionState": "manual",
       "localizations": {
@@ -3844,6 +4184,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Popüler Vibe'lar"
+          }
+        }
+      }
+    },
+    "Try 1 week free": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hafta ücretsiz dene"
           }
         }
       }
@@ -3909,6 +4259,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beğenmekten vazgeç"
+          }
+        }
+      }
+    },
+    "Unlike comment": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beğeniyi geri al"
           }
         }
       }
@@ -4190,6 +4550,16 @@
         }
       }
     },
+    "You can send music to people you follow who follow you back.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takip ettiğin ve seni de takip eden kişilere müzik gönderebilirsin."
+          }
+        }
+      }
+    },
     "You can't block yourself.": {
       "localizations": {
         "tr": {
@@ -4294,6 +4664,16 @@
         }
       }
     },
+    "You've sent a lot today. Try again tomorrow.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bugün çok gönderdin. Yarın tekrar dene."
+          }
+        }
+      }
+    },
     "Your Spectrum": {
       "extractionState": "manual",
       "localizations": {
@@ -4333,6 +4713,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Renklerin"
+          }
+        }
+      }
+    },
+    "Your most-logged artists, genres and decades, and how your ratings drift over time.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En çok loglanan sanatçıların, türlerin ve on yılların; puanlarının zamanla nasıl değiştiği."
+          }
+        }
+      }
+    },
+    "Your own profile colour": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendi profil rengin"
           }
         }
       }
@@ -4386,6 +4786,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zaman içinde spektrumun"
+          }
+        }
+      }
+    },
+    "Your spectrum, month by month": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ay ay spektrumun"
           }
         }
       }
@@ -4526,6 +4936,16 @@
         }
       }
     },
+    "log": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "log"
+          }
+        }
+      }
+    },
     "logged a track": {
       "localizations": {
         "tr": {
@@ -4568,6 +4988,16 @@
         }
       }
     },
+    "out of 5": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 üzerinden"
+          }
+        }
+      }
+    },
     "per month": {
       "extractionState": "manual",
       "localizations": {
@@ -4586,6 +5016,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "yıllık"
+          }
+        }
+      }
+    },
+    "rating": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "puan"
           }
         }
       }
