@@ -1557,6 +1557,13 @@ final class SupabaseManager {
 
     /// Deletes a list. Its items go with it via `on delete cascade`.
     func deleteList(listId: UUID) async throws {
+        // The cover file first, through the Storage API: Postgres can't delete storage
+        // objects, so a database trigger isn't an option, and a cover left behind would
+        // outlive the (possibly private) list. Best effort: most lists have no cover.
+        if let user = try await getCurrentUser() {
+            let path = "\(user.id.uuidString.lowercased())/\(listId.uuidString.lowercased()).jpg"
+            _ = try? await client.storage.from("list-covers").remove(paths: [path])
+        }
         try await client.from("lists").delete().eq("id", value: listId).execute()
     }
 

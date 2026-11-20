@@ -76,6 +76,17 @@ Deno.serve(async (req) => {
     // Intentionally ignored.
   }
 
+  // List covers, same rule. They sit under the user's folder ({id}/{list_id}.jpg) and would
+  // otherwise outlive the account, private lists' covers included.
+  try {
+    const { data: covers } = await admin.storage.from("list-covers").list(id, { limit: 1000 });
+    if (covers && covers.length > 0) {
+      await admin.storage.from("list-covers").remove(covers.map((f) => `${id}/${f.name}`));
+    }
+  } catch (_) {
+    // Intentionally ignored.
+  }
+
   const { error: profileError } = await admin.from("profiles").delete().eq("id", id);
   if (profileError) {
     return json({ error: `Failed clearing profile: ${String(profileError)}` }, 500);
