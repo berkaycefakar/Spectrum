@@ -4,7 +4,7 @@
 -- opens a public list (so the owner could log viewers' IPs). A few free-text columns had no
 -- bound at all. Every existing row already satisfies these (checked 20 Nov 2026).
 --
--- NOT APPLIED YET: waiting for approval. Run in Supabase → SQL Editor. Safe to re-run.
+-- Applied 20 Nov 2026. Safe to re-run.
 
 alter table public.lists drop constraint if exists lists_cover_url_shape;
 alter table public.lists add constraint lists_cover_url_shape

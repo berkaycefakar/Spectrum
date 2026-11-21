@@ -1,7 +1,7 @@
 -- Spectrum — hardening pass, 20 Nov 2026
 --
 -- Everything Supabase's own security advisor flagged, plus abuse limits the code scan can't
--- see. Run AFTER Supabase_migration_field_limits.sql (or together). Safe to re-run.
+-- see. Run AFTER Supabase_migration_field_limits.sql (or together). Applied 20 Nov 2026. Safe to re-run.
 --
 -- 1. GraphQL is switched off. The app only talks to PostgREST; pg_graphql just published the
 --    whole schema (including content_reports, user_blocks, shares) to anyone with the anon key.
