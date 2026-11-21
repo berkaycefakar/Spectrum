@@ -30,16 +30,20 @@ final class LanguageConsistencyUITests: XCTestCase {
         attach(app.screenshot(), named: "tr-01-landing")
         getStarted.tap()
 
-        XCTAssertTrue(app.buttons["Giriş Yap"].waitForExistence(timeout: 10), "Auth screen never appeared.")
+        let emailLink = app.buttons["E-postayla giriş yap"]
+        XCTAssertTrue(emailLink.waitForExistence(timeout: 10), "Auth screen never appeared.")
         attach(app.screenshot(), named: "tr-02-auth")
+        emailLink.tap()
+        XCTAssertTrue(app.buttons["Giriş Yap"].waitForExistence(timeout: 5))
+        attach(app.screenshot(), named: "tr-03-auth-email")
 
-        // These three are the `String(localized:)` half.
-        for label in ["E-posta", "Şifre", "Şifreni mi unuttun?"] {
+        // These are the `String(localized:)` half.
+        for label in ["E-posta", "Şifre"] {
             XCTAssertTrue(app.descendants(matching: .any)[label].exists,
                           "Expected Turkish “\(label)”. Visible: \(visibleText(app).prefix(500))")
         }
 
-        let english = ["Email", "Password", "Forgot password?", "Log In", "Sign Up", "Get Started"]
+        let english = ["Email", "Password", "Log In", "Log in with email", "Get Started"]
         let visible = Set(visibleText(app))
         for word in english {
             XCTAssertFalse(visible.contains(word), "“\(word)” is still English.")
@@ -55,10 +59,14 @@ final class LanguageConsistencyUITests: XCTestCase {
                       "Landing screen is not English. Visible: \(visibleText(app).prefix(400))")
         getStarted.tap()
 
-        XCTAssertTrue(app.buttons["Log In"].waitForExistence(timeout: 10), "Auth screen never appeared.")
+        let emailLink = app.buttons["Log in with email"]
+        XCTAssertTrue(emailLink.waitForExistence(timeout: 10), "Auth screen never appeared.")
         attach(app.screenshot(), named: "en-02-auth")
+        emailLink.tap()
+        XCTAssertTrue(app.buttons["Log In"].waitForExistence(timeout: 5))
+        attach(app.screenshot(), named: "en-03-auth-email")
 
-        for label in ["Email", "Password", "Forgot password?"] {
+        for label in ["Email", "Password"] {
             XCTAssertTrue(app.descendants(matching: .any)[label].exists,
                           "Expected English “\(label)”. Visible: \(visibleText(app).prefix(500))")
         }

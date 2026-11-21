@@ -2030,6 +2030,16 @@
         }
       }
     },
+    "Log in with email": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-postayla giriş yap"
+          }
+        }
+      }
+    },
     "Log options": {
       "extractionState": "manual",
       "localizations": {

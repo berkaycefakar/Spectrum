@@ -7,20 +7,18 @@ struct AuthView: View {
 
     @StateObject private var sessionStore = SessionStore.shared
 
-    @State private var isLoginMode = true
+    @State private var showEmailLogin = false
     @State private var email = ""
     @State private var password = ""
-    @State private var username = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     /// Non-error feedback: "check your inbox", "reset link sent". Green rather than red — the
     /// old screen had no way to say anything that wasn't a failure.
     @State private var infoMessage: String?
-    @State private var showPasswordResetSheet = false
     @State private var currentNonce: String?
     @FocusState private var focusedField: Field?
 
-    private enum Field { case username, email, password }
+    private enum Field { case email, password }
 
     // Animation States
     @State private var animateBlobs = false
@@ -56,11 +54,6 @@ struct AuthView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .onAppear { animateBlobs = true }
-        .sheet(isPresented: $showPasswordResetSheet) {
-            PasswordResetView(initialEmail: email)
-                .presentationDetents([.height(340)])
-                .presentationDragIndicator(.visible)
-        }
     }
 
     // MARK: - Header
@@ -72,7 +65,7 @@ struct AuthView: View {
                 .foregroundStyle(.white)
                 .shadow(color: .white.opacity(0.5), radius: 10)
 
-            Text(isLoginMode ? "Welcome Back" : "Join the Vibe")
+            Text("Join the Vibe")
                 .font(.title3)
                 .foregroundStyle(.white.opacity(0.7))
         }
@@ -81,60 +74,46 @@ struct AuthView: View {
 
     // MARK: - Form
 
+    /// New accounts come only through Apple or Google (the server's before-user-created hook
+    /// refuses email sign-ups). Email + password stays behind a quiet link for accounts that
+    /// already have one, such as the App Review demo account.
     private var formCard: some View {
         VStack(spacing: 18) {
-            Picker("", selection: $isLoginMode) {
-                Text("Log In").tag(true)
-                Text("Sign Up").tag(false)
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: isLoginMode) { _, _ in
-                // Stale feedback from the other mode is just confusing.
-                errorMessage = nil
-                infoMessage = nil
-            }
-
-            if !isLoginMode {
-                GlassTextField(icon: "person", placeholder: String(localized: "Username", bundle: appStringsBundle), text: $username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($focusedField, equals: .username)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .email }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
-            GlassTextField(icon: "envelope", placeholder: String(localized: "Email", bundle: appStringsBundle), text: $email)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.emailAddress)
-                .textContentType(.emailAddress)
-                .focused($focusedField, equals: .email)
-                .submitLabel(.next)
-                .onSubmit { focusedField = .password }
-
-            GlassTextField(icon: "lock", placeholder: String(localized: "Password", bundle: appStringsBundle), text: $password, isSecure: true)
-                .textContentType(isLoginMode ? .password : .newPassword)
-                .focused($focusedField, equals: .password)
-                .submitLabel(.go)
-                .onSubmit(handleAuth)
-
-            if isLoginMode {
-                Button("Forgot password?") {
-                    showPasswordResetSheet = true
-                }
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.65))
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+            socialButtons
 
             feedbackMessages
 
-            primaryButton
+            if showEmailLogin {
+                dividerRow
 
-            dividerRow
+                GlassTextField(icon: "envelope", placeholder: String(localized: "Email", bundle: appStringsBundle), text: $email)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
+                    .focused($focusedField, equals: .email)
+                    .submitLabel(.next)
+                    .onSubmit { focusedField = .password }
 
-            socialButtons
+                GlassTextField(icon: "lock", placeholder: String(localized: "Password", bundle: appStringsBundle), text: $password, isSecure: true)
+                    .textContentType(.password)
+                    .focused($focusedField, equals: .password)
+                    .submitLabel(.go)
+                    .onSubmit(handleAuth)
+
+                primaryButton
+            } else {
+                Button("Log in with email") {
+                    errorMessage = nil
+                    showEmailLogin = true
+                    focusedField = .email
+                }
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.65))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+            }
         }
         .padding(28)
         .background(.ultraThinMaterial)
@@ -144,7 +123,7 @@ struct AuthView: View {
                 .stroke(.white.opacity(0.2), lineWidth: 1)
         )
         .padding(.horizontal, 20)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isLoginMode)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showEmailLogin)
     }
 
     @ViewBuilder
@@ -190,7 +169,7 @@ struct AuthView: View {
                 if isLoading {
                     ProgressView().tint(.black)
                 } else {
-                    Text(isLoginMode ? "Log In" : "Create Account")
+                    Text("Log In")
                         .fontWeight(.bold)
                         .foregroundStyle(.black)
                 }
@@ -261,11 +240,7 @@ struct AuthView: View {
         infoMessage = nil
 
         // Answer the obvious mistakes instantly instead of after a network round-trip.
-        if let problem = AuthErrorMessage.validate(
-            email: email,
-            password: password,
-            username: isLoginMode ? nil : username
-        ) {
+        if let problem = AuthErrorMessage.validate(email: email, password: password, username: nil) {
             withAnimation { errorMessage = problem }
             return
         }
@@ -275,33 +250,8 @@ struct AuthView: View {
         Task {
             do {
                 let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-
-                if isLoginMode {
-                    try await sessionStore.signIn(email: trimmedEmail, password: password)
-                    await MainActor.run { finishSuccess() }
-                } else {
-                    let outcome = try await sessionStore.signUp(
-                        email: trimmedEmail,
-                        password: password,
-                        username: username.trimmingCharacters(in: .whitespaces)
-                    )
-
-                    await MainActor.run {
-                        switch outcome {
-                        case .signedIn:
-                            finishSuccess()
-                        case .needsEmailConfirmation:
-                            // The project has email confirmation on, so there is genuinely no
-                            // session to hand over. Say so instead of appearing to hang.
-                            isLoading = false
-                            isLoginMode = true
-                            password = ""
-                            withAnimation {
-                                infoMessage = String(localized: "Account created. Confirm your email, then log in.", bundle: appStringsBundle)
-                            }
-                        }
-                    }
-                }
+                try await sessionStore.signIn(email: trimmedEmail, password: password)
+                await MainActor.run { finishSuccess() }
             } catch {
                 await MainActor.run { fail(with: error) }
             }
@@ -371,105 +321,6 @@ struct AuthView: View {
         let message = AuthErrorMessage.friendly(error)
         guard !message.isEmpty else { return } // user cancelled
         withAnimation { errorMessage = message }
-    }
-}
-
-// MARK: - Password Reset
-
-/// "I forgot my password" — a separate sheet so the main form stays a single decision.
-struct PasswordResetView: View {
-    let initialEmail: String
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var email: String
-    @State private var isSending = false
-    @State private var message: String?
-    @State private var didSend = false
-
-    init(initialEmail: String) {
-        self.initialEmail = initialEmail
-        _email = State(initialValue: initialEmail)
-    }
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Reset your password")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-
-                Text("We'll email you a link to set a new one.")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.6))
-
-                GlassTextField(icon: "envelope", placeholder: String(localized: "Email", bundle: appStringsBundle), text: $email)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.emailAddress)
-                    .textContentType(.emailAddress)
-
-                if let message {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(didSend ? Color(hex: "#4CD964") : Color(hex: "#FF6B6B"))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Button(action: send) {
-                    Group {
-                        if isSending {
-                            ProgressView().tint(.black)
-                        } else {
-                            Text(didSend ? "Send again" : "Send reset link")
-                                .fontWeight(.bold)
-                                .foregroundStyle(.black)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .contentShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .disabled(isSending)
-
-                Spacer(minLength: 0)
-            }
-            .padding(24)
-        }
-    }
-
-    private func send() {
-        let trimmed = email.trimmingCharacters(in: .whitespaces)
-        guard AuthErrorMessage.isPlausibleEmail(trimmed) else {
-            didSend = false
-            message = String(localized: "That email address doesn't look right.", bundle: appStringsBundle)
-            return
-        }
-
-        isSending = true
-        message = nil
-
-        Task {
-            do {
-                try await SessionStore.shared.sendPasswordReset(email: trimmed)
-                await MainActor.run {
-                    isSending = false
-                    didSend = true
-                    // Worded so it reveals nothing about whether the address has an account.
-                    message = String(localized: "If that address has an account, the link is on its way.", bundle: appStringsBundle)
-                }
-            } catch {
-                await MainActor.run {
-                    isSending = false
-                    didSend = false
-                    message = AuthErrorMessage.friendly(error)
-                }
-            }
-        }
     }
 }
 
