@@ -222,6 +222,16 @@
         }
       }
     },
+    "1 rating": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 puan"
+          }
+        }
+      }
+    },
     "1 record": {
       "extractionState": "manual",
       "localizations": {
@@ -2576,6 +2586,16 @@
         }
       }
     },
+    "Nothing yet. When a friend sends you a song, it lands here.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz bir şey yok. Bir arkadaşın sana şarkı gönderince burada görünür."
+          }
+        }
+      }
+    },
     "Number %lld, %@ by %@": {
       "localizations": {
         "tr": {
@@ -2905,6 +2925,16 @@
         }
       }
     },
+    "Popular reviews": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popüler yorumlar"
+          }
+        }
+      }
+    },
     "Preferences": {
       "extractionState": "manual",
       "localizations": {
@@ -3076,6 +3106,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tepkiler ve yeni takipçiler"
+          }
+        }
+      }
+    },
+    "Received": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gelen"
           }
         }
       }
@@ -3504,6 +3544,16 @@
         }
       }
     },
+    "Send a song from its page: Share → Send to a friend.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkı sayfasından gönderebilirsin: Paylaş → Arkadaşa gönder."
+          }
+        }
+      }
+    },
     "Send again": {
       "extractionState": "manual",
       "localizations": {
@@ -3564,6 +3614,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gönderiliyor…"
+          }
+        }
+      }
+    },
+    "Sent": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giden"
           }
         }
       }
@@ -3639,6 +3699,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu logu paylaş"
+          }
+        }
+      }
+    },
+    "Shared with friends": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaşlarla paylaşılanlar"
           }
         }
       }
@@ -4147,6 +4217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Başlık"
+          }
+        }
+      }
+    },
+    "To %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kime: %@"
           }
         }
       }

@@ -31,6 +31,8 @@ struct TrackDetailView: View {
 
     @State private var trackReviews: [Review] = []
     @State private var reviewProfiles: [UUID: Profile] = [:]
+    /// Like counts per review: the page shows the most liked first.
+    @State private var reviewLikes: [UUID: Int] = [:]
     @State private var isLoadingReviews = true
     @State private var album: Album?
     
@@ -485,7 +487,7 @@ struct TrackDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             // Only carries the written reviews now — the numbers moved into CommunityStatsCard.
             if !trackReviews.isEmpty || isLoadingReviews {
-                Text("Reviews")
+                Text(reviewLikes.values.contains { $0 > 0 } ? "Popular reviews" : "Reviews")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(.white)
             }
@@ -517,6 +519,7 @@ struct TrackDetailView: View {
                             TrackReviewCard(
                                 review: review,
                                 profile: reviewProfiles[review.userId],
+                                likes: reviewLikes[review.id] ?? 0,
                                 onTapAuthor: { profileToOpen = review.userId }
                             )
                         }
@@ -557,11 +560,24 @@ struct TrackDetailView: View {
             // One query for every reviewer rather than one per reviewer — a popular song was
             // firing a request per log.
             let userIds = Set(reviews.map { $0.userId }).map(\.uuidString)
-            let fetchedProfiles = (try? await SupabaseManager.shared.batchGetProfiles(ids: userIds)) ?? []
+            async let profilesLoad = (try? SupabaseManager.shared.batchGetProfiles(ids: userIds)) ?? []
+            async let likesLoad = SupabaseManager.shared.likeStates(contentType: .songReview, contentIds: reviews.map(\.id))
+            let (fetchedProfiles, likeStates) = await (profilesLoad, likesLoad)
             let profiles = Dictionary(uniqueKeysWithValues: fetchedProfiles.map { ($0.id, $0) })
+            let likes = likeStates.mapValues(\.count)
+
+            // Most liked first; among equals a written review beats a bare rating, then newest.
+            let sorted = reviews.sorted { a, b in
+                let la = likes[a.id] ?? 0, lb = likes[b.id] ?? 0
+                if la != lb { return la > lb }
+                let ta = !(a.reviewText ?? "").isEmpty, tb = !(b.reviewText ?? "").isEmpty
+                if ta != tb { return ta }
+                return a.createdAt > b.createdAt
+            }
 
             await MainActor.run {
-                self.trackReviews = reviews
+                self.trackReviews = sorted
+                self.reviewLikes = likes
                 self.reviewProfiles = profiles
                 self.isLoadingReviews = false
             }
@@ -663,6 +679,7 @@ private struct PreviewScrubBar: View {
 struct TrackReviewCard: View {
     let review: Review
     let profile: Profile?
+    var likes: Int = 0
     /// Opens the author's profile from the avatar and name.
     var onTapAuthor: (() -> Void)? = nil
 
@@ -698,7 +715,19 @@ struct TrackReviewCard: View {
                     .accessibilityHidden(true)
             }
 
-            starRow
+            HStack {
+                starRow
+                Spacer()
+                if likes > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "heart.fill")
+                        Text("\(likes)")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .accessibilityElement(children: .combine)
+                }
+            }
 
             if let text = review.reviewText, !text.isEmpty {
                 // Masked on read: rows written before the profanity filter are still in the DB.
