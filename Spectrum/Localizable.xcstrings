@@ -564,6 +564,16 @@
         }
       }
     },
+    "Album · %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albüm · %@"
+          }
+        }
+      }
+    },
     "Albums": {
       "extractionState": "manual",
       "localizations": {
@@ -1319,6 +1329,16 @@
         }
       }
     },
+    "Diary": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Günlük"
+          }
+        }
+      }
+    },
     "Discover": {
       "extractionState": "manual",
       "localizations": {
@@ -1484,6 +1504,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Şifreni gir."
+          }
+        }
+      }
+    },
+    "Every log, by date": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm logların, tarihe göre"
           }
         }
       }
@@ -1739,6 +1769,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taciz veya zorbalık"
+          }
+        }
+      }
+    },
+    "Has a review": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yorumu var"
           }
         }
       }
@@ -2571,6 +2611,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu listede henüz bir şey yok"
+          }
+        }
+      }
+    },
+    "Nothing logged yet.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz log yok."
+          }
+        }
+      }
+    },
+    "Nothing logged yet. Your logs show up here by date.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz log yok. Logların burada tarihe göre görünür."
           }
         }
       }

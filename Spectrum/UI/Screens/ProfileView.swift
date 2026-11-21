@@ -157,6 +157,11 @@ struct ProfileView: View {
                                 .padding(.horizontal)
                         }
 
+                        if let profileId = profile?.id {
+                            DiaryEntryRow(userId: profileId, isOwner: true, count: totals.songs + totals.albums)
+                                .padding(.horizontal)
+                        }
+
                         // 4. Category Tabs & Logs
                         VStack(alignment: .leading, spacing: 16) {
                             // Category Selector
@@ -406,16 +411,16 @@ struct ProfileView: View {
             if sortedReviews.isEmpty {
                 emptyStateView(message: String(localized: "No songs logged yet", bundle: appStringsBundle))
             } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 14) {
                     ForEach(sortedReviews) { review in
                         if let track = tracks[review.itunesTrackId] {
                             NavigationLink(value: AppRoute.log(track: track, review: review, isOwner: true)) {
-                                AlbumGridItem(track: track, vibeColor: Color(hex: review.vibeColor))
+                                LogCoverCell(artworkUrl: track.artworkUrl600, title: track.title, rating: Double(review.rating) / 2.0, vibeColor: Color(hex: review.vibeColor))
                             }
                         } else {
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 8)
                                 .fill(.white.opacity(0.05))
-                                .frame(height: 200)
+                                .aspectRatio(1, contentMode: .fit)
                                 .overlay(ProgressView().tint(.white))
                         }
                     }
@@ -426,22 +431,16 @@ struct ProfileView: View {
             if sortedAlbumReviews.isEmpty {
                 emptyStateView(message: String(localized: "No albums rated yet", bundle: appStringsBundle))
             } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 14) {
                     ForEach(sortedAlbumReviews) { review in
                         if let album = albums[review.itunesCollectionId] {
                             NavigationLink(value: AppRoute.album(album)) {
-                                AlbumGridItemView(
-                                    title: album.title,
-                                    subtitle: album.artist,
-                                    artworkUrl: album.artworkUrl600,
-                                    vibeColor: Color(hex: review.vibeColor),
-                                    rating: Double(review.rating) / 2.0
-                                )
+                                LogCoverCell(artworkUrl: album.artworkUrl600, title: album.title, rating: Double(review.rating) / 2.0, vibeColor: Color(hex: review.vibeColor), cornerRadius: 4)
                             }
                         } else {
-                            RoundedRectangle(cornerRadius: 16)
+                            RoundedRectangle(cornerRadius: 8)
                                 .fill(.white.opacity(0.05))
-                                .frame(height: 200)
+                                .aspectRatio(1, contentMode: .fit)
                                 .overlay(ProgressView().tint(.white))
                         }
                     }

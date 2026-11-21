@@ -963,7 +963,9 @@ struct UserProfileView: View {
                         
                         // RLS returns only public lists here; on your own profile it also
                         // returns the private ones. The view draws whatever it is given.
-                        ProfileListsSection(userId: userId, isOwner: isCurrentUser)
+DiaryEntryRow(userId: userId, isOwner: isCurrentUser, count: totals.songs + totals.albums)
+                            .padding(.horizontal)
+                                                ProfileListsSection(userId: userId, isOwner: isCurrentUser)
                             .padding(.horizontal)
 
                         VStack(alignment: .leading, spacing: 16) {
@@ -1000,16 +1002,16 @@ struct UserProfileView: View {
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 32)
                                 } else {
-                                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 14) {
                                         ForEach(sortedUserReviews) { review in
                                             if let track = userTracks[review.itunesTrackId] {
                                                 NavigationLink(destination: LogDetailView(track: track, review: review, authorUsername: profile?.username)) {
-                                                    AlbumGridItem(track: track, vibeColor: Color(hex: review.vibeColor))
+                                                    LogCoverCell(artworkUrl: track.artworkUrl600, title: track.title, rating: Double(review.rating) / 2.0, vibeColor: Color(hex: review.vibeColor))
                                                 }
                                             } else {
                                                 RoundedRectangle(cornerRadius: 16)
                                                     .fill(.white.opacity(0.05))
-                                                    .frame(height: 200)
+                                                    .aspectRatio(1, contentMode: .fit)
                                                     .overlay(ProgressView().tint(.white))
                                             }
                                         }
@@ -1023,22 +1025,16 @@ struct UserProfileView: View {
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 32)
                                 } else {
-                                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 14) {
                                         ForEach(sortedUserAlbumReviews) { review in
                                             if let album = userAlbums[review.itunesCollectionId] {
                                                 NavigationLink(destination: AlbumDetailView(album: album)) {
-                                                    AlbumGridItemView(
-                                                        title: album.title,
-                                                        subtitle: album.artist,
-                                                        artworkUrl: album.artworkUrl600,
-                                                        vibeColor: Color(hex: review.vibeColor),
-                                                        rating: Double(review.rating) / 2.0
-                                                    )
+                                                    LogCoverCell(artworkUrl: album.artworkUrl600, title: album.title, rating: Double(review.rating) / 2.0, vibeColor: Color(hex: review.vibeColor), cornerRadius: 4)
                                                 }
                                             } else {
                                                 RoundedRectangle(cornerRadius: 16)
                                                     .fill(.white.opacity(0.05))
-                                                    .frame(height: 200)
+                                                    .aspectRatio(1, contentMode: .fit)
                                                     .overlay(ProgressView().tint(.white))
                                             }
                                         }

@@ -414,6 +414,26 @@ final class SupabaseManager {
     /// This used to be unbounded. A profile with several hundred logs pulled every row and
     /// then asked MusicKit to resolve every distinct track id in one request — the slowest
     /// screen in the app, growing with use, for a list nobody scrolls to the bottom of.
+    /// Newest first, for the diary. Separate from `getUserReviews`, which ranks by rating.
+    func getUserReviewsByDate(userId: UUID, limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> [Review] {
+        try await client.from("reviews").select()
+            .eq("user_id", value: userId)
+            .order("created_at", ascending: false)
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
+            .execute().value
+    }
+
+    /// Newest first, for the diary.
+    func getUserAlbumReviewsByDate(userId: UUID, limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> [AlbumReview] {
+        try await client.from("album_reviews").select()
+            .eq("user_id", value: userId)
+            .order("created_at", ascending: false)
+            .order("id", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
+            .execute().value
+    }
+
     func getUserReviews(userId: UUID, limit: Int = SupabaseManager.pageSize, offset: Int = 0) async throws -> [Review] {
         let response: [Review] = try await client
             .from("reviews")
