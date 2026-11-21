@@ -11,6 +11,9 @@ struct AddRecordsToListView: View {
     /// Whatever the list already holds, so rows can say "added" rather than letting the user
     /// tap something that can't change.
     let existing: Set<String>
+    /// A list holds one kind of thing: whatever its first entry is. Nil for an empty list,
+    /// which can still start as songs, albums or artists.
+    var lockedKind: ListItemKind? = nil
     /// Called after every successful add, so the list behind the sheet stays current.
     let onAdded: () -> Void
 
@@ -35,7 +38,7 @@ struct AddRecordsToListView: View {
                 Color.black.ignoresSafeArea()
 
                 VStack(spacing: 16) {
-                    kindPicker
+                    if lockedKind == nil { kindPicker }
                     searchField
 
                     if let errorMessage {
@@ -58,6 +61,7 @@ struct AddRecordsToListView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onAppear { if let lockedKind { kind = lockedKind } }
         // A sheet dragged away mid-search would otherwise leave the request running.
         .onDisappear { searchTask?.cancel() }
     }

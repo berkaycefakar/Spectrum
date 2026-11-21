@@ -1932,6 +1932,36 @@
         }
       }
     },
+    "Lists of albums or artists aren't shown here.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albüm ya da sanatçı listeleri burada görünmez."
+          }
+        }
+      }
+    },
+    "Lists of songs or albums aren't shown here.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkı ya da albüm listeleri burada görünmez."
+          }
+        }
+      }
+    },
+    "Lists of songs or artists aren't shown here.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şarkı ya da sanatçı listeleri burada görünmez."
+          }
+        }
+      }
+    },
     "Lists to Apple Music": {
       "extractionState": "manual",
       "localizations": {

@@ -17,6 +17,9 @@ struct AddToListView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var summaries: [MusicListSummary] = []
+    /// Lists that already hold a different kind of thing, left out: a list is all songs, all
+    /// albums or all artists, set by its first entry.
+    @State private var otherKindCount = 0
     /// List id → the item id of this record in it, for the lists that already hold it.
     @State private var membership: [UUID: UUID] = [:]
     /// List id → up to three cover URLs, in list order.
@@ -82,13 +85,21 @@ struct AddToListView: View {
                                 .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
                             }
 
-                            if summaries.isEmpty {
+                            if summaries.isEmpty && otherKindCount == 0 {
                                 emptyState
                             } else {
                                 VStack(spacing: 10) {
                                     ForEach(shown) { summary in
                                         listRow(summary)
                                     }
+                                    if summaries.isEmpty {
+                                        emptyState
+                                    }
+                                }
+                                if otherKindCount > 0 {
+                                    Text(otherKindNote)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.4))
                                 }
                             }
 
@@ -121,6 +132,14 @@ struct AddToListView: View {
         .task { await load() }
         .sheet(isPresented: $showCreate) {
             EditListView(list: nil) { Task { await load() } }
+        }
+    }
+
+    private var otherKindNote: String {
+        switch kind {
+        case .song: String(localized: "Lists of albums or artists aren't shown here.", bundle: appStringsBundle)
+        case .album: String(localized: "Lists of songs or artists aren't shown here.", bundle: appStringsBundle)
+        case .artist: String(localized: "Lists of songs or albums aren't shown here.", bundle: appStringsBundle)
         }
     }
 
@@ -255,7 +274,12 @@ struct AddToListView: View {
             }
         }
 
-        summaries = loaded
+        let fitting = loaded.filter { summary in
+            guard let first = itemsByList[summary.list.id]?.first else { return true }
+            return first.kind == kind
+        }
+        otherKindCount = loaded.count - fitting.count
+        summaries = fitting
         membership = members
         // A cover photo the owner picked leads the stack.
         covers = coverMap.merging(
