@@ -7,6 +7,23 @@
 
 ---
 
+## 🟢 DURUM — 21 Kasım 2026 (güvenlik + sadece Apple/Google kayıt)
+
+Build 1.0 (14) yükleniyor/bağlanıyor. 11–13: Apple Music tarzı renkli arka plan, tam ekran kapak,
+yorum avatarı + yorum beğenisi, App Store tarzı topluluk puanı, "arkadaşa şarkı gönder" (shares),
+kaydırmalı paywall (kapalı). 14: **giriş ekranı Apple + Google; e-posta sadece "E-postayla giriş yap"
+linki** (demo hesap için). Yeni e-posta kaydı sunucuda kapalı (`Supabase_migration_social_only_signup.sql`,
+before-user-created hook; curl ile denendi: kayıt 403, demo girişi 200).
+
+Güvenlik (hepsi canlıda, test edildi): iki Claude Security taraması (`CLAUDE-SECURITY-*`, gitignore'da),
+`Supabase_migration_security_scan_fixes.sql`, `_field_limits.sql`, `_hardening_2.sql`: GraphQL kapalı,
+depolar listelenemiyor, engel yorum/beğeniyi kesiyor, avatar/kapak URL'si kendi kovasına sabit,
+hesap başına saatlik sınırlar, şifre değişiminde mevcut şifre soruluyor.
+**Açık kalanlar:** sızmış şifre kontrolü (Pro plan), captcha yok (yeni kayıt artık Apple/Google
+olduğu için önemi düştü), push bildirim yok (APNs anahtarı gerekli).
+
+---
+
 ## 🟢 DURUM — 19 Kasım 2026 gece
 
 Build 1.0 (10) sürüme bağlı (20 Kasım). 10'da: şarkı/albüm sayfası büyük kapak + bulanık arka plan (Apple Music tarzı), küçük Apple Music rozeti önizleme kartında, akış kartı logu açar (kapak/başlık şarkıyı), log sayfası üst boşluk, sanatçı sayfası alt boşluk. Açık: avatar storage kuralını büyük/küçük harfe duyarsız yapan migration (eski build'lerden yükleme RLS'e takılıyor) kullanıcı onayı bekliyor.
