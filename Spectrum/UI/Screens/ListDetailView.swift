@@ -71,6 +71,7 @@ struct ListDetailView: View {
             AddRecordsToListView(
                 list: currentList,
                 existing: Set(items.map(\.contentRef)),
+                lockedKind: items.first?.kind,
                 onAdded: {
                     Task { await load() }
                     onChanged?()
@@ -202,7 +203,9 @@ struct ListDetailView: View {
 
             HStack(spacing: 8) {
                 if let ownerName {
-                    NavigationLink(value: AppRoute.user(currentList.userId)) {
+                    NavigationLink {
+                        AppRouteView(route: .user(currentList.userId))
+                    } label: {
                         HStack(spacing: 6) {
                             Circle().fill(.white.opacity(0.15)).frame(width: 22, height: 22)
                                 .overlay(Text(String(ownerName.prefix(1)).uppercased())
@@ -283,7 +286,7 @@ struct ListDetailView: View {
             // Only linkable once the catalog lookup has come back — a row whose destination
             // doesn't exist yet is a dead tap, which reads as a broken list.
             if let destination = destination(for: item) {
-                NavigationLink(value: destination) { card }
+                NavigationLink { AppRouteView(route: destination) } label: { card }
                     .buttonStyle(.plain)
             } else {
                 card

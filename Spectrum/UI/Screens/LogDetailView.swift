@@ -32,7 +32,7 @@ struct LogDetailView: View {
     @ViewBuilder
     private func songLink<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         if showsSongLink {
-            NavigationLink(value: AppRoute.track(track)) { content() }
+            NavigationLink { AppRouteView(route: .track(track)) } label: { content() }
                 .buttonStyle(.plain)
                 .accessibilityHint(Text("Opens the song", bundle: appStringsBundle))
         } else {
@@ -102,7 +102,9 @@ struct LogDetailView: View {
 
                         // Someone else's log: the byline opens their profile.
                         if !isOwner {
-                            NavigationLink(value: AppRoute.user(review.userId)) {
+                            NavigationLink {
+                                AppRouteView(route: .user(review.userId))
+                            } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "person.crop.circle")
                                     Text(authorName ?? authorUsername ?? String(localized: "View profile", bundle: appStringsBundle))

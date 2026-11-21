@@ -32,29 +32,42 @@ extension View {
     /// a log from the detail screen; the other tabs pass nothing.
     func appRouteDestinations(onLogChanged: (() -> Void)? = nil) -> some View {
         navigationDestination(for: AppRoute.self) { route in
-            switch route {
-            case .track(let track):
-                TrackDetailView(track: track)
-            case .album(let album):
-                AlbumDetailView(album: album)
-            case .artist(let name, let id):
-                ArtistDetailView(artistName: name, artistId: id)
-            case .user(let userId):
-                UserProfileView(userId: userId)
-            case .activityTrack(let trackId):
-                ActivityTrackDestination(trackId: trackId)
-            case .activityAlbum(let collectionId):
-                ActivityAlbumDestination(collectionId: collectionId)
-            case .activityLog(let reviewId, let trackId):
-                ActivityLogDestination(reviewId: reviewId, trackId: trackId)
-            case .log(let track, let review, let isOwner):
-                LogDetailView(
-                    track: track,
-                    review: review,
-                    isOwner: isOwner,
-                    onChanged: { onLogChanged?() }
-                )
-            }
+            AppRouteView(route: route, onLogChanged: onLogChanged)
+        }
+    }
+}
+
+/// The screen for a route. Detail screens link to it with a destination-based link
+/// (`NavigationLink { AppRouteView(route:) }`): a value-based link only works while every
+/// screen under it was pushed by value too, and a list page or a log opened from Discover is
+/// not, so their songs and names were dead on tap.
+struct AppRouteView: View {
+    let route: AppRoute
+    var onLogChanged: (() -> Void)? = nil
+
+    var body: some View {
+        switch route {
+        case .track(let track):
+            TrackDetailView(track: track)
+        case .album(let album):
+            AlbumDetailView(album: album)
+        case .artist(let name, let id):
+            ArtistDetailView(artistName: name, artistId: id)
+        case .user(let userId):
+            UserProfileView(userId: userId)
+        case .activityTrack(let trackId):
+            ActivityTrackDestination(trackId: trackId)
+        case .activityAlbum(let collectionId):
+            ActivityAlbumDestination(collectionId: collectionId)
+        case .activityLog(let reviewId, let trackId):
+            ActivityLogDestination(reviewId: reviewId, trackId: trackId)
+        case .log(let track, let review, let isOwner):
+            LogDetailView(
+                track: track,
+                review: review,
+                isOwner: isOwner,
+                onChanged: { onLogChanged?() }
+            )
         }
     }
 }
