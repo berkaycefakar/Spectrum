@@ -49,9 +49,10 @@ struct AlbumDetailView: View {
             ScrollView {
                 VStack(spacing: 28) {
                     heroSection
+                    // Under the cover, where the song page has its Log button.
+                    rateButton
                     communitySection
                     trackListSection
-                    rateButton
                 }
                 // The tab bar — and the mini-player above it when something is playing — float
                 // over this scroll view, and 40pt left the rate button underneath them at the
@@ -319,18 +320,20 @@ struct AlbumDetailView: View {
                 Text(userAlbumReview != nil ? "Edit your rating" : "Rate this album")
                     .fontWeight(.semibold)
             }
-            .foregroundStyle(.black)
+            // The cover's colour, like the song page's Log button (it was always gold).
+            .foregroundStyle(artworkColor.accent.contrastingForeground)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 15)
             .background(
                 LinearGradient(
-                    colors: [Color(hex: "#FFCC00"), Color(hex: "#FFB800")],
+                    colors: [artworkColor.accent, artworkColor.accent.opacity(0.75)],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
             )
             .clipShape(Capsule())
-            .shadow(color: Color(hex: "#FFCC00").opacity(0.35), radius: 12, y: 4)
+            .shadow(color: artworkColor.accent.opacity(0.4), radius: 12, y: 4)
+            .animation(.easeInOut(duration: 0.45), value: artworkColor.accent)
         }
         .padding(.horizontal)
     }
