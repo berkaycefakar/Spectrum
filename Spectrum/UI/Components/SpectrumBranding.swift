@@ -111,3 +111,67 @@ struct SplashView: View {
 #Preview {
     SplashView()
 }
+
+#if DEBUG
+/// Wordmark candidates, side by side for choosing. Launch with `-spectrum.wordmarkGallery YES`.
+struct WordmarkGallery: View {
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 34) {
+                option("A") {
+                    // Editorial serif, lowercase italic: a record-sleeve title.
+                    Text("spectrum")
+                        .font(.system(size: 34, weight: .black, design: .serif))
+                        .italic()
+                        .foregroundStyle(.white)
+                }
+                option("B") {
+                    // Each letter one colour of the vibe spectrum.
+                    HStack(spacing: 0) {
+                        ForEach(Array("Spectrum".enumerated()), id: \.offset) { i, ch in
+                            Text(String(ch))
+                                .foregroundStyle(SpectrumPalette.colors[i % SpectrumPalette.colors.count])
+                        }
+                    }
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                }
+                option("C") {
+                    // Wide caps with a thin spectrum rule underneath.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SPECTRUM")
+                            .font(.system(size: 26, weight: .black).width(.expanded))
+                            .tracking(1)
+                            .foregroundStyle(.white)
+                        LinearGradient(colors: SpectrumPalette.colors, startPoint: .leading, endPoint: .trailing)
+                            .frame(height: 3)
+                            .clipShape(Capsule())
+                    }
+                    .fixedSize()
+                }
+                option("D") {
+                    // Condensed heavy, white melting into the spectrum.
+                    Text("Spectrum")
+                        .font(.system(size: 38, weight: .heavy).width(.compressed))
+                        .foregroundStyle(LinearGradient(
+                            colors: [.white, .white, Color(hex: "#FF9500"), Color(hex: "#FF2D55"), Color(hex: "#5856D6")],
+                            startPoint: .leading, endPoint: .trailing))
+                }
+                option("Now") { SpectrumWordmark(size: 30) }
+            }
+            .padding(24)
+        }
+    }
+
+    private func option(_ label: String, @ViewBuilder _ wordmark: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).font(.caption.weight(.bold)).foregroundStyle(.white.opacity(0.4))
+            HStack(spacing: 11) {
+                SpectrumMark(size: 32)
+                wordmark()
+                Spacer()
+            }
+        }
+    }
+}
+#endif

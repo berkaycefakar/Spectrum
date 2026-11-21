@@ -28,6 +28,19 @@ struct SpectrumApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "spectrum.wordmarkGallery") {
+                WordmarkGallery()
+            } else {
+                root
+            }
+            #else
+            root
+            #endif
+        }
+    }
+
+    private var root: some View {
             ContentView()
                 // `.id` forces the whole tree to rebuild when the language changes. The
                 // bundle swap makes new lookups return the other language, but views already
@@ -76,5 +89,4 @@ struct SpectrumApp: App {
                     }
                 }
         }
-    }
 }
