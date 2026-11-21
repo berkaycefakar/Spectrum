@@ -28,6 +28,8 @@ struct FeedView: View {
     @StateObject private var reselection = TabReselectionState.shared
     /// Value-based navigation so tapping Home while already on Home can pop back to the feed.
     @State private var path = NavigationPath()
+    /// Shares friends sent that haven't been opened: the badge on the paper plane.
+    @State private var unseenShares = 0
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -49,6 +51,24 @@ struct FeedView: View {
                             SpectrumMark(size: 32)
                             SpectrumWordmark(size: 30)
                             Spacer()
+                            Button { path.append(AppRoute.shares) } label: {
+                                Image(systemName: "paperplane")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 44, height: 44)
+                                    .overlay(alignment: .topTrailing) {
+                                        if unseenShares > 0 {
+                                            Text("\(min(unseenShares, 9))")
+                                                .font(.caption2.weight(.bold))
+                                                .foregroundStyle(.black)
+                                                .frame(minWidth: 17, minHeight: 17)
+                                                .background(Color.spectrumAccent, in: Circle())
+                                                .offset(x: -2, y: 4)
+                                        }
+                                    }
+                            }
+                            .accessibilityLabel(Text("Shared with friends", bundle: appStringsBundle))
+                            .accessibilityValue(unseenShares > 0 ? "\(unseenShares)" : "")
                         }
                         .padding(.horizontal)
                         
@@ -180,6 +200,13 @@ struct FeedView: View {
         }
         .onChange(of: reselection.token(for: 0)) { _, _ in
             path = NavigationPath()
+        }
+        // Back on the feed (or first load): refresh the badge, since opening a share in the
+        // inbox marks it seen.
+        .task(id: path.count) {
+            guard path.isEmpty else { return }
+            let inbox = (try? await SupabaseManager.shared.fetchInbox()) ?? []
+            unseenShares = inbox.filter { $0.seenAt == nil }.count
         }
     }
     

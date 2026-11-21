@@ -23,6 +23,8 @@ enum AppRoute: Hashable {
     case activityAlbum(Int64)
     /// Someone's song log from the activity list: their log first, the song one tap further.
     case activityLog(reviewId: UUID, trackId: Int64)
+    /// Songs and albums sent between friends (the paper plane on Home).
+    case shares
 }
 
 extension View {
@@ -61,6 +63,8 @@ struct AppRouteView: View {
             ActivityAlbumDestination(collectionId: collectionId)
         case .activityLog(let reviewId, let trackId):
             ActivityLogDestination(reviewId: reviewId, trackId: trackId)
+        case .shares:
+            SharesInboxRoute()
         case .log(let track, let review, let isOwner):
             LogDetailView(
                 track: track,
