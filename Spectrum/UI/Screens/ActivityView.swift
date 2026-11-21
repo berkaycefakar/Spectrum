@@ -6,6 +6,7 @@ struct ActivityView: View {
     @State private var activities: [ActivityItem] = []
     /// Songs and albums friends sent, shown above the activity list.
     @State private var inbox = SharesInbox()
+    @State private var sent = SharesInbox(isSent: true)
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var filter: ActivityFilter = .all
@@ -35,7 +36,7 @@ struct ActivityView: View {
                 } else if isLoading {
                     ProgressView()
                         .tint(.white)
-                } else if activities.isEmpty && inbox.isEmpty {
+                } else if activities.isEmpty && inbox.isEmpty && sent.isEmpty {
                     emptyState
                 } else {
                     activityList
@@ -202,6 +203,10 @@ struct ActivityView: View {
                     SharesInboxSection(inbox: $inbox) { path.append($0) }
                 }
 
+                if !sent.isEmpty {
+                    SharesInboxSection(inbox: $sent) { path.append($0) }
+                }
+
                 filterChips
 
                 if groupedActivities.isEmpty {
@@ -309,15 +314,19 @@ struct ActivityView: View {
         #endif
         // The inbox loads alongside the activity feed; both land before the spinner goes.
         async let inboxLoad = SharesInbox.load()
+        async let sentLoad = SharesInbox.load(sent: true)
         do {
             let items = try await SupabaseManager.shared.fetchActivityFeed()
             let loadedInbox = await inboxLoad
+            let loadedSent = await sentLoad
             self.activities = items
             self.inbox = loadedInbox
+            self.sent = loadedSent
             self.isLoading = false
             self.errorMessage = nil
         } catch {
             self.inbox = await inboxLoad
+            self.sent = await sentLoad
             self.errorMessage = error.localizedDescription
             self.isLoading = false
         }

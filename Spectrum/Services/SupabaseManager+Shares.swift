@@ -98,6 +98,16 @@ extension SupabaseManager {
         return rows.filter { !blocked.contains($0.senderId) }
     }
 
+    /// What you sent, newest first, so you can see who got it and whether they opened it.
+    func fetchSent(limit: Int = 30) async throws -> [Share] {
+        guard let me = try await getCurrentUser()?.id else { return [] }
+        return try await client.from("shares").select()
+            .eq("sender_id", value: me)
+            .order("created_at", ascending: false)
+            .limit(limit)
+            .execute().value
+    }
+
     func markSharesSeen(_ ids: [UUID]) async {
         guard !ids.isEmpty else { return }
         nonisolated struct Seen: Encodable, Sendable { let seen_at: Date }

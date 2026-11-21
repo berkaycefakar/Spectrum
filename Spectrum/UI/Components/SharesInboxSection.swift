@@ -1,31 +1,37 @@
 import SwiftUI
 
-/// Everything needed to draw the "Sent to you" row: the shares plus what they point at.
+/// Everything needed to draw a "Sent to you" or "You sent" row: the shares plus what they
+/// point at. `people` holds the other party: the sender for received, the recipient for sent.
 struct SharesInbox {
     var shares: [Share] = []
     var tracks: [Int64: Track] = [:]
     var albums: [Int64: Album] = [:]
-    var senders: [UUID: Profile] = [:]
+    var people: [UUID: Profile] = [:]
+    var isSent = false
 
     var isEmpty: Bool { shares.isEmpty }
 
-    /// Loads the inbox and resolves its songs, albums and senders in parallel.
-    static func load() async -> SharesInbox {
-        let shares = (try? await SupabaseManager.shared.fetchInbox()) ?? []
-        guard !shares.isEmpty else { return SharesInbox() }
+    func otherParty(of share: Share) -> UUID { isSent ? share.recipientId : share.senderId }
+
+    /// Loads received (or sent) shares and resolves songs, albums and people in parallel.
+    static func load(sent: Bool = false) async -> SharesInbox {
+        let shares = (try? await (sent ? SupabaseManager.shared.fetchSent() : SupabaseManager.shared.fetchInbox())) ?? []
+        guard !shares.isEmpty else { return SharesInbox(isSent: sent) }
         let songIds = shares.filter { $0.kind == .song }.compactMap(\.catalogId)
         let albumIds = shares.filter { $0.kind == .album }.compactMap(\.catalogId)
         async let tracks = songIds.isEmpty ? [:] : MusicService.shared.fetchTracks(ids: songIds)
         async let albums = albumIds.isEmpty ? [:] : MusicService.shared.fetchAlbums(ids: albumIds)
-        async let senders = (try? SupabaseManager.shared.batchGetProfiles(ids: Array(Set(shares.map(\.senderId.uuidString))))) ?? []
-        let (t, a, s) = await (tracks, albums, senders)
+        let otherIds = Set(shares.map { sent ? $0.recipientId : $0.senderId }).map(\.uuidString)
+        async let people = (try? SupabaseManager.shared.batchGetProfiles(ids: Array(otherIds))) ?? []
+        let (t, a, p) = await (tracks, albums, people)
         return SharesInbox(shares: shares, tracks: t, albums: a,
-                           senders: Dictionary(uniqueKeysWithValues: s.map { ($0.id, $0) }))
+                           people: Dictionary(uniqueKeysWithValues: p.map { ($0.id, $0) }), isSent: sent)
     }
 }
 
 /// "Sent to you": what friends sent, side by side, newest first. An unseen one carries a
-/// dot; opening it marks it seen.
+/// dot; opening it marks it seen. With a sent inbox it becomes "You sent", showing who got
+/// each one and whether they've opened it.
 struct SharesInboxSection: View {
     @Binding var inbox: SharesInbox
     let open: (AppRoute) -> Void
@@ -33,12 +39,12 @@ struct SharesInboxSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
-                Text("Sent to you", bundle: appStringsBundle)
+                Text(inbox.isSent ? "You sent" : "Sent to you", bundle: appStringsBundle)
                     .font(.caption.weight(.semibold))
                     .textCase(.uppercase)
                     .tracking(0.5)
                     .foregroundStyle(.white.opacity(0.4))
-                let unseen = inbox.shares.filter { $0.seenAt == nil }.count
+                let unseen = inbox.isSent ? 0 : inbox.shares.filter { $0.seenAt == nil }.count
                 if unseen > 0 {
                     Text("\(unseen)")
                         .font(.caption.weight(.bold))
@@ -54,14 +60,14 @@ struct SharesInboxSection: View {
                             card(share)
                                 .onTapGesture {
                                     open(route)
-                                    markSeen(share)
+                                    if !inbox.isSent { markSeen(share) }
                                 }
                                 .accessibilityAddTraits(.isButton)
                                 .moderationActions(
                                     contentType: .share,
                                     contentRef: share.id.uuidString,
                                     authorId: share.senderId,
-                                    authorUsername: inbox.senders[share.senderId]?.username,
+                                    authorUsername: inbox.people[share.senderId]?.username,
                                     reportedText: share.note,
                                     onBlocked: { remove(share) },
                                     onDelete: {
@@ -86,7 +92,7 @@ struct SharesInboxSection: View {
     }
 
     private func card(_ share: Share) -> some View {
-        let sender = inbox.senders[share.senderId]
+        let sender = inbox.people[inbox.otherParty(of: share)]
         let name = sender?.username ?? String(localized: "Someone", bundle: appStringsBundle)
         let id = share.catalogId ?? 0
         let title = share.kind == .song ? inbox.tracks[id]?.title : inbox.albums[id]?.title
@@ -101,7 +107,14 @@ struct SharesInboxSection: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Spacer(minLength: 4)
-                if share.seenAt == nil {
+                if inbox.isSent {
+                    if share.seenAt != nil {
+                        Image(systemName: "checkmark")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.45))
+                            .accessibilityLabel(Text("Seen", bundle: appStringsBundle))
+                    }
+                } else if share.seenAt == nil {
                     Circle().fill(Color.spectrumAccent).frame(width: 8, height: 8)
                         .accessibilityLabel(Text("New", bundle: appStringsBundle))
                 }
@@ -138,7 +151,7 @@ struct SharesInboxSection: View {
         .padding(14)
         .frame(width: 260, alignment: .topLeading)
         .frame(minHeight: 120, alignment: .topLeading)
-        .background(.white.opacity(share.seenAt == nil ? 0.1 : 0.06), in: RoundedRectangle(cornerRadius: 18))
+        .background(.white.opacity(!inbox.isSent && share.seenAt == nil ? 0.1 : 0.06), in: RoundedRectangle(cornerRadius: 18))
         .contentShape(RoundedRectangle(cornerRadius: 18))
     }
 

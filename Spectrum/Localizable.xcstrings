@@ -3454,6 +3454,16 @@
         }
       }
     },
+    "Seen": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görüldü"
+          }
+        }
+      }
+    },
     "Send": {
       "localizations": {
         "tr": {
@@ -4647,6 +4657,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "İçerik bildirmek için giriş yapmalısın."
+          }
+        }
+      }
+    },
+    "You sent": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gönderdiklerin"
           }
         }
       }
