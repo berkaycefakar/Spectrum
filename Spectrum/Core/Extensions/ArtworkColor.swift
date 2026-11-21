@@ -164,7 +164,16 @@ actor ArtworkColorLoader {
     private var cache: [URL: ArtworkColor] = [:]
     private var inFlight: [URL: Task<ArtworkColor, Never>] = [:]
 
+    /// The same results, readable synchronously, so a page opened a second time starts in its
+    /// colour instead of flashing black first.
+    nonisolated private static let syncCache = SyncColorCache()
+
     private init() {}
+
+    /// The colour if it has already been worked out, without waiting.
+    nonisolated static func cached(_ url: URL?) -> ArtworkColor? {
+        url.flatMap { syncCache.get($0) }
+    }
 
     func color(for url: URL?) async -> ArtworkColor {
         guard let url else { return .placeholder }
@@ -172,10 +181,10 @@ actor ArtworkColorLoader {
         if let cached = cache[url] { return cached }
         if let existing = inFlight[url] { return await existing.value }
 
-        let task = Task<ArtworkColor, Never>.detached(priority: .utility) {
-            // Goes through the shared URLCache, so the artwork the UI is already showing
-            // is usually served from disk rather than refetched.
-            guard let (data, _) = try? await URLSession.shared.data(from: url),
+        let task = Task<ArtworkColor, Never>.detached(priority: .userInitiated) {
+            // Only the colour distribution matters, so fetch Apple's 100px rendition instead
+            // of the 600px one: a fraction of the bytes, which was most of the wait.
+            guard let (data, _) = try? await URLSession.shared.data(from: Self.small(url)),
                   let image = UIImage(data: data) else {
                 return ArtworkColor.placeholder
             }
@@ -186,6 +195,30 @@ actor ArtworkColorLoader {
         let result = await task.value
         inFlight[url] = nil
         cache[url] = result
+        Self.syncCache.set(url, result)
         return result
+    }
+
+    /// iTunes artwork URLs end in `{w}x{h}bb.jpg`; swap in 100x100.
+    nonisolated private static func small(_ url: URL) -> URL {
+        let s = url.absoluteString
+        guard let range = s.range(of: #"\d+x\d+bb"#, options: .regularExpression) else { return url }
+        return URL(string: s.replacingCharacters(in: range, with: "100x100bb")) ?? url
+    }
+}
+
+/// A lock-guarded dictionary: the actor's cache can only be read with `await`.
+private final class SyncColorCache: @unchecked Sendable {
+    private var store: [URL: ArtworkColor] = [:]
+    private let lock = NSLock()
+
+    func get(_ url: URL) -> ArtworkColor? {
+        lock.lock(); defer { lock.unlock() }
+        return store[url]
+    }
+
+    func set(_ url: URL, _ color: ArtworkColor) {
+        lock.lock(); defer { lock.unlock() }
+        store[url] = color
     }
 }

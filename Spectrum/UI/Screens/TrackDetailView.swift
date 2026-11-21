@@ -12,7 +12,12 @@ struct TrackDetailView: View {
     @State private var showAddToList = false
     @State private var showArtwork = false
     @State private var showSend = false
-    @State private var artworkColor: ArtworkColor = .placeholder
+    @State private var artworkColor: ArtworkColor
+
+    init(track: Track) {
+        self.track = track
+        _artworkColor = State(initialValue: ArtworkColorLoader.cached(track.artworkUrl600) ?? .placeholder)
+    }
 
     private var dominantColor: Color { artworkColor.accent }
 

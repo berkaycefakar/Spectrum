@@ -18,12 +18,17 @@ struct AlbumDetailView: View {
     @State private var userAlbumReview: AlbumReview?
     @State private var communityReviews: [AlbumReview] = []
     @State private var showLogSheet = false
-    @State private var artworkColor: ArtworkColor = .placeholder
+    @State private var artworkColor: ArtworkColor
     @State private var showAddToList = false
     /// Album logs used to hard-code gold, which made "what vibe did people give this?"
     /// unanswerable. Users pick it from the prism now, same as songs.
     @State private var selectedVibeHex: String = "#FFCC00"
     @State private var hasPickedVibe = false
+
+    init(album: Album) {
+        self.album = album
+        _artworkColor = State(initialValue: ArtworkColorLoader.cached(album.artworkUrl600) ?? .placeholder)
+    }
 
     private var communityStats: CommunityStats {
         CommunityStats(
@@ -101,10 +106,12 @@ struct AlbumDetailView: View {
             async let communityLoad: Void = loadCommunityReviews()
             async let ownReviewLoad: Void = loadUserAlbumReview()
 
+            // The colour goes on as soon as it's known: it used to wait for the track list
+            // and ratings too, which is why the page stayed black for a second.
             let color = await colorLoad
+            withAnimation(.easeInOut(duration: 0.3)) { artworkColor = color }
             _ = await (trackLoad, communityLoad, ownReviewLoad)
 
-            artworkColor = color
             // Pre-select the palette entry closest to the cover, but only when the cover
             // actually has a colour — a monochrome sleeve would just be a guess — and never
             // over the top of the vibe the user already saved.
