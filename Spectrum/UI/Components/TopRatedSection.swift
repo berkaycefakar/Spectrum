@@ -1,22 +1,13 @@
 import SwiftUI
 
-/// Thresholds for "Highest rated on Spectrum". With a handful of users the ranking is noise,
-/// so the section stays hidden until enough items clear the bar. Raise these as the
-/// community grows; no migration needed.
+/// Thresholds for "Highest rated on Spectrum". On from day one: any rated item can rank, and
+/// the Bayesian average in the RPC keeps a lone 5★ from topping 20 ratings of 4.6. Raise
+/// `minRatingsPerItem` as the community grows; no migration needed.
 enum TopRated {
     /// Ratings an item needs before it can rank.
-    static var minRatingsPerItem: Int { forceShow ? 1 : 3 }
-    /// Ranked items needed before the section appears at all.
-    static var minItemsToShow: Int { forceShow ? 1 : 8 }
-
-    /// Debug: `-spectrum.topRated.force YES` shows the section with any data.
-    private static var forceShow: Bool {
-        #if DEBUG
-        UserDefaults.standard.bool(forKey: "spectrum.topRated.force")
-        #else
-        false
-        #endif
-    }
+    static let minRatingsPerItem = 1
+    /// Ranked items needed before a tab appears.
+    static let minItemsToShow = 1
 }
 
 /// "Highest rated on Spectrum": songs, albums and artists ranked by the community.
@@ -32,7 +23,9 @@ struct TopRatedSection: View {
     }
 
     var body: some View {
-        Group {
+        // A VStack, not a Group: an empty Group is no view at all, so its `.task` never ran
+        // and the section could never load its way out of being empty.
+        VStack(spacing: 0) {
             if !availableKinds.isEmpty {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Highest Rated on Spectrum", bundle: appStringsBundle)
@@ -131,7 +124,7 @@ struct TopRatedSection: View {
                     Text(String(format: "%.1f", row.avgRating / 2)).font(.subheadline.weight(.bold).monospacedDigit())
                 }
                 .foregroundStyle(Color.spectrumAccent)
-                Text("\(row.ratingCount) ratings", bundle: appStringsBundle)
+                Text(row.ratingCount == 1 ? "1 rating" : "\(row.ratingCount) ratings", bundle: appStringsBundle)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.45))
             }
