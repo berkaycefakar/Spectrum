@@ -115,62 +115,41 @@ struct SplashView: View {
 #if DEBUG
 /// Wordmark candidates, side by side for choosing. Launch with `-spectrum.wordmarkGallery YES`.
 struct WordmarkGallery: View {
+    /// Single-colour candidates only, all in fonts that ship with iOS (nothing to bundle).
+    private let options: [(String, String, Font, CGFloat, Bool)] = [
+        // label, text, font, tracking, italic
+        ("1", "Spectrum", .custom("Didot-Bold", size: 34), 0, false),
+        ("2", "spectrum", .custom("Didot-Italic", size: 36), 0, true),
+        ("3", "SPECTRUM", .custom("Futura-Medium", size: 26), 5, false),
+        ("4", "spectrum", .custom("Futura-Bold", size: 32), -0.5, false),
+        ("5", "Spectrum", .custom("Baskerville-SemiBoldItalic", size: 34), 0, true),
+        ("6", "SPECTRUM", .custom("AvenirNext-Heavy", size: 26).width(.condensed), 3, false),
+        ("7", "spectrum", .system(size: 34, weight: .semibold, design: .serif), -1, false),
+        ("8", "SPECTRUM", .system(size: 26, weight: .light).width(.expanded), 6, false),
+        ("9", "spectrum", .system(size: 30, weight: .medium, design: .monospaced), -1, false),
+        ("10", "Spectrum", .custom("BodoniSvtyTwoITCTT-Bold", size: 34), 0, false),
+    ]
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 34) {
-                option("A") {
-                    // Editorial serif, lowercase italic: a record-sleeve title.
-                    Text("spectrum")
-                        .font(.system(size: 34, weight: .black, design: .serif))
-                        .italic()
-                        .foregroundStyle(.white)
-                }
-                option("B") {
-                    // Each letter one colour of the vibe spectrum.
-                    HStack(spacing: 0) {
-                        ForEach(Array("Spectrum".enumerated()), id: \.offset) { i, ch in
-                            Text(String(ch))
-                                .foregroundStyle(SpectrumPalette.colors[i % SpectrumPalette.colors.count])
-                        }
-                    }
-                    .font(.system(size: 32, weight: .heavy, design: .rounded))
-                }
-                option("C") {
-                    // Wide caps with a thin spectrum rule underneath.
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("SPECTRUM")
-                            .font(.system(size: 26, weight: .black).width(.expanded))
-                            .tracking(1)
+            VStack(alignment: .leading, spacing: 22) {
+                ForEach(options, id: \.0) { o in
+                    HStack(spacing: 14) {
+                        Text(o.0)
+                            .font(.caption.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.35))
+                            .frame(width: 22, alignment: .leading)
+                        SpectrumMark(size: 30)
+                        Text(o.1)
+                            .font(o.2)
+                            .tracking(o.3)
                             .foregroundStyle(.white)
-                        LinearGradient(colors: SpectrumPalette.colors, startPoint: .leading, endPoint: .trailing)
-                            .frame(height: 3)
-                            .clipShape(Capsule())
+                        Spacer()
                     }
-                    .fixedSize()
                 }
-                option("D") {
-                    // Condensed heavy, white melting into the spectrum.
-                    Text("Spectrum")
-                        .font(.system(size: 38, weight: .heavy).width(.compressed))
-                        .foregroundStyle(LinearGradient(
-                            colors: [.white, .white, Color(hex: "#FF9500"), Color(hex: "#FF2D55"), Color(hex: "#5856D6")],
-                            startPoint: .leading, endPoint: .trailing))
-                }
-                option("Now") { SpectrumWordmark(size: 30) }
             }
             .padding(24)
-        }
-    }
-
-    private func option(_ label: String, @ViewBuilder _ wordmark: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label).font(.caption.weight(.bold)).foregroundStyle(.white.opacity(0.4))
-            HStack(spacing: 11) {
-                SpectrumMark(size: 32)
-                wordmark()
-                Spacer()
-            }
         }
     }
 }

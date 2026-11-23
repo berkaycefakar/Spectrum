@@ -177,7 +177,7 @@ struct AlbumDetailView: View {
                 )
                 .padding(.top, 2)
 
-                AppleMusicBadge(url: album.appleMusicLink, height: 24)
+                AppleMusicBadge(url: album.appleMusicLink, height: 19)
                     .padding(.top, 4)
 
                 // Label and year, the way a sleeve credits itself. Only drawn when MusicKit

@@ -384,7 +384,7 @@ struct TrackDetailView: View {
                             .tracking(1.2)
                             .foregroundStyle(.white.opacity(0.45))
                         Spacer(minLength: 8)
-                        AppleMusicBadge(url: track.appleMusicLink, height: 24)
+                        AppleMusicBadge(url: track.appleMusicLink, height: 19)
                     }
 
                     if hasPreview {
