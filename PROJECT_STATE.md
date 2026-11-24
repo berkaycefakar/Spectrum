@@ -828,3 +828,10 @@ SpectrumInfo.plist
 APP_STORE_READINESS.md, AUTH_SETUP.md, HANDOFF.md, PROJECT_STATE.md (bu dosya)
 ```
 `git add -A` hepsini alır (`.gitignore` sadece build/DerivedData/credentials'ı hariç tutuyor).
+
+## 24 Nov 2026
+- Build 18: Futura wordmark, Friends/Popular feed switch, smaller Apple Music badge. Build 19: push notifications (APNs registration, `device_tokens` table applied live, profile "Spectrum App Store Push"). Build 19 attached to 1.0.
+- ASC: age rating completed, price Free, 174 territories (China removed: needs ICP/security assessment), App Privacy published (Email, User ID, Photos, Other User Content; app functionality, linked, no tracking). Review notes now explain "Log in with email" for the demo account.
+- TestFlight external group "Arkadaşlar" (public link https://testflight.apple.com/join/175KNw4W), build 19 in beta review.
+- Store screenshots: 01-06 kept, 07-popular / 08-diary / 09-top-rated added in the same style (sources: ~/Desktop/spectrumlogs/appstore-yeni).
+- Push is blocked on an APNs key with "Sandbox & Production" environment (key JXPMVJ5KVY is sandbox-only → BadEnvironmentKeyInToken).
