@@ -211,6 +211,17 @@ struct DiaryView: View {
 
     /// Next page of whichever list is holding the merge back (or both on the first load).
     private func loadMore() async {
+        #if DEBUG
+        if DemoMode.isOn {
+            tracks = DemoData.tracksById
+            albums = DemoData.albumsById
+            songs = DemoData.myReviews
+            albumLogs = DemoData.myAlbumReviews
+            songsDone = true
+            albumsDone = true
+            return
+        }
+        #endif
         let needSongs = !songsDone && (songs.isEmpty || albumsDone
             || (songs.last?.createdAt ?? .distantPast) >= (albumLogs.last?.createdAt ?? .distantPast))
         let needAlbums = !albumsDone && (albumLogs.isEmpty || songsDone || !needSongs)

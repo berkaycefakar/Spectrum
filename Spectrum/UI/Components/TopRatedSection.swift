@@ -135,6 +135,20 @@ struct TopRatedSection: View {
     }
 
     private func load() async {
+        #if DEBUG
+        if DemoMode.isOn {
+            tracks = DemoData.tracksById
+            albums = DemoData.albumsById
+            let a = [9.8, 9.6, 9.6, 9.4, 9.2, 9.0, 9.0, 8.8], c = [214, 187, 163, 148, 122, 109, 96, 88]
+            rows = [.albums: DemoData.albums.prefix(8).enumerated().map { i, al in
+                        SupabaseManager.TopRatedRow(itemId: al.id, artistName: nil, avgRating: a[i % 8], ratingCount: c[i % 8]) },
+                    .songs: DemoData.tracks.prefix(8).enumerated().map { i, t in
+                        SupabaseManager.TopRatedRow(itemId: Int64(t.id), artistName: nil, avgRating: a[i % 8], ratingCount: c[i % 8] + 40) },
+                    .artists: Array(Set(DemoData.tracks.map(\.artist))).sorted().prefix(8).enumerated().map { i, name in
+                        SupabaseManager.TopRatedRow(itemId: nil, artistName: name, avgRating: a[i % 8], ratingCount: c[i % 8] * 3) }]
+            return
+        }
+        #endif
         // Missing RPCs (migration not applied) just leave the section hidden.
         async let songs = try? SupabaseManager.shared.topRated(.songs, minRatings: TopRated.minRatingsPerItem)
         async let albumRows = try? SupabaseManager.shared.topRated(.albums, minRatings: TopRated.minRatingsPerItem)
