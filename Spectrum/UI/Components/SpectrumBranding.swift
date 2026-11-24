@@ -68,10 +68,10 @@ struct SpectrumWordmark: View {
     var size: CGFloat = 30
 
     var body: some View {
-        Text("Spectrum")
-            .font(.system(size: size, weight: .bold, design: .rounded))
+        Text(verbatim: "spectrum")
+            .font(.custom("Futura-Bold", size: size))
             .foregroundStyle(.white)
-            .tracking(0.5)
+            .tracking(-0.5)
     }
 }
 

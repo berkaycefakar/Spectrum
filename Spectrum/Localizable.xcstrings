@@ -1698,6 +1698,16 @@
         }
       }
     },
+    "Friends": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkadaşlar"
+          }
+        }
+      }
+    },
     "From everyone — follow users to personalize your feed": {
       "extractionState": "manual",
       "localizations": {
@@ -2981,6 +2991,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Profilinde Plus rozeti"
+          }
+        }
+      }
+    },
+    "Popular": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popüler"
           }
         }
       }

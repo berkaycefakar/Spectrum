@@ -1186,6 +1186,33 @@ final class SupabaseManager {
         )
     }
 
+    /// The most liked logs from everyone in the last month, for the feed's Popular tab. Likes
+    /// count most, then whether the log has a written review, then how recent it is. One
+    /// ranked page; there's no meaningful "next page" of a popularity ranking this small.
+    func fetchPopularReviews(days: Int = 30, pool: Int = 200, limit: Int = 60) async throws -> ReviewPage {
+        let since = Date().addingTimeInterval(-Double(days) * 86_400)
+        let rows: [Review] = try await client
+            .from("reviews")
+            .select()
+            .gte("created_at", value: ISO8601DateFormatter().string(from: since))
+            .order("created_at", ascending: false)
+            .order("id", ascending: false)
+            .limit(pool)
+            .execute()
+            .value
+        let blocked = await blockedUserIds()
+        let visible = rows.filter { !blocked.contains($0.userId) }
+        let likes = await likeStates(contentType: .songReview, contentIds: visible.map(\.id))
+        func score(_ r: Review) -> Int {
+            (likes[r.id]?.count ?? 0) * 3 + ((r.reviewText ?? "").isEmpty ? 0 : 1)
+        }
+        let ranked = visible.sorted {
+            let a = score($0), b = score($1)
+            return a != b ? a > b : $0.createdAt > $1.createdAt
+        }
+        return ReviewPage(reviews: Array(ranked.prefix(limit)), hasMore: false)
+    }
+
     /// Logs from the people this user follows, one page at a time.
     ///
     /// Blocked users are removed from the id list *before* the query here rather than after

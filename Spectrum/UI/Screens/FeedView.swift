@@ -30,6 +30,21 @@ struct FeedView: View {
     @State private var path = NavigationPath()
     /// Shares friends sent that haven't been opened: the badge on the paper plane.
     @State private var unseenShares = 0
+    /// Friends (people you follow) or Popular (most liked logs from everyone this month).
+    @State private var mode: FeedMode = FeedMode.saved
+
+    enum FeedMode: String, CaseIterable {
+        case friends, popular
+        var label: Text {
+            switch self {
+            case .friends: Text("Friends", bundle: appStringsBundle)
+            case .popular: Text("Popular", bundle: appStringsBundle)
+            }
+        }
+        static var saved: FeedMode {
+            FeedMode(rawValue: UserDefaults.standard.string(forKey: "spectrum.feedMode") ?? "") ?? .friends
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -71,7 +86,16 @@ struct FeedView: View {
                             .accessibilityValue(unseenShares > 0 ? "\(unseenShares)" : "")
                         }
                         .padding(.horizontal)
-                        
+
+                        Picker(selection: $mode) {
+                            ForEach(FeedMode.allCases, id: \.self) { m in
+                                m.label.tag(m)
+                            }
+                        } label: { EmptyView() }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal)
+                        .padding(.top, -8)
+
                         if isLoading {
                             // The shape of the feed rather than a spinner, so the cards land
                             // where the eye is already looking.
@@ -194,6 +218,11 @@ struct FeedView: View {
             .task {
                 await loadFeedData()
             }
+            .onChange(of: mode) { _, new in
+                UserDefaults.standard.set(new.rawValue, forKey: "spectrum.feedMode")
+                reviews = []
+                Task { await loadFeedData() }
+            }
             .refreshable {
                 await loadFeedData()
             }
@@ -236,8 +265,9 @@ struct FeedView: View {
             }
 
             // Cold launch: draw the last feed straight from disk, then refresh it in place.
+            let popular = mode == .popular
             await MainActor.run {
-                guard self.reviews.isEmpty, let cached = FeedCache.load(for: currentUser.id) else { return }
+                guard !popular, self.reviews.isEmpty, let cached = FeedCache.load(for: currentUser.id) else { return }
                 self.currentUserId = currentUser.id
                 self.reviews = cached.reviews
                 for track in cached.tracks { self.tracks[Int64(track.id)] = track }
@@ -248,13 +278,14 @@ struct FeedView: View {
             }
 
             // Try the people you follow first (may fail if the follows table doesn't exist).
-            var page = (try? await SupabaseManager.shared.fetchFollowingReviews(userId: currentUser.id))
-                ?? .empty
+            var page = popular
+                ? ((try? await SupabaseManager.shared.fetchPopularReviews()) ?? .empty)
+                : ((try? await SupabaseManager.shared.fetchFollowingReviews(userId: currentUser.id)) ?? .empty)
             var showingRecent = false
 
             // Following nobody, or nobody you follow has logged anything: fall back to
             // everyone's recent logs so the first screen isn't empty.
-            if page.reviews.isEmpty && !page.hasMore {
+            if !popular && page.reviews.isEmpty && !page.hasMore {
                 page = (try? await SupabaseManager.shared.fetchRecentReviews()) ?? .empty
                 showingRecent = true
             }
@@ -271,6 +302,7 @@ struct FeedView: View {
             }
 
             await hydrate(page.reviews)
+            guard !popular else { return }
             await MainActor.run {
                 FeedCache.save(FeedSnapshot(
                     userId: currentUser.id,
