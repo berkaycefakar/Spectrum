@@ -22,6 +22,7 @@ struct SpectrumApp: App {
         )
     }
 
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var musicAuth = MusicAuthorizationStore.shared
     @StateObject private var language = LanguagePreference.shared
@@ -76,6 +77,7 @@ struct SpectrumApp: App {
                     // request throws and the app shows empty feeds and empty search results.
                     // The demo runs without an Apple Music account; asking would cover the screen.
                     if !DemoMode.isOn { await musicAuth.requestIfNeeded() }
+                    await PushManager.shared.registerIfSignedIn()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     // iOS doesn't notify us when the user flips the Media & Apple Music switch
@@ -86,6 +88,7 @@ struct SpectrumApp: App {
                         // moment we get to find out that something happened while it was
                         // closed. Three `limit 1` reads — cheap enough to do every time.
                         Task { await ActivityBadgeStore.shared.refresh() }
+                        Task { await PushManager.shared.registerIfSignedIn() }
                     }
                 }
         }

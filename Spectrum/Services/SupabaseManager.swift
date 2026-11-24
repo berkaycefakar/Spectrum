@@ -202,7 +202,39 @@ final class SupabaseManager {
     }
     
     func signOut() async throws {
+        // Stop pushes to this phone for the account that's leaving. Best effort: a failed
+        // delete must never block signing out.
+        if let token = UserDefaults.standard.string(forKey: "spectrum.apnsToken") {
+            _ = try? await client.from("device_tokens").delete().eq("token", value: token).execute()
+        }
         try await client.auth.signOut()
+    }
+
+    // MARK: - Push
+
+    /// Stores this phone's APNs token against the signed-in account (one row per token; a
+    /// phone that changes hands moves to the new account).
+    func saveDeviceToken(_ token: String) async {
+        guard let user = try? await getCurrentUser() else { return }
+        nonisolated struct Row: Encodable, Sendable {
+            let token: String
+            let user_id: UUID
+            let environment: String
+            let updated_at: Date
+        }
+        #if DEBUG
+        let env = "development"
+        #else
+        let env = "production"
+        #endif
+        do {
+            try await client.from("device_tokens")
+                .upsert(Row(token: token, user_id: user.id, environment: env, updated_at: Date()), onConflict: "token")
+                .execute()
+            UserDefaults.standard.set(token, forKey: "spectrum.apnsToken")
+        } catch {
+            debugLog("Saving device token failed: \(error)")
+        }
     }
 
     // MARK: - Account Deletion
