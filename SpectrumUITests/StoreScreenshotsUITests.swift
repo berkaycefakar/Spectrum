@@ -16,8 +16,8 @@ final class StoreScreenshotsUITests: XCTestCase {
         settle(8)
         shot(app, "01-feed")
 
-        // First feed card → its detail page.
-        let firstCard = app.scrollViews.firstMatch.buttons.element(boundBy: 0)
+        // First feed card's title → the song page (the card itself opens the log).
+        let firstCard = app.staticTexts["Snooze"].firstMatch
         if firstCard.waitForExistence(timeout: 5) {
             firstCard.tap()
             settle(4)
@@ -29,7 +29,7 @@ final class StoreScreenshotsUITests: XCTestCase {
                 // A ray of the prism picks the vibe; the last bar is a full five.
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.40)).tap()
                 settle(1)
-                app.coordinate(withNormalizedOffset: CGVector(dx: 0.61, dy: 0.715)).tap()
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.64, dy: 0.80)).tap()
                 settle(1)
                 let field = app.textFields.firstMatch
                 if field.waitForExistence(timeout: 2) {
