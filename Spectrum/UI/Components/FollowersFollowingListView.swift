@@ -31,6 +31,9 @@ struct FollowersFollowingListView: View {
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            // UserRow links by AppRoute; without the destinations this sheet's own stack
+            // had nowhere to go, so tapping a person did nothing.
+            .appRouteDestinations()
         }
     }
 }
