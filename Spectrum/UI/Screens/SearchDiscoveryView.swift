@@ -1409,17 +1409,25 @@ struct UserProfileHeader: View {
                 }
             } else {
                 Button(action: onFollowTapped) {
+                    // The label stays in the layout while loading (just hidden under the
+                    // spinner) and the button has a fixed width that fits both "Follow" and
+                    // "Following", so tapping it no longer shifts the profile underneath.
                     HStack(spacing: 6) {
+                        Image(systemName: isFollowing ? "person.fill.checkmark" : "person.badge.plus")
+                            .contentTransition(.symbolEffect(.replace))
+                        Text(isFollowing ? "Following" : "Follow")
+                            .contentTransition(.interpolate)
+                    }
+                    .opacity(isFollowLoading ? 0 : 1)
+                    .overlay {
                         if isFollowLoading {
-                            ProgressView().tint(.white).scaleEffect(0.8)
-                        } else {
-                            Image(systemName: isFollowing ? "person.fill.checkmark" : "person.badge.plus")
-                            Text(isFollowing ? "Following" : "Follow")
+                            ProgressView().tint(.white).controlSize(.small)
                         }
                     }
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(isFollowing ? .white.opacity(0.8) : .white)
+                    .frame(minWidth: 124)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 10)
                     .background(
@@ -1436,6 +1444,8 @@ struct UserProfileHeader: View {
                         }
                     )
                     .clipShape(Capsule())
+                    .animation(.smooth(duration: 0.25), value: isFollowing)
+                    .animation(.smooth(duration: 0.2), value: isFollowLoading)
                 }
                 .disabled(isFollowLoading)
             }
@@ -1453,7 +1463,10 @@ struct UserProfileStatItem: View {
             Text(value)
                 .font(.title3)
                 .fontWeight(.bold)
+                .monospacedDigit()
                 .foregroundStyle(.white)
+                .contentTransition(.numericText())
+                .animation(.smooth, value: value)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.5))
