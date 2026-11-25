@@ -406,6 +406,26 @@ struct AlbumDetailView: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
+                        // The cover, like the song log sheet: without it the sheet was a
+                        // title and some controls, with nothing to show what you're rating.
+                        VStack(spacing: 10) {
+                            AsyncImage(url: album.artworkUrl600) { phase in
+                                if let image = phase.image {
+                                    image.resizable().aspectRatio(contentMode: .fill)
+                                } else {
+                                    artworkColor.accent.opacity(0.3)
+                                }
+                            }
+                            .frame(width: 150, height: 150)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: artworkColor.accent.opacity(0.45), radius: 18, y: 6)
+                            Text(album.artist)
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity)
+
                         HStack {
                             Text("Your rating")
                                 .font(.caption)
