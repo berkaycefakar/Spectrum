@@ -17,6 +17,8 @@ struct AlbumDetailView: View {
     @State private var errorMessage: String?
     @State private var userAlbumReview: AlbumReview?
     @State private var communityReviews: [AlbumReview] = []
+    @State private var reviewProfiles: [UUID: Profile] = [:]
+    @State private var profileToOpen: UUID?
     @State private var showLogSheet = false
     @State private var artworkColor: ArtworkColor
     @State private var showAddToList = false
@@ -90,6 +92,7 @@ struct AlbumDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showArtwork) { ArtworkViewer(url: album.artworkUrl600) }
+        .navigationDestination(item: $profileToOpen) { UserProfileView(userId: $0) }
         .sheet(isPresented: $showSend) {
             SendToFriendView(kind: .album, contentRef: String(album.id), title: album.title,
                              subtitle: album.artist, artworkURL: album.artworkUrl600)
@@ -227,8 +230,58 @@ struct AlbumDetailView: View {
 
     // MARK: - Community ratings
     private var communitySection: some View {
-        CommunityStatsCard(stats: communityStats)
-            .padding(.horizontal)
+        VStack(alignment: .leading, spacing: 16) {
+            CommunityStatsCard(stats: communityStats)
+                .padding(.horizontal)
+            if !writtenReviews.isEmpty {
+                albumReviewsList
+            }
+        }
+    }
+
+    /// Reviews with words in them, newest first. A bare rating already counts in the card above.
+    private var writtenReviews: [AlbumReview] {
+        communityReviews
+            .filter { !($0.reviewText ?? "").trimmingCharacters(in: .whitespaces).isEmpty }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// The written reviews, side by side like on the song page. They used to be missing:
+    /// the page showed the score but not what anyone wrote.
+    private var albumReviewsList: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Reviews")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(writtenReviews) { review in
+                        TrackReviewCard(
+                            review: Review(
+                                id: review.id,
+                                userId: review.userId,
+                                itunesTrackId: review.itunesCollectionId,
+                                spotifyTrackId: nil,
+                                rating: review.rating,
+                                reviewText: review.reviewText,
+                                vibeColor: review.vibeColor,
+                                createdAt: review.createdAt
+                            ),
+                            profile: reviewProfiles[review.userId],
+                            onTapAuthor: { profileToOpen = review.userId },
+                            contentType: .albumReview
+                        )
+                        .containerRelativeFrame(.horizontal) { width, _ in
+                            writtenReviews.count == 1 ? width - 32 : width * 0.78
+                        }
+                    }
+                }
+                .scrollTargetLayout()
+                .padding(.horizontal)
+            }
+            .scrollTargetBehavior(.viewAligned)
+        }
     }
     
     // MARK: - Track list
@@ -487,7 +540,12 @@ struct AlbumDetailView: View {
     
     private func loadCommunityReviews() async {
         guard let list = try? await SupabaseManager.shared.getAlbumReviews(collectionId: album.id) else { return }
-        await MainActor.run { self.communityReviews = list }
+        let ids = Set(list.map(\.userId)).map(\.uuidString)
+        let fetched = (try? await SupabaseManager.shared.batchGetProfiles(ids: ids)) ?? []
+        await MainActor.run {
+            self.communityReviews = list
+            self.reviewProfiles = Dictionary(fetched.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        }
     }
     
     private func loadUserAlbumReview() async {

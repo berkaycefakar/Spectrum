@@ -687,6 +687,8 @@ struct TrackReviewCard: View {
     var likes: Int = 0
     /// Opens the author's profile from the avatar and name.
     var onTapAuthor: (() -> Void)? = nil
+    /// What a report from the long-press menu is filed against (the album page reuses this card).
+    var contentType: ReportedContentType = .songReview
 
     private var name: String { profile?.username ?? String(localized: "Anonymous", bundle: appStringsBundle) }
     private var stars: Double { Double(review.rating) / 2.0 }
@@ -750,7 +752,7 @@ struct TrackReviewCard: View {
         // Long press to report or block — the community list is where an offensive review is
         // most likely to be seen, so the action has to be reachable from here too.
         .moderationActions(
-            contentType: .songReview,
+            contentType: contentType,
             contentRef: review.id.uuidString,
             authorId: review.userId,
             authorUsername: profile?.username,
