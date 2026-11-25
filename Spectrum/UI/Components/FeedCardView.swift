@@ -141,35 +141,9 @@ struct FeedCardView: View {
             // Bottom Section: Play Button, with the like beside it.
             HStack(spacing: 10) {
             Button(action: toggleAudio) {
-                HStack {
-                    if audioManager.isTrackBuffering(track.id) {
-                        ProgressView()
-                            .tint(.white)
-                        Text("Loading...")
-                    } else {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        Text(isPlaying ? "Playing Preview" : "Play Preview")
-                    }
-                }
-                .font(.subheadline)
-                .fontWeight(.bold)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(dynamicColor.opacity(0.2)) // Tint button with vibe
-                        
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(LinearGradient(
-                                colors: [.white.opacity(0.3), .white.opacity(0.05)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ), lineWidth: 1)
-                    }
-                )
+                previewButtonLabel
             }
+            .buttonStyle(PreviewPressStyle())
 
                 if commentCount > 0 {
                     HStack(spacing: 4) {
@@ -259,7 +233,91 @@ struct FeedCardView: View {
         }
     }
     
+    // MARK: - Preview button
+
+    private var isBuffering: Bool { audioManager.isTrackBuffering(track.id) }
+    private var isLoaded: Bool { audioManager.isTrackLoaded(track.id) }
+
+    /// One fixed layout for all three states (idle, loading, playing): the icon swaps in a
+    /// fixed slot and the label cross-fades, so the button never changes size or jumps.
+    /// While this track is loaded, the button fills left to right with the preview's progress.
+    private var previewButtonLabel: some View {
+        HStack(spacing: 8) {
+            ZStack {
+                if isBuffering {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                } else {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .contentTransition(.symbolEffect(.replace.downUp))
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                }
+            }
+            .frame(width: 18, height: 18)
+
+            ZStack {
+                if isBuffering {
+                    Text("Loading...")
+                        .transition(.opacity.combined(with: .offset(y: 6)))
+                } else if isPlaying {
+                    Text("Playing Preview")
+                        .transition(.opacity.combined(with: .offset(y: 6)))
+                } else {
+                    Text("Play Preview")
+                        .transition(.opacity.combined(with: .offset(y: 6)))
+                }
+            }
+        }
+        .font(.subheadline)
+        .fontWeight(.bold)
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(dynamicColor.opacity(isPlaying ? 0.32 : 0.2))
+
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(LinearGradient(
+                            colors: [dynamicColor.opacity(0.55), .white.opacity(0.22)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ))
+                        .frame(width: geo.size.width * (isLoaded ? audioManager.progress : 0))
+                        // Matches the player's four ticks a second, so the fill glides.
+                        .animation(.linear(duration: 0.25), value: audioManager.progress)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .opacity(isLoaded ? 1 : 0)
+
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(LinearGradient(
+                        colors: [.white.opacity(isPlaying ? 0.45 : 0.3), .white.opacity(0.05)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ), lineWidth: 1)
+            }
+        }
+        .animation(.smooth(duration: 0.3), value: isPlaying)
+        .animation(.smooth(duration: 0.3), value: isBuffering)
+        .animation(.smooth(duration: 0.3), value: isLoaded)
+    }
+
     private func toggleAudio() {
         audioManager.toggle(track: track)
+    }
+}
+
+/// A light press: the button dips slightly while held.
+private struct PreviewPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.snappy(duration: 0.18), value: configuration.isPressed)
     }
 }
