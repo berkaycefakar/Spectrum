@@ -26,29 +26,33 @@ struct SpectrumPrismPicker: View {
                 let exitPt  = CGPoint(x: prismCX + prismSide * 0.25, y: prismCY)
 
                 ZStack {
-                    // ── White beam (extends past left edge) ──
-                    
-                    // Glow layer
-                    Path { p in
-                        p.move(to: CGPoint(x: -30, y: h / 2 - 5))
-                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y - 1.5))
-                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y + 1.5))
-                        p.addLine(to: CGPoint(x: -30, y: h / 2 + 5))
-                        p.closeSubpath()
-                    }
-                    .fill(.white.opacity(0.08))
-                    .blur(radius: 4)
+                    // ── White beam ──
+                    // Rises slightly from the lower left into the prism's left face, like the
+                    // album cover it nods to, and widens as it travels: thin and far at the
+                    // edge of the screen, brightest where it meets the glass.
+                    let beamStart = CGPoint(x: -30, y: prismCY + prismH * 0.32)
 
-                    // Core beam
+                    // Soft halo
                     Path { p in
-                        p.move(to: CGPoint(x: -30, y: h / 2 - 1.5))
-                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y - 0.3))
-                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y + 0.3))
-                        p.addLine(to: CGPoint(x: -30, y: h / 2 + 1.5))
+                        p.move(to: CGPoint(x: beamStart.x, y: beamStart.y - 3))
+                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y - 5))
+                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y + 5))
+                        p.addLine(to: CGPoint(x: beamStart.x, y: beamStart.y + 3))
                         p.closeSubpath()
                     }
-                    .fill(.white.opacity(0.9))
-                    .shadow(color: .white.opacity(0.5), radius: 4)
+                    .fill(LinearGradient(colors: [.white.opacity(0.02), .white.opacity(0.16)], startPoint: .leading, endPoint: .trailing))
+                    .blur(radius: 5)
+
+                    // Core
+                    Path { p in
+                        p.move(to: CGPoint(x: beamStart.x, y: beamStart.y - 0.6))
+                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y - 1.6))
+                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y + 1.6))
+                        p.addLine(to: CGPoint(x: beamStart.x, y: beamStart.y + 0.6))
+                        p.closeSubpath()
+                    }
+                    .fill(LinearGradient(colors: [.white.opacity(0.55), .white], startPoint: .leading, endPoint: .trailing))
+                    .shadow(color: .white.opacity(0.6), radius: 3)
 
                     // ── Rainbow beams (extend past right edge) ──
 
@@ -65,86 +69,77 @@ struct SpectrumPrismPicker: View {
 
                     // ── Glass Prism ──
 
-                    // Base glass material
+                    // Dark glass body: the beams behind it stay faintly visible through it.
                     PrismTriangle()
                         .fill(.ultraThinMaterial)
                         .frame(width: prismSide, height: prismH)
                         .position(x: prismCX, y: prismCY)
-
-                    // Inner refraction gradient (white → rainbow transition)
                     PrismTriangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.22),
-                                    .white.opacity(0.10),
-                                ] + vibeColors.map { Color(hex: $0).opacity(0.08) },
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: prismSide - 8, height: prismH - 10)
-                        .position(x: prismCX, y: prismCY + 2)
-
-                    // Internal light path through the prism
-                    Path { p in
-                        p.move(to: CGPoint(x: entryPt.x + 4, y: entryPt.y))
-                        p.addLine(to: CGPoint(x: exitPt.x - 4, y: exitPt.y))
-                    }
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.3)] + vibeColors.prefix(4).map { Color(hex: $0).opacity(0.15) },
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        lineWidth: 2.5
-                    )
-                    .blur(radius: 3)
-
-                    // Bright entry point (white light hitting the glass)
-                    Circle()
-                        .fill(.white.opacity(0.5))
-                        .frame(width: 16, height: 16)
-                        .blur(radius: 7)
-                        .position(x: entryPt.x + 6, y: entryPt.y)
-
-                    // Rainbow exit spread (colors leaving the glass)
-                    Ellipse()
-                        .fill(
-                            LinearGradient(
-                                colors: vibeColors.map { Color(hex: $0).opacity(0.3) },
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 10, height: 30)
-                        .blur(radius: 5)
-                        .position(x: exitPt.x - 3, y: exitPt.y)
-
-                    // Glass edge highlight
-                    PrismTriangle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [.white.opacity(0.55), .white.opacity(0.08)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 1.5
-                        )
+                        .fill(LinearGradient(
+                            colors: [.white.opacity(0.10), .black.opacity(0.35)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
                         .frame(width: prismSide, height: prismH)
                         .position(x: prismCX, y: prismCY)
 
-                    // Left face shine
+                    // Light crossing the glass: white at the left face, splitting by the right.
                     Path { p in
-                        let topY = prismCY - prismH / 2
-                        p.move(to: CGPoint(x: prismCX, y: topY + 2))
-                        p.addLine(to: CGPoint(
-                            x: prismCX - prismSide * 0.35,
-                            y: prismCY + prismH * 0.2
-                        ))
+                        p.move(to: CGPoint(x: entryPt.x, y: entryPt.y - 1.5))
+                        p.addLine(to: CGPoint(x: exitPt.x, y: exitPt.y - 7))
+                        p.addLine(to: CGPoint(x: exitPt.x, y: exitPt.y + 7))
+                        p.addLine(to: CGPoint(x: entryPt.x, y: entryPt.y + 1.5))
+                        p.closeSubpath()
                     }
-                    .stroke(.white.opacity(0.12), lineWidth: 1)
-                    .blur(radius: 0.5)
+                    .fill(LinearGradient(
+                        colors: [.white.opacity(0.45)] + vibeColors.map { Color(hex: $0).opacity(0.22) },
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
+                    .blur(radius: 2)
+
+                    // Where the beam strikes the glass: a small, bright flare on the face.
+                    Circle()
+                        .fill(RadialGradient(colors: [.white, .white.opacity(0)], center: .center, startRadius: 0, endRadius: 10))
+                        .frame(width: 20, height: 20)
+                        .position(entryPt)
+                    Capsule()
+                        .fill(.white.opacity(0.5))
+                        .frame(width: 1.5, height: 16)
+                        .blur(radius: 1)
+                        .rotationEffect(.degrees(-30))
+                        .position(entryPt)
+
+                    // Colours leaving the right face
+                    Ellipse()
+                        .fill(LinearGradient(
+                            colors: vibeColors.map { Color(hex: $0).opacity(0.35) },
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
+                        .frame(width: 8, height: 26)
+                        .blur(radius: 4)
+                        .position(x: exitPt.x, y: exitPt.y)
+
+                    // Crisp edges: bright along the top, fading toward the base.
+                    PrismTriangle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.9), .white.opacity(0.35)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            style: StrokeStyle(lineWidth: 2, lineJoin: .round)
+                        )
+                        .frame(width: prismSide, height: prismH)
+                        .position(x: prismCX, y: prismCY)
+                        .shadow(color: .white.opacity(0.25), radius: 4)
+
+                    // Inner bevel, a hairline just inside the edge, so the glass has depth.
+                    PrismTriangle()
+                        .stroke(.white.opacity(0.12), style: StrokeStyle(lineWidth: 1, lineJoin: .round))
+                        .frame(width: prismSide - 12, height: prismH - 12)
+                        .position(x: prismCX, y: prismCY + 3)
 
                     // ── Gesture layer ──
                     Color.clear
