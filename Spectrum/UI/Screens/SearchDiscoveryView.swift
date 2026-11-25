@@ -1427,7 +1427,9 @@ struct UserProfileHeader: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(isFollowing ? .white.opacity(0.8) : .white)
-                    .frame(minWidth: 124)
+                    // Fixed height too: the two icons differ by a point or two, which nudged
+                    // the whole page up and down on every tap.
+                    .frame(minWidth: 124, minHeight: 20, maxHeight: 20)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 10)
                     .background(
