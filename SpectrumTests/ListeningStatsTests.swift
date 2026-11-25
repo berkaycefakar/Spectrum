@@ -20,7 +20,7 @@ struct ListeningStatsTests {
         _ entries: [(vibe: String, rating: Int, day: String)]
     ) -> SupabaseManager.UserLogSummary {
         SupabaseManager.UserLogSummary(entries: entries.map {
-            .init(vibeColor: $0.vibe, rating: $0.rating, createdAt: date($0.day))
+            .init(vibeColor: $0.vibe, rating: Double($0.rating), createdAt: date($0.day))
         })
     }
 

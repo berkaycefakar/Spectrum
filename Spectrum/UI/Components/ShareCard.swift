@@ -12,7 +12,7 @@ import SwiftUI
 /// number rather than a text style: this view is never actually shown to anybody.
 struct ShareCard: View {
     let track: Track
-    let rating: Int
+    let rating: Double
     let vibeHex: String
     let reviewText: String?
     let username: String?
@@ -21,7 +21,7 @@ struct ShareCard: View {
     static let side: CGFloat = 1080
 
     private var vibe: Color { Color(hex: vibeHex) }
-    private var displayRating: Double { Double(rating) / 2.0 }
+    private var displayRating: Double { rating / 2.0 }
 
     var body: some View {
         ZStack {
@@ -153,7 +153,7 @@ enum ShareCardRenderer {
     @MainActor
     static func render(
         track: Track,
-        rating: Int,
+        rating: Double,
         vibeHex: String,
         reviewText: String?,
         username: String?

@@ -88,26 +88,26 @@ struct VibeShare: Identifiable {
 /// Aggregate of everything the community logged for one track / album / artist.
 struct CommunityStats {
     let count: Int
-    /// 0...5, averaged from the 0...10 integers we store.
+    /// 0...5, averaged from the 0...10 scores we store.
     let averageRating: Double
     /// Palette buckets, most-picked first.
     let vibes: [VibeShare]
 
-    /// How many logs landed on each whole star, index 0 = 1 star … 4 = 5 stars. Half stars
-    /// round up (3.5 counts as 4), the way the App Store groups them.
+    /// How many logs landed on each whole star, index 0 = 1 star … 4 = 5 stars. Part stars
+    /// round up (3.5 and 3.2 count as 4), the way the App Store groups them.
     let starCounts: [Int]
 
     var topVibe: VibeShare? { vibes.first }
     var isEmpty: Bool { count == 0 }
 
-    init(ratings: [Int], vibeHexes: [String]) {
+    init(ratings: [Double], vibeHexes: [String]) {
         count = ratings.count
         var stars = [0, 0, 0, 0, 0]
-        for r in ratings { stars[min(max((r + 1) / 2, 1), 5) - 1] += 1 }
+        for r in ratings { stars[min(max(Int((r / 2 - 0.001).rounded(.up)), 1), 5) - 1] += 1 }
         starCounts = stars
         averageRating = ratings.isEmpty
             ? 0
-            : Double(ratings.reduce(0, +)) / Double(ratings.count) / 2.0
+            : ratings.reduce(0, +) / Double(ratings.count) / 2.0
 
         var buckets: [String: Int] = [:]
         for hex in vibeHexes {

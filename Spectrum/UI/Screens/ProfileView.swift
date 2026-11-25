@@ -673,7 +673,8 @@ struct ArtistReviewRow: View {
 
     /// Full, half or empty star for position `index`, from the 0–10 stored rating.
     private func starSymbol(for index: Int) -> String {
-        let doubled = review.rating
+        // Nearest half star: the stored score can carry a tenth now (8.6 = 4.3 stars).
+        let doubled = Int(review.rating.rounded())
         if doubled >= index * 2 { return "star.fill" }
         if doubled == index * 2 - 1 { return "star.leadinghalf.filled" }
         return "star"

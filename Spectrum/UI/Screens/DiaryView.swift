@@ -23,7 +23,7 @@ struct DiaryView: View {
             case .album(let r): r.createdAt
             }
         }
-        var rating: Int {
+        var rating: Double {
             switch self {
             case .song(let r): r.rating
             case .album(let r): r.rating

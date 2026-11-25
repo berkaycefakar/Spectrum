@@ -1,97 +1,124 @@
 import SwiftUI
 import UIKit
 
-/// Custom on-brand rating control using vertical glowing bars.
-/// - Rates in half-steps (3.5, say).
-/// - Each bar is taller than the one before it, left to right, all standing on one baseline:
-///   it reads as a volume meter, louder to the right.
+/// The rating dial: a half-circle like an amp's volume knob. Drag along the arc (or tap a point
+/// on it) to set the score, in tenths: 4.2 and 4.3 are both possible, 4.25 is not. The score sits
+/// big in the middle. Light ticks mark every whole and half star; a soft click every tenth and a
+/// firmer one on each half star.
 struct SpectrumRatingControl: View {
-    /// Rating value in the range 0...5 (0.5 steps).
+    /// Rating value in the range 0...5, in 0.1 steps. Zero means "not rated yet".
     @Binding var rating: Double
     var accentColor: Color = Color.spectrumAccent
-    /// Maximum display rating (5 = 5 bars).
+    /// The top of the scale.
     var maxRating: Int = 5
-    /// Bar size multiplier: the log sheet on a tall phone has room for bigger bars.
+    /// Size multiplier: the log sheet on a short phone needs a smaller dial.
     var scale: CGFloat = 1
-    
-    // Heights for the bars - progressively increasing left to right.
-    // The first bar is the shortest, the fifth the tallest.
-    // A steep climb so the five read as a volume meter rather than a row of pills.
-    private let barHeights: [CGFloat] = [14, 24, 34, 44, 54]
-    
-    // Haptic feedback generator - sadece bir kez initialize et
-    @State private var hapticGenerator = UIImpactFeedbackGenerator(style: .soft)
-    @State private var lastHapticRating: Double = -1 // The rating we last buzzed on
-    
+
+    @State private var selection = UISelectionFeedbackGenerator()
+    @State private var impact = UIImpactFeedbackGenerator(style: .soft)
+
+    private var width: CGFloat { 250 * scale }
+    private var lineWidth: CGFloat { 12 * scale }
+    private var radius: CGFloat { width / 2 - 22 * scale }
+    private var height: CGFloat { radius + 22 * scale + lineWidth }
+    private var center: CGPoint { CGPoint(x: width / 2, y: height - lineWidth) }
+    private var fraction: Double { min(max(rating / Double(maxRating), 0), 1) }
+
     var body: some View {
-        GeometryReader { geometry in
-            HStack(alignment: .bottom, spacing: 9 * scale) {
-                Spacer()
-                ForEach(1...maxRating, id: \.self) { index in
-                    SpectrumBar(
-                        fillPercentage: calculateFillPercentage(for: index),
-                        height: barHeights[index - 1] * scale,
-                        width: 14 * scale,
-                        accentColor: accentColor
-                    )
-                    .onTapGesture {
-                        hapticGenerator.impactOccurred(intensity: 0.7)
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                            rating = Double(index)
-                        }
-                    }
-                }
-                Spacer()
+        ZStack {
+            ticks
+            arc.stroke(.white.opacity(0.12), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            arc.trim(from: 0, to: fraction)
+                .stroke(
+                    LinearGradient(colors: [accentColor.opacity(0.65), accentColor], startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .shadow(color: accentColor.opacity(0.45), radius: 8)
+            knob
+            VStack(spacing: 0) {
+                Text(String(format: "%.1f", rating))
+                    .font(.system(size: 46 * scale, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(rating > 0 ? .white : .white.opacity(0.3))
+                    .contentTransition(.numericText(value: rating))
+                Text("out of 5", bundle: appStringsBundle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.5))
             }
-            .frame(maxHeight: .infinity, alignment: .bottom)
-            .contentShape(Rectangle()) // Tüm alan drag için aktif
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        let totalWidth = geometry.size.width
-                        let x = max(0, min(value.location.x, totalWidth))
-                        let raw = Double(x / totalWidth) * Double(maxRating) // 0...5
-                        let stepped = (raw * 2).rounded() / 2              // half-steps
-                        let clamped = max(0, min(Double(maxRating), stepped))
-                        if clamped != rating {
-                            // Haptics only when the drag crosses a half-step
-                            let currentStep = Int(clamped * 2)
-                            let lastStep = Int(lastHapticRating * 2)
-                            if currentStep != lastStep {
-                                hapticGenerator.impactOccurred(intensity: 0.5)
-                                lastHapticRating = clamped
-                            }
-                            
-                            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                                rating = clamped
-                            }
-                        }
-                    }
-                    .onEnded { _ in
-                        // One last buzz when the drag ends
-                        hapticGenerator.impactOccurred(intensity: 0.6)
-                    }
-            )
+            .position(x: center.x, y: center.y - 30 * scale)
         }
-        .frame(height: 60 * scale)
-        .padding(.vertical, 8)
-        .onAppear {
-            hapticGenerator.prepare()
+        .frame(width: width, height: height)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { update(at: $0.location) }
+                .onEnded { _ in impact.impactOccurred(intensity: 0.6) }
+        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .onAppear { selection.prepare(); impact.prepare() }
+        .accessibilityElement()
+        .accessibilityLabel(Text("Rating", bundle: appStringsBundle))
+        .accessibilityValue(String(format: "%.1f / %d", rating, maxRating))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: rating = min(Double(maxRating), ((rating + 0.1) * 10).rounded() / 10)
+            case .decrement: rating = max(0.1, ((rating - 0.1) * 10).rounded() / 10)
+            @unknown default: break
+            }
         }
     }
-    
-    /// Her bar için fill percentage hesapla (0.0...1.0)
-    /// A rating of 2.5 gives bar 1: 1.0, bar 2: 1.0, bar 3: 0.5, bar 4: 0.0, bar 5: 0.0
-    private func calculateFillPercentage(for index: Int) -> Double {
-        let barStart = Double(index - 1)
-        let barEnd = Double(index)
-        if rating >= barEnd {
-            return 1.0 // Tam dolu
-        } else if rating > barStart {
-            return rating - barStart // Partly filled (2.5 - 2.0 = 0.5)
-        } else {
-            return 0.0 // Empty
+
+    /// Point on the arc at `t` (0 = left end, 1 = right end), over the top.
+    private func point(_ t: Double, r: CGFloat? = nil) -> CGPoint {
+        let a = Double.pi + Double.pi * t
+        let rr = r ?? radius
+        return CGPoint(x: center.x + rr * CGFloat(cos(a)), y: center.y + rr * CGFloat(sin(a)))
+    }
+
+    /// The half-circle as a sampled path, so `trim` fills it left to right.
+    private var arc: Path {
+        Path { p in
+            p.move(to: point(0))
+            for i in 1...120 { p.addLine(to: point(Double(i) / 120)) }
         }
+    }
+
+    private var ticks: some View {
+        Path { p in
+            for k in 0...(maxRating * 2) {
+                let t = Double(k) / Double(maxRating * 2)
+                let whole = k % 2 == 0
+                p.move(to: point(t, r: radius + lineWidth / 2 + 5 * scale))
+                p.addLine(to: point(t, r: radius + lineWidth / 2 + (whole ? 12 : 8) * scale))
+            }
+        }
+        .stroke(.white.opacity(0.25), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+    }
+
+    private var knob: some View {
+        Circle()
+            .fill(.white)
+            .frame(width: lineWidth + 8 * scale, height: lineWidth + 8 * scale)
+            .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+            .position(point(fraction))
+            .opacity(rating > 0 ? 1 : 0)
+    }
+
+    private func update(at location: CGPoint) {
+        let dx = Double(location.x - center.x), dy = Double(location.y - center.y)
+        let t: Double
+        if dy > 0 {
+            // Below the dial's centre line: pin to whichever end the finger is nearer.
+            t = dx < 0 ? 0 : 1
+        } else {
+            t = (atan2(dy, dx) + Double.pi) / Double.pi
+        }
+        let value = max(0.1, min(Double(maxRating), (t * Double(maxRating) * 10).rounded() / 10))
+        guard value != rating else { return }
+        let crossedHalf = Int(value * 2) != Int(rating * 2)
+        if crossedHalf { impact.impactOccurred(intensity: 0.5) } else { selection.selectionChanged() }
+        withAnimation(.snappy(duration: 0.15)) { rating = value }
     }
 }
 

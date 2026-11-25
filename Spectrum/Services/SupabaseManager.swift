@@ -517,16 +517,16 @@ final class SupabaseManager {
         /// derived from. Deliberately not the whole row — no review text, no ids.
         struct Entry {
             let vibeColor: String
-            let rating: Int
+            let rating: Double
             let createdAt: Date
         }
 
         let entries: [Entry]
 
         var vibeColors: [String] { entries.map(\.vibeColor) }
-        var ratings: [Int] { entries.map(\.rating) }
+        var ratings: [Double] { entries.map(\.rating) }
 
-        /// 0...5, averaged from the 0...10 integers stored.
+        /// 0...5, averaged from the stored 0...10 scores.
         var averageRating: Double {
             guard !entries.isEmpty else { return 0 }
             return Double(entries.reduce(0) { $0 + $1.rating }) / Double(entries.count) / 2.0
@@ -538,7 +538,7 @@ final class SupabaseManager {
     func fetchUserLogSummary(userId: UUID) async -> UserLogSummary {
         struct Row: Decodable {
             let vibe_color: String
-            let rating: Int
+            let rating: Double
             let created_at: Date
         }
         guard let rows: [Row] = try? await client
@@ -555,7 +555,7 @@ final class SupabaseManager {
         })
     }
 
-    func saveReview(trackId: Int, rating: Int, text: String, vibeColor: String) async throws {
+    func saveReview(trackId: Int, rating: Double, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
             throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in", bundle: appStringsBundle)])
         }
@@ -681,7 +681,7 @@ final class SupabaseManager {
         table: String,
         existingIds: [UUID],
         insert: some Encodable,
-        rating: Int,
+        rating: Double,
         text: String,
         vibeColor: String
     ) async throws {
@@ -778,7 +778,7 @@ final class SupabaseManager {
     
     // MARK: - Album Reviews
     
-    func saveAlbumReview(collectionId: Int64, rating: Int, text: String, vibeColor: String) async throws {
+    func saveAlbumReview(collectionId: Int64, rating: Double, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
             throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in", bundle: appStringsBundle)])
         }
@@ -853,7 +853,7 @@ final class SupabaseManager {
     
     // MARK: - Artist Reviews
     
-    func saveArtistReview(artistName: String, rating: Int, text: String, vibeColor: String) async throws {
+    func saveArtistReview(artistName: String, rating: Double, text: String, vibeColor: String) async throws {
         guard let user = try await getCurrentUser() else {
             throw NSError(domain: "Spectrum", code: 401, userInfo: [NSLocalizedDescriptionKey: String(localized: "User not logged in", bundle: appStringsBundle)])
         }

@@ -272,10 +272,13 @@ struct AllTimeSummaryCard: View {
             .map { (hex: $0.key, share: $0.value / total) }
     }
 
-    /// Ten buckets for the stored 1...10 (half-star) ratings.
+    /// Ten half-star buckets for the stored 0...10 ratings (a tenth like 8.6 rounds to 9).
     private var ratingBuckets: [Int] {
         var buckets = Array(repeating: 0, count: 10)
-        for r in summary.ratings where (1...10).contains(r) { buckets[r - 1] += 1 }
+        for score in summary.ratings {
+            let r = Int(score.rounded())
+            if (1...10).contains(r) { buckets[r - 1] += 1 }
+        }
         return buckets
     }
 

@@ -412,7 +412,6 @@ struct AlbumDetailView: View {
                                 .textCase(.uppercase)
                                 .foregroundStyle(.white.opacity(0.5))
                             Spacer()
-                            RatingLabel(rating: albumRating, maxRating: 5, accentColor: Color(hex: "#FFCC00"))
                         }
                         
                         SpectrumRatingControl(
@@ -578,7 +577,7 @@ struct AlbumDetailView: View {
 
         Task {
             do {
-                let storedRating = Int((albumRating * 2).rounded())
+                let storedRating = (albumRating * 20).rounded() / 10
                 try await SupabaseManager.shared.saveAlbumReview(
                     collectionId: album.id,
                     rating: storedRating,

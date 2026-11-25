@@ -61,7 +61,7 @@ struct Review: Codable, Identifiable, Hashable {
     let userId: UUID
     let itunesTrackId: Int64
     let spotifyTrackId: String?
-    let rating: Int
+    let rating: Double
     let reviewText: String?
     let vibeColor: String
     let createdAt: Date
@@ -82,7 +82,7 @@ struct Review: Codable, Identifiable, Hashable {
 struct NewReview: Encodable {
     let user_id: UUID
     let itunes_track_id: Int64
-    let rating: Int
+    let rating: Double
     let review_text: String
     let vibe_color: String
 }
@@ -90,7 +90,7 @@ struct NewReview: Encodable {
 /// The mutable part of any review row (track, album or artist). Editing a log rewrites
 /// exactly these three columns and leaves user/target/created_at alone.
 struct ReviewUpdate: Encodable {
-    let rating: Int
+    let rating: Double
     let review_text: String
     let vibe_color: String
 }
@@ -126,7 +126,7 @@ struct AlbumReview: Codable, Identifiable {
     let id: UUID
     let userId: UUID
     let itunesCollectionId: Int64
-    let rating: Int
+    let rating: Double
     let reviewText: String?
     let vibeColor: String
     let createdAt: Date
@@ -145,7 +145,7 @@ struct AlbumReview: Codable, Identifiable {
 struct NewAlbumReview: Encodable {
     let user_id: UUID
     let itunes_collection_id: Int64
-    let rating: Int
+    let rating: Double
     let review_text: String
     let vibe_color: String
 }
@@ -156,7 +156,7 @@ struct ArtistReview: Codable, Identifiable {
     let id: UUID
     let userId: UUID
     let artistName: String
-    let rating: Int
+    let rating: Double
     let reviewText: String?
     let vibeColor: String
     let createdAt: Date
@@ -175,7 +175,7 @@ struct ArtistReview: Codable, Identifiable {
 struct NewArtistReview: Encodable {
     let user_id: UUID
     let artist_name: String
-    let rating: Int
+    let rating: Double
     let review_text: String
     let vibe_color: String
 }
@@ -216,7 +216,7 @@ struct ActivityItem: Codable, Identifiable {
     let targetId: String?
     let targetName: String?
     
-    let rating: Int?
+    let rating: Double?
     let vibeColor: String?
     let reviewText: String?
     

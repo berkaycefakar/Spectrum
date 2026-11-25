@@ -151,7 +151,6 @@ struct AddLogView: View {
 
                             Spacer()
 
-                            RatingLabel(rating: rating, maxRating: 5, accentColor: selectedColor)
                         }
                         .padding(.horizontal)
 
@@ -159,7 +158,7 @@ struct AddLogView: View {
                         SpectrumRatingControl(
                             rating: $rating,
                             accentColor: selectedColor,
-                            scale: isCompact ? 1 : 1.35
+                            scale: isCompact ? 0.75 : 0.95
                         )
                     }
 
@@ -319,7 +318,7 @@ struct AddLogView: View {
         Task {
             do {
                 // 0...5 (0.5 step) rating -> 0...10 integer
-                let storedRating = Int((rating * 2).rounded())
+                let storedRating = (rating * 20).rounded() / 10
                 try await SupabaseManager.shared.saveReview(
                     trackId: track.id,
                     rating: storedRating,

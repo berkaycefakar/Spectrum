@@ -536,7 +536,6 @@ struct ArtistDetailView: View {
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.5))
                 Spacer()
-                RatingLabel(rating: artistRating, maxRating: 5, accentColor: accentColor)
             }
 
             SpectrumRatingControl(
@@ -687,7 +686,7 @@ struct ArtistDetailView: View {
         await MainActor.run { isSaving = true }
 
         do {
-            let storedRating = Int((rating * 2).rounded())
+            let storedRating = (rating * 20).rounded() / 10
             try await SupabaseManager.shared.saveArtistReview(
                 artistName: artistName,
                 rating: storedRating,

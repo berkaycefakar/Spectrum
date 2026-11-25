@@ -92,7 +92,7 @@ enum DemoData {
     static let summary: SupabaseManager.UserLogSummary = {
         let vibes = ["#FF2D55", "#FF2D55", "#5856D6", "#FF2D55", "#5856D6", "#5AC8FA", "#007AFF",
                      "#FF9500", "#5856D6", "#FF2D55", "#4CD964", "#FFCC00", "#5AC8FA"]
-        let ratings = [8, 9, 10, 8, 7, 9, 8, 10, 6, 9, 8, 7, 9, 10, 8, 5]
+        let ratings: [Double] = [8, 9, 10, 8, 7, 9, 8, 10, 6, 9, 8, 7, 9, 10, 8, 5]
         let entries = (0..<128).map { i in
             SupabaseManager.UserLogSummary.Entry(
                 vibeColor: vibes[i % vibes.count],
@@ -133,7 +133,7 @@ enum DemoData {
     private static func review(_ n: Int, by user: Int, track: Int, rating: Int, vibe: String,
                                _ text: String?, hoursAgo: Double) -> Review {
         Review(id: uuid(n), userId: uuid(user), itunesTrackId: Int64(tracks[track].id), spotifyTrackId: nil,
-               rating: rating, reviewText: text, vibeColor: vibe,
+               rating: Double(rating), reviewText: text, vibeColor: vibe,
                createdAt: Date().addingTimeInterval(-hoursAgo * 3600))
     }
 
