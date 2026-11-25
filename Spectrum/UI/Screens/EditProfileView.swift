@@ -159,13 +159,13 @@ struct EditProfileView: View {
         }
         .simultaneousGesture(
             TapGesture().onEnded {
-                if focusedField != nil { focusedField = nil }
+                if focusedField != nil { focusedField = nil; Keyboard.dismiss() }
             }
         )
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { focusedField = nil }
+                Button("Done") { focusedField = nil; Keyboard.dismiss() }
                     .fontWeight(.semibold)
             }
         }

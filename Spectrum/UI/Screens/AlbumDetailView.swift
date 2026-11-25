@@ -388,6 +388,7 @@ struct AlbumDetailView: View {
                                 .foregroundStyle(.white.opacity(0.5))
                             TextField("Add a short review...", text: $reviewText, axis: .vertical)
                                 .focused($reviewFieldFocused)
+                                .returnDismissesKeyboard($reviewText, focus: $reviewFieldFocused)
                                 .lineLimit(3...6)
                                 .padding()
                                 .background(.ultraThinMaterial)
@@ -439,6 +440,7 @@ struct AlbumDetailView: View {
                     }
                     .padding(24)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle(album.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -453,11 +455,16 @@ struct AlbumDetailView: View {
                 // way out — it sits on top of the save button otherwise.
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") { reviewFieldFocused = false }
+                    Button("Done") { reviewFieldFocused = false; Keyboard.dismiss() }
                         .fontWeight(.semibold)
                 }
             }
         }
+        // Tap anywhere off the field to close the keyboard. Unconditional: the FocusState lives
+        // on the album page, outside this sheet, so it never reads true for the field in here,
+        // which is also why the keyboard's Done used to do nothing. Simultaneous so the rating
+        // control and the prism still get their taps.
+        .simultaneousGesture(TapGesture().onEnded { Keyboard.dismiss() })
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {

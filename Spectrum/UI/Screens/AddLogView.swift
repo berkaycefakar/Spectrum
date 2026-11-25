@@ -126,6 +126,7 @@ struct AddLogView: View {
                     // Review Text
                     TextField("What's the vibe?", text: $reviewText, axis: .vertical)
                         .focused($reviewFieldFocused)
+                        .returnDismissesKeyboard($reviewText, focus: $reviewFieldFocused)
                         .lineLimit(isCompact ? 1...2 : 2...3)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -238,13 +239,13 @@ struct AddLogView: View {
         // meant for the prism picker or the rating control underneath.
         .simultaneousGesture(
             TapGesture().onEnded {
-                if reviewFieldFocused { reviewFieldFocused = false }
+                if reviewFieldFocused { reviewFieldFocused = false; Keyboard.dismiss() }
             }
         )
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { reviewFieldFocused = false }
+                Button("Done") { reviewFieldFocused = false; Keyboard.dismiss() }
                     .fontWeight(.semibold)
             }
         }
